@@ -1,6 +1,6 @@
 from distutils.core import setup
 setup(
-  name = 'CosinorPy'
+  name = 'CosinorPy',
   packages = ['CosinorPy'],  
   version = '0.1',      
   license='MIT',        
