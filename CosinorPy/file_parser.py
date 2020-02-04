@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import CosinorPy
+from CosinorPy import cosinor
 
 
 
@@ -388,7 +388,7 @@ def export_cosinor2(input_file_name, output_file_name, period = 24, trim=True, d
                 curr_y = y[idxs[i]:idxs[i+1]]
                 
                 if remove_lin_comp:
-                    curr_x, curr_y = CosinorPy.remove_lin_comp(curr_x, curr_y, n_components = 1, period = period)
+                    curr_x, curr_y = cosinor.remove_lin_comp(curr_x, curr_y, n_components = 1, period = period)
                 
                 full_y = np.zeros(len(full_x))
                 full_y[:] = np.nan
