@@ -8,7 +8,7 @@ setup(
   author = 'Miha Moskon',                   
   author_email = 'miha.moskon@fri.uni-lj.si',      
   url = 'https://github.com/mmoskon/CosinorPy',   
-  download_url = 'https://github.com/user/reponame/archive/v_01.tar.gz',    # I explain this later on
+  download_url = 'https://github.com/mmoskon/CosinorPy/archive/v_0.1.tar.gz',   
   keywords = ['cosinor', 'rhytmomethry', 'regression', 'bioinformatics'],  
   install_requires=[            
           'pandas',
@@ -19,7 +19,7 @@ setup(
           'openpyxl',
       ],
   classifiers=[
-    'Development Status :: 3 - Alpha',      # Chose either "3 - Alpha", "4 - Beta" or "5 - Production/Stable" as the current state of your package
+    'Development Status :: 3 - Alpha',     
     'Intended Audience :: Researchers',     
     'Topic :: Software Development :: Build Tools',
     'License :: OSI Approved :: MIT License',   
