@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from CosinorPy import cosinor
-
+import re
 
 
 """
@@ -115,14 +115,31 @@ def generate_test_data(n_components=1, period = 24, amplitudes = 0, baseline = 0
     return df
 
 def read_csv(file_name, sep="\t"):
+    
     df1 = pd.read_csv(file_name, sep=sep)
 
-    reps = int(df1.columns[-1].split('_')[1][3:])
-    max_time = int(df1.columns[-1].split('_')[0].replace('T',""))
-    shuffle = np.array([(np.arange(0,max_time+1,reps))+i for i in range(reps)]).flatten()+1
+    try:
+        header = np.array(list(map(lambda s: re.sub('[^0-9_]','', s), df1.columns[1:])))
+        reps = int(header[-1].split('_')[1])
+        
+        t1 = int(header[0].split("_")[0])
+        t2 = int(header[reps].split("_")[0])
+        dt = t2-t1
+        
+        max_time = int(header[-1].split("_")[0])
+        
+        measurements = max_time//dt
+                
+        shuffle = np.array([(np.arange(0,measurements*reps+1,reps))+i for i in range(reps)]).flatten()
+                
+        x = list(map(lambda t: int(t.split('_')[0]), header[shuffle]))
+    except:
+        reps = 1
+        shuffle = np.arange(0,len(df1.columns)-1)
+        x = list(map(lambda s: int(re.sub('[^0-9]','', s)), df1.columns[1:]))
 
-    x = list(map(lambda t: int(t.split('_')[0][1:]), df1.columns[shuffle]))
-    Y = df1.iloc[:,shuffle].values#df1.iloc[:,1:].values
+
+    Y = df1.iloc[:,shuffle+1].values
     names = df1.iloc[:,0].values
 
     df2 = pd.DataFrame(columns=['test','x','y'])
@@ -131,13 +148,15 @@ def read_csv(file_name, sep="\t"):
         df_tmp['x'] = x
         df_tmp['y'] = y
         df_tmp['test'] = name
-        
+
         df2 = pd.concat([df2, df_tmp])
-    
+
+    df2['x'] = df2['x'].astype(float)
+    df2['y'] = df2['y'].astype(float)
+
     df2 = df2.dropna()
 
     return df2
-
 
 def export(df, file_name, independent = True):
     tests = df.test.unique()
