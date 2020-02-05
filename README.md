@@ -18,7 +18,7 @@ CosinorPy can be installed using ```pip``` with the command
 ```pip install CosinorPy```
 
 ## Examples
-Examples are given as interactive python notebooks (ipynb):
+Examples are given as interactive python notebook (ipynb) files:
 * [```demo_independent.ipynb```](demo_independent.ipynb): cosinor analysis of independent data
 * [```demo_dependent.ipynb```](demo_dependent.ipynb): cosinor analysis of population (dependent) data
 * [```demo_csv.ipynb```](demo_csv.ipynb): reading from csv file 
