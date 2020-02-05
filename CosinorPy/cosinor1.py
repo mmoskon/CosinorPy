@@ -349,7 +349,7 @@ def population_fit_group(df, period = 24, save_folder='', plot_on=True):
 
     return df_cosinor1_fits    
 
-def population_test_cosinor_pairs(df, pairs):
+def population_test_cosinor_pairs(df, pairs, period = 24):
     df_res = pd.DataFrame(columns = ['test', 
                                     'amplitude1', 
                                     'amplitude2',
@@ -364,8 +364,8 @@ def population_test_cosinor_pairs(df, pairs):
         df_pop1 = df[df.test.str.startswith(pair[0])] 
         df_pop2 = df[df.test.str.startswith(pair[1])] 
 
-        res1 = population_fit_cosinor(df_pop1, period = 24, plot_on = False)
-        res2 = population_fit_cosinor(df_pop2, period = 24, plot_on = False)
+        res1 = population_fit_cosinor(df_pop1, period = period, plot_on = False)
+        res2 = population_fit_cosinor(df_pop2, period = period, plot_on = False)
 
         res = population_test_cosinor(res1, res2)
         d = {'test': res['test'], 
