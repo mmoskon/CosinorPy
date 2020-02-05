@@ -7,11 +7,11 @@ CosinorPy presents a python package for cosinor based rhythmomethry. It is compo
 
 * [```cosinor1```](docs/docs_cosinor1.md): single-component cosinor specific functions
 
-## Installation
-
 To use these three modules include the following code in your python file:
 
 ```from CosinorPy import file_parser, cosinor, cosinor1```
+
+## Installation
 
 CosinorPy can be installed using ```pip``` with the command
 

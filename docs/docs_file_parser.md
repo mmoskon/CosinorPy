@@ -14,9 +14,9 @@ Reads the measurent from excel (xlsx) file. Each group of measurement (e.g., eac
 
 #### Returns
 * ```pandas``` ```DataFrame``` with three columns
- * ```test```: names of groups of measurements 
- * ```x```: timepoints
- * ```y```: measurements
+  * ```test```: names of groups of measurements 
+  * ```x```: timepoints
+  * ```y```: measurements
 
 ### ```file_parser.read_csv(file_name, (file_name, sep="\t")```
 Reads the measurent from csv file as used by other methods, such as JTK_CYLCE and RAIN. The first column should include the names of groups of measurement (e.g., genes). The first row should include the data describing the timepoints and replicates. If replicates are available, they should be labeled with increasing numbers (starting with 1) and these should be separated with timepoints using the underscore symbol (```_```). See an example of a valid file [here](https://github.com/mfcovington/jtk-cycle/raw/develop/Example2_data.txt).
@@ -26,9 +26,9 @@ Reads the measurent from csv file as used by other methods, such as JTK_CYLCE an
 * ```sep``` (```str```): separator
 #### Returns
 * ```pandas``` ```DataFrame``` with three columns
- * ```test```: names of groups of measurements 
- * ```x```: timepoints
- * ```y```: measurements
+  * ```test```: names of groups of measurements 
+  * ```x```: timepoints
+  * ```y```: measurements
 
 ### ```file_parser.export(df, file_name, independent = True)```
 Exports the measurements into an xlsx file.
@@ -62,6 +62,6 @@ Synthetic test-data generator.
 * ```noise``` (```int```, ```default=0```): noise amplitude
 #### Returns
 * ```pandas``` ```DataFrame``` with three columns
- * ```test```: name of group of measurements 
- * ```x```: timepoints
- * ```y```: measurements
+  * ```test```: name of group of measurements 
+  * ```x```: timepoints
+  * ```y```: measurements
