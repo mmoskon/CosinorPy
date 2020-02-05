@@ -62,11 +62,11 @@ Perform the basic Cosinor regression
 * ```plot_phase```: if True phase plot will be made
 #### Returns
 * tuple which includes
- * ```model```: if ```return_model``` was set to True
- * ```statistics```
- * ```rhythm_params```: parameters describing the rhythmicity
- * ```X_test```: timepoints for additional plotting
- * ```Y_test```: measurement for additional plotting
+  * ```model```: if ```return_model``` was set to True
+  * ```statistics```
+  * ```rhythm_params```: parameters describing the rhythmicity
+  * ```X_test```: timepoints for additional plotting
+  * ```Y_test```: measurement for additional plotting
 
 
 ### ```cosinor.population_fit(df, n_components = 2, period = 24, lin_comp = False, names = [], folder = '', prefix='', plot_measurements = True)```
