@@ -726,8 +726,8 @@ def acrophase_to_hours(acrophase, period=24):
 
 def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green", "blue"), folder = "", prefix="", legend=True, CI_acrs = [], CI_amps = []):
 
-    acrs = np.array(acrs)
-    amps = np.array(amps)
+    acrs = np.array(acrs, dtype = float)
+    amps = np.array(amps, dtype = float)
     
     if colors and len(colors) < len(tests):
         colors += ("black",) * (len(tests)-len(colors))
@@ -736,7 +736,7 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
     x_labels = list(map(lambda i: 'CT ' + str(i) + " ", list((x/(2*np.pi) * period).astype(int))))
     x_labels[1::2] = [""]*len(x_labels[1::2])
 
-    ampM = max(amps)
+    ampM = np.max(amps)
     amps /= ampM
     
     acrs = -acrs
@@ -1908,8 +1908,6 @@ def compare_nonlinear_pairs(df, pairs, min_per = 18, max_per = 36, folder = '', 
     return df_results
 
     #return multi.multipletests(P, method = 'fdr_bh')[1]
-
-
 
 
 def compare_nonlinear(X1, Y1, X2, Y2, test1 = '', test2 = '', min_per = 18, max_per=36, compare_phase = False, compare_period = False, compare_amplitude = False, save_to = '', plot_residuals=False):
