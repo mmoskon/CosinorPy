@@ -26,7 +26,7 @@ Plots the raw data pairs (two groups of measurement on the same plot).
 * ```prefix```: prefix to the file names in which plots will be stored
 
 
-### ```cosinor.plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green", "blue"), folder = "", prefix="", legend=True, CI_acrs = [], CI_amps = [])```
+### ```cosinor.plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green", "blue"), folder = "", prefix="", legend=True, CI_acrs = [], CI_amps = [], linestyles = [], title = "", labels = [])```
 Plots the phases in the polar coordinate system.
 #### Parameters
 * ```acrs```: acrophase value or list of acrophases
@@ -39,9 +39,12 @@ Plots the phases in the polar coordinate system.
 * ```legend```: plot legend?
 * ```CI_acrs```: list of acrophase confidence intervals to plot
 * ```CI_amps```: list of amplitude confidence intervals to plot
+* ```linestyles```: linestyles to use with each plot
+* ```title```: if not empty used this label as a plot title
+* ```labels```: labels assigned to each plot
 
 
-### ```cosinor.fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, plot_phase = True)```
+### ```cosinor.fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True)```
 Perform the basic Cosinor regression
 #### Parameters
 * ```X```: iterable of timepoints 
@@ -59,6 +62,7 @@ Perform the basic Cosinor regression
 * ```plot_measurements```: if True raw measurement are plotted
 * ```plot_margins```: if True confidence intervals are plotted
 * ```return_model```: if True model will be returned
+* ```color```: the color to use when plotting; if False, black color will be used
 * ```plot_phase```: if True phase plot will be made
 #### Returns
 * tuple which includes
