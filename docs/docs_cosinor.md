@@ -27,7 +27,7 @@ Plots the raw data pairs (two groups of measurement on the same plot).
 
 
 ### ```cosinor.plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green", "blue"), folder = "", prefix="", legend=True, CI_acrs = [], CI_amps = [], linestyles = [], title = "", labels = [])```
-Plots the phases in the polar coordinate system.
+Plots the phases in a polar coordinate system.
 #### Parameters
 * ```acrs```: acrophase value or list of acrophases
 * ```amps```: amplitude or list of amplitudes
