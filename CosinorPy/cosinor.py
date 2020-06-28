@@ -13,6 +13,10 @@ from scipy.stats import t
 from scipy.optimize import curve_fit
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 
+import copy
+import itertools
+from matplotlib.lines import Line2D
+from random import sample
 def plot_components(X, Y, n_components = 3, period = 24, name = '', save_to = ''):
     
     A = np.sin((X/period)*np.pi*2)
@@ -549,7 +553,7 @@ def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', li
     
     return params, statistics, statistics_params, rhythm_params, results
 
-def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, plot_phase = True):
+def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True):
     """
     ###
     # prepare the independent variables
@@ -642,7 +646,12 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
     else:
         Y_fit = results.fittedvalues
     
-    statistics = calculate_statistics(X, Y, Y_fit, n_components, period, lin_comp)
+    if model_type == 'lin':
+        statistics = calculate_statistics(X, Y, Y_fit, n_components, period, lin_comp)
+    else:
+        RSS = sum((Y - Y_fit)**2)
+        p = results.llr_pvalue        
+        statistics = {'p':p, 'RSS':RSS, 'count': np.sum(Y)}
     
     Y_test = results.predict(X_fit_test)
     Y_eval_params = results.predict(X_fit_eval_params)
@@ -655,6 +664,74 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
     ###
     """
     if plot:
+        if plot_margins:
+            if model_type == 'lin':
+                sdev, lower, upper = wls_prediction_std(results, exog=X_fit_test, alpha=0.05)
+                if color:
+                    plt.fill_between(X_test, lower, upper, color=color, alpha=0.1)
+                else:
+                    plt.fill_between(X_test, lower, upper, color='#888888', alpha=0.1)
+            else:
+                res2 = copy.deepcopy(results)
+                params = res2.params
+                CIs = results.conf_int()
+                
+                #N = 512
+                N = 1024
+                
+                if n_components == 1:
+                    #N2 = 8
+                    N2 = 10
+                elif n_components == 2:
+                    #N2 = 6
+                    N2 = 8
+                else:                                   
+                    #N2 = 8 - n_components 
+                    N2 = 10 - n_components 
+              
+                
+                P = np.zeros((len(params), N2))
+                
+                for i, CI in enumerate(CIs):
+                    P[i,:] = np.linspace(CI[0], CI[1], N2)
+                    
+                amplitude_CI = [rhythm_params['amplitude']]
+                mesor_CI = [rhythm_params['mesor']]
+                acrophase_CI = [rhythm_params['acrophase']]
+                
+                for i,p in enumerate(sample(list(itertools.product(*P)), N)):
+                    res2.initialize(results.model, p)            
+                    Y_test_CI = res2.predict(X_fit_test)
+                    
+                    rhythm_params_CI = evaluate_rhythm_params(X_test, Y_test_CI)
+                    amplitude_CI.append(rhythm_params_CI['amplitude'])
+                    mesor_CI.append(rhythm_params_CI['mesor'])
+                    acrophase_CI.append(rhythm_params_CI['acrophase'])
+                   
+                    
+                    """
+                    if i == 0:
+                        Y_min = Y
+                        Y_max = Y
+                    else:
+                        Y_min = np.min(np.vstack([Y,Y_min]), axis=0)
+                        Y_max = np.max(np.vstack([Y,Y_max]), axis=0)
+                    """
+                    if color and color != '#000000':
+                        plt.plot(X_test, Y_test_CI, color=color, alpha=0.05)
+                    else:
+                        plt.plot(X_test, Y_test_CI, color='#888888', alpha=0.05)
+                
+                    
+                #plt.fill_between(X_test, Y_min, Y_max, color='#888888', alpha=0.1)
+        
+                #amplitude_CI = (min(amplitude_CI), max(amplitude_CI))
+                #mesor_CI = (min(mesor_CI), max(mesor_CI))
+                #acrophase_CI = (min(acrophase_CI), max(acrophase_CI))
+        
+                rhythm_params['amplitude_CI'] = amplitude_CI
+                rhythm_params['mesor_CI'] = mesor_CI
+                rhythm_params['acrophase_CI'] = acrophase_CI
         
         
         ###
@@ -663,23 +740,39 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
         #plt.plot(X, results.fittedvalues, label = 'fit')
         
         
-        plt.plot(X_test, Y_test, 'k', label = 'fit')
+        if color and not plot_margins: 
+            plt.plot(X_test, Y_test, 'k', label = 'fit', color=color)
+        else:
+            plt.plot(X_test, Y_test, 'k', label = 'fit')
+        
         if plot_measurements:
-            plt.axis([min(min(X),0), 1.1*max(max(X),period), 0.9*min(min(Y), min(Y_test)), 1.1*max(max(Y), max(Y_test))])
+            if model_type == 'lin':
+                plt.axis([min(min(X),0), 1.1*max(max(X),period), 0.9*min(min(Y), min(Y_test)), 1.1*max(max(Y), max(Y_test))])
+            else:
+                plt.axis([min(min(X),0), max(X), 0.9*min(min(Y), min(Y_test)), 1.1*max(max(Y), max(Y_test))])
         else:
             plt.axis([min(X_test), 50, min(Y_test)*0.9, max(Y_test)*1.1])
         #plt.title(name + ', components=' + str(n_components) +' , period=' + str(period) + '\np-value=' + str(statistics['p']) + ', p-value(gof)=' + str(statistics['p_reject']))
         #plt.title(name + ', components=' + str(n_components) +' , period=' + str(period) + '\np-value=' + str(statistics['p']))
-        plt.title(name + ', p-value=' + "{0:.5f}".format(statistics['p']))
-        plt.xlabel('time [h]')
-        plt.ylabel('measurements')
+        if model_type == 'lin':
+            if name: 
+                plt.title(name + ', p-value=' + "{0:.5f}".format(statistics['p']))
+            else:
+                plt.title('p-value=' + "{0:.5f}".format(statistics['p']))
+        else:
+            if name:
+                plt.title(name + ', p-value=' + '{0:.3f}'.format(statistics['p']) + ' (n='+str(statistics['count'])+ ')')            
+            else:
+                plt.title('p-value=' + '{0:.3f}'.format(statistics['p']) + ' (n='+str(statistics['count'])+ ')')
+        plt.xlabel('Time [h]')
+        if model_type == 'lin':
+            plt.ylabel('Measurements')
+        else:
+            plt.ylabel('Count')
         #fig = plt.gcf()
         #fig.set_size_inches(11,8)               
         
 
-        if plot_margins:
-            sdev, lower, upper = wls_prediction_std(results, exog=X_fit_test, alpha=0.05)
-            plt.fill_between(X_test, lower, upper, color='#888888', alpha=0.1)
         
         
         if save_to:
@@ -688,12 +781,12 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
             plt.close()
         else:
             plt.show()
-
-        if plot_residuals:          
+        if plot_residuals:
             resid = results.resid
             fig = sm.qqplot(resid)
             plt.title(name)
             if save_to:
+                plt.savefig(save_to+'_resid.pdf', bbox_inches='tight')
                 plt.savefig(save_to+'_resid.png')                
                 plt.close()
             else:
@@ -724,7 +817,7 @@ def acrophase_to_hours(acrophase, period=24):
 #r = np.linspace(0,2*np.pi,1000)
 #X = np.sin(r)
 
-def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green", "blue"), folder = "", prefix="", legend=True, CI_acrs = [], CI_amps = []):
+def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green", "blue"), folder = "", prefix="", legend=True, CI_acrs = [], CI_amps = [], linestyles = [], title = "", labels = []):
 
     acrs = np.array(acrs, dtype = float)
     amps = np.array(amps, dtype = float)
@@ -744,6 +837,7 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
     ax = plt.subplot(111, projection='polar')        
     ax.set_theta_offset(0.5*np.pi)
     ax.set_theta_direction(-1) 
+    lines = []
 
     for i, (acr, amp, test, color) in enumerate(zip(acrs, amps, tests, colors)):
         
@@ -759,10 +853,18 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
         else:
             color = "#0000FF"            
         """
+        if linestyles:
+            #ax.plot([acr, acr], [0, amp], label=test, color=color, linestyle = linestyles[i])
+            ax.annotate("", xy=(acr, amp), xytext=(0, 0), arrowprops=dict(arrowstyle="->", color=color, alpha = 0.75, linewidth=2, linestyle = linestyles[i]) )
+            lines.append(Line2D([0], [0], color=color, linewidth=2, linestyle=linestyles[i]))
+        else:
+            #ax.plot([acr, acr], [0, amp], label=test, color=color)
+            ax.annotate("", xy=(acr, amp), xytext=(0, 0), arrowprops=dict(arrowstyle="->", color=color, alpha = 0.75, linewidth=2) )
+            lines.append(Line2D([0], [0], color=color, linewidth=2))
 
-        ax.plot([acr, acr], [0, amp], label=test, color=color)
+        #ax.plot([acr, acr], [0, amp], label=test, color=color)
     
-        ax.annotate("", xy=(acr, amp), xytext=(0, 0), arrowprops=dict(arrowstyle="->", color=color, linewidth=2) )
+        #ax.annotate("", xy=(acr, amp), xytext=(0, 0), arrowprops=dict(arrowstyle="->", color=color, linewidth=2) )
         
         if CI_acrs and CI_amps:
             amp_l, amp_u = np.array(CI_amps[i])/ampM
@@ -789,17 +891,24 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
        
       
     name = "_".join(tests)
-    ax.set_title(name, va='bottom')
+    #ax.set_title(name, va='bottom')
+    if title:
+        ax.set_title(title, va='bottom')
+    else:
+        ax.set_title(name, va='bottom')
 
     if legend:
-        ax.legend()
+        if labels:
+            plt.legend(lines, labels, bbox_to_anchor=(1.0, 1), loc='upper left', borderaxespad=0., frameon=False)
+        else:
+            plt.legend(lines, tests, bbox_to_anchor=(1.0, 1), loc='upper left', borderaxespad=0., frameon=False)
+        #ax.legend()
     if folder:
         plt.savefig(folder+"\\"+prefix+name+"_phase.pdf")
         plt.savefig(folder+"\\"+prefix+name+"_phase.png")
         plt.close()
     else:
         plt.show()
-         
 def evaluate_rhythm_params(X,Y):
     m = min(Y)
     M = max(Y)
@@ -2041,6 +2150,4 @@ def compare_nonlinear(X1, Y1, X2, Y2, test1 = '', test2 = '', min_per = 18, max_
     
     return statistics, p_dict
     
-   
-
-
+ 
