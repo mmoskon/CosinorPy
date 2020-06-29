@@ -461,15 +461,44 @@ def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', li
 
     tests = df_pop.test.unique()
     k = len(tests)
+    
+    X_test = np.linspace(0, 100, 1000)
+    X_fit_eval_params = generate_independents(X_test, n_components = n_components, period = period, lin_comp = lin_comp)
+    if lin_comp:
+        X_fit_eval_params[:,1] = 0    
+    
+    min_X = 1000
+    max_X = 0
+    min_Y = 1000
+    max_Y = 0
+    min_Y_test = 1000
+    max_Y_test = 0
+    min_X_test = np.min(X_test)
+    
+    
     for test in tests:
         x,y = np.array(df_pop[df_pop.test == test].x), np.array(df_pop[df_pop.test == test].y)
+        
+        min_X = min(min_X, np.min(x))
+        max_X = max(max_X, np.max(x))
+        
+        min_Y = min(min_Y, np.min(y))
+        max_Y = max(max_Y, np.max(y))
+        
+        
         results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, model_type = model_type, lin_comp=lin_comp, plot = False, return_model = True, plot_phase=False)
         if type(params) == int:
             params = results.params
         else:
             params = np.vstack([params, results.params])
         if plot_on and plot_individuals:
-            plt.plot(x, results.fittedvalues,'k', label=test)
+            Y_eval_params = results.predict(X_fit_eval_params)
+            plt.plot(X_test,Y_eval_params,'k', label=test)
+            
+            min_Y_test = min(min_Y_test, np.min(Y_eval_params))
+            max_Y_test = max(max_Y_test, np.max(Y_eval_params))
+            
+            #plt.plot(x, results.fittedvalues,'k', label=test)
         if plot_on and plot_measurements:
             plt.plot(x,y,'ko', markersize=1)
     
@@ -508,25 +537,36 @@ def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', li
     X_fit = generate_independents(x, n_components = n_components, period = period, lin_comp = lin_comp)
     Y_fit = results.predict(X_fit)
     
+    
+    Y_eval_params = results.predict(X_fit_eval_params)    
+    rhythm_params = evaluate_rhythm_params(X_test, Y_eval_params)
+        
     if plot_on:
-        plt.plot(x,Y_fit,'r', label="population fit")
+        #plt.plot(x,Y_fit,'r', label="population fit")
+        plt.plot(X_test,Y_eval_params,'r', label="population fit")
         plt.legend()
         plt.xlabel('time [h]')
         plt.ylabel('measurements')
-
+    
+        min_Y_test = min(min_Y_test, np.min(Y_eval_params))
+        max_Y_test = max(max_Y_test, np.max(Y_eval_params))
+    
         
 
     if plot_on and plot_margins:
-        sdev, lower, upper = wls_prediction_std(results, exog=X_fit, alpha=0.05)
-        plt.fill_between(x, lower, upper, color='#888888', alpha=0.1)                   
+        sdev, lower, upper = wls_prediction_std(results, exog=X_fit_eval_params, alpha=0.05)
+        plt.fill_between(X_test, lower, upper, color='#888888', alpha=0.1)                   
     
-
+    if plot_measurements:
+        if model_type == 'lin':
+            plt.axis([min(min_X,0), 1.1*max(max_X,period), 0.9*min(min_Y, min_Y_test), 1.1*max(max_Y, max_Y_test)])
+        else:
+            plt.axis([min(min_X,0), max_X, 0.9*min(min_Y, min_Y_test), 1.1*max(max_Y, max_Y_test)])
+        
+    else:
+        plt.axis([min_X_test, 50, min_Y_test*0.9, max_Y_test*1.1])
     
-    statistics = calculate_statistics(x, y, Y_fit, n_components, period, lin_comp) 
-    statistics_params = {'values': means,
-                        'SE': se,
-                        'CI': (lower_CI, upper_CI),
-                        'p-values': p_values} 
+    
     if plot_on:
         pop_name = "_".join(test.split("_")[:-1])
         plt.title(pop_name + ', p-value=' + "{0:.5f}".format(statistics['p']))
@@ -539,19 +579,19 @@ def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', li
             plt.show()
     
 
+   
+
+    statistics = calculate_statistics(x, y, Y_fit, n_components, period, lin_comp) 
+    statistics_params = {'values': means,
+                        'SE': se,
+                        'CI': (lower_CI, upper_CI),
+                        'p-values': p_values} 
 
 
-
-
-
-    X_test = np.linspace(0, 100, 1000)
-    X_fit_eval_params = generate_independents(X_test, n_components = n_components, period = period, lin_comp = lin_comp)
-    if lin_comp:
-        X_fit_eval_params[:,1] = 0    
-    Y_eval_params = results.predict(X_fit_eval_params)    
-    rhythm_params = evaluate_rhythm_params(X_test, Y_eval_params)
+    
     
     return params, statistics, statistics_params, rhythm_params, results
+
 
 def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True):
     """
