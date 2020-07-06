@@ -138,7 +138,7 @@ def plot_single(data, results, test='', plot_measurements=True, save_to='', plot
     color = "black"
         
     if plot_dense:
-        X_fit = np.linspace(min(X), max(X), 100)
+        X_fit = np.linspace(min(X), 100, 1000)
         
         rrr_fit= np.cos(2*np.pi*X_fit/period)
         sss_fit = np.sin(2*np.pi*X_fit/period)
@@ -175,7 +175,12 @@ def plot_single(data, results, test='', plot_measurements=True, save_to='', plot
     
     plt.plot(X_fit, Y_fit, color=color, label = test)    
     
-    plt.title(test+" p-value="+str(results.f_pvalue)+", period="+str(period))
+    if plot_measurements:
+        plt.axis([min(min(X),0), 1.1*max(max(X),period), 0.9*min(min(Y), min(Y_fit)), 1.1*max(max(Y), max(Y_fit))])
+    else:
+        plt.axis([min(X_test), 50, min(Y_test)*0.9, max(Y_test)*1.1])
+        
+    plt.title(test + ', p-value=' + "{0:.5f}".format(results.f_pvalue))
     
     if save_to:
         plt.savefig(save_to+'.pdf')

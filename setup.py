@@ -2,13 +2,13 @@ from distutils.core import setup
 setup(
   name = 'CosinorPy',
   packages = ['CosinorPy'],  
-  version = '0.13',      
+  version = '0.14',      
   license='MIT',        
   description = 'Python package for cosinor based rhytmomethry',   
   author = 'Miha Moskon',                   
   author_email = 'miha.moskon@fri.uni-lj.si',      
   url = 'https://github.com/mmoskon/CosinorPy',   
-  download_url = 'https://github.com/mmoskon/CosinorPy/archive/v_0.13.tar.gz',   
+  download_url = 'https://github.com/mmoskon/CosinorPy/archive/v_0.14.tar.gz',   
   keywords = ['cosinor', 'rhytmomethry', 'regression', 'bioinformatics'],  
   install_requires=[            
           'pandas',
