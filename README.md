@@ -1,6 +1,6 @@
 # CosinorPy
 
-CosinorPy presents a python package for cosinor based rhythmomethry. It is composed of three modules:
+CosinorPy presents a python package for cosinor based rhythmometry. It is composed of three modules:
 * [```file_parser```](docs/docs_file_parser.md): reading and writting xlsx or csv files and generating synthetic data
 
 * [```cosinor```](docs/docs_cosinor.md): single- or multi-component cosinor functions
