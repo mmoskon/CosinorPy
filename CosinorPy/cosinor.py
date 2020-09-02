@@ -987,7 +987,7 @@ def calculate_statistics(X, Y, Y_fit, n_components, period, lin_comp = False):
     N = Y.size
 
     F = (MSS/(n_params - 1)) / (RSS/(N - n_params)) 
-    p = 1 - stats.f.cdf(F, n_params - 1, N - n_params);
+    p = 1 - stats.f.cdf(F, n_params - 1, N - n_params)
     #print("p-value(Cornelissen): {}".format(p))
     
     # statistics of GOF according to Cornelissen (eqs (14) - (15))
@@ -1007,8 +1007,12 @@ def calculate_statistics(X, Y, Y_fit, n_components, period, lin_comp = False):
     #print('SSPE: ', SSPE)
     #print('SSLOF: ', SSLOF)
     if lin_comp:
-        F = (SSLOF/(n_T-1-(2*n_components + 1)))/(SSPE/(N-n_T))
-        p_reject = 1 - stats.f.cdf(F, n_T-1-(2*n_components + 1), N-n_T)
+        try:
+            F = (SSLOF/(n_T-1-(2*n_components + 1)))/(SSPE/(N-n_T))
+            p_reject = 1 - stats.f.cdf(F, n_T-1-(2*n_components + 1), N-n_T)
+        except:
+            F = np.nan
+            p_reject = np.nan    
     else:    
         try:
             F = (SSLOF/(n_T-1-2*n_components))/(SSPE/(N-n_T))
