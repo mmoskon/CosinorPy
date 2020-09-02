@@ -178,7 +178,7 @@ def plot_single(data, results, test='', plot_measurements=True, save_to='', plot
     if plot_measurements:
         plt.axis([min(min(X),0), 1.1*max(max(X),period), 0.9*min(min(Y), min(Y_fit)), 1.1*max(max(Y), max(Y_fit))])
     else:
-        plt.axis([min(X_test), 50, min(Y_test)*0.9, max(Y_test)*1.1])
+        plt.axis([min(X_fit), 50, min(Y_fit)*0.9, max(Y_fit)*1.1])
         
     plt.title(test + ', p-value=' + "{0:.5f}".format(results.f_pvalue))
     
