@@ -1,3 +1,10 @@
-.ipynb_checkpoints/
-CosinorPy/__pycache__
-.vscode/
+CosinorPy/__pycache__/
+*.py[cod]
+*$py.class
+
+dist/
+MANIFEST
+
+.ipynb_checkpoints
+
+.vscode
