@@ -351,7 +351,7 @@ def rescale_to_median(x, y):
 """
 EXPORT FOR COSINOR 2
 """  
-def export_cosinor2(input_file_name, output_file_name, period = 24, trim=True, diff=False, remove_outliers=False, rescale_median = False, remove_lin_comp = False):        
+def export_cosinor2(input_file_name, output_file_name, period = 24, trim=False, diff=False, remove_outliers=False, rescale_median = False, remove_lin_comp = False):        
     outputs = []
 
     xls_file = pd.ExcelFile(input_file_name)

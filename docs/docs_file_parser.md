@@ -44,6 +44,26 @@ Exports the measurements into a csv file.
 * ```file_name``` (```str```): name of the file
 * ```independent``` (```bool```, ```default=True```): if ```False``` replicates that are stored sepparately under names ```x_rep1```, ```x_rep2```, etc., are merged together to a single measurement group
 
+### ```file_parser.export_csv(df, file_name, independent = True)```
+Exports the measurements into a csv file.
+#### Parameters
+* ```df``` (```DataFrame```): with columns ```test```, ```x``` and ```y```
+* ```file_name``` (```str```): name of the file
+* ```independent``` (```bool```, ```default=True```): if ```False``` replicates that are stored sepparately under names ```x_rep1```, ```x_rep2```, etc., are merged together to a single measurement group
+
+### ```file_parser.export_cosinor2(input_file_name, output_file_name, period = 24, trim=False, diff=False, remove_outliers=False, rescale_median = False, remove_lin_comp = False)```
+Convert the xlsx file with the name `input_file_name` into an xlsx file with the name `output_file_name` that can be used in a combination with the population-mean cosinor tests implemented in the cosinor2 R package (see https://cran.r-project.org/web/packages/cosinor2/).
+#### Parameters
+* ```input_file_name``` (```str```): input file name (xlsx); see `file_parser.read_excel` for the description of required file formatting. 
+* ```output_file_name``` (```str```): name of the output file (xlsx).
+* ```period``` (```int```, ```default=24```): presumed period; only used if `remove_lin_comp` is set to `True`.
+* ```trim``` (```bool```, ```default=False```): if ```True``` first line of the file should include the times describing the interval of the measurement to include in the analysis; other measurement are removed; if the interval is set to [-1, -1] all measurement are included in the analysis.
+* ```diff``` (```bool```, ```default=False```): if ```True``` differentials of the measurement are calculated (e.g. to remove the accumulation of luminiscence)
+* ```remove_outliers``` (```bool```, ```default=False```): if ```True``` removes outliers.
+* ```rescale_median``` (```bool```, ```default=False```): if ```True``` timepoints with the same values within the same replicate are rescaled to an interval between the current timepoint and the next timepoint using the median values of each timepoint.
+* ```remove_lin_comp``` (```bool```, ```default=False```): if ```True``` linear component is identified and removed from the data.
+
+
 
 ### ```file_parser.generate_test_data(n_components=1, period = 24, amplitudes = 0, baseline = 0, phase = 0, min_time = 0, max_time = 48, time_step = 2, replicates = 1, independent = True, name="test", noise = 0)```
 Synthetic test-data generator.
