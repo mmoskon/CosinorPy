@@ -7,7 +7,7 @@ Reads the measurent from excel (xlsx) file. Each group of measurement (e.g., eac
 #### Parameters
 * ```file_name``` (```str```): name of the file
 * ```trim``` (```bool```, ```default=False```): if ```True``` first line of the file should include the times describing the interval of the measurement to include in the analysis; other measurement are removed; if the interval is set to [-1, -1] all measurement are included in the analysis.
-* ```diff``` (```bool```, ```default=False```): if ```True``` differentials of the measurement are calculated (e.g. to remove the accumulation of luminiscence)
+* ```diff``` (```bool```, ```default=False```): if ```True``` differentials of the measurement are calculated (e.g. to remove the accumulation of luminescence)
 * ```rescale_x``` (```bool```, ```default=False```): if ```True``` timepoints with the same values within the same replicate are rescaled to an interval between the current timepoint and the next timepoint.
 * ```independent``` (```bool```, ```default=True```): if ```False``` replicates are stored sepparately under names ```x_rep1```, ```x_rep2```, etc., where ```x``` corresponds to the current measurement.
 * ```remove_outliers``` (```bool```, ```default=False```): if ```True``` removes outliers.
@@ -58,7 +58,7 @@ Convert the xlsx file with the name `input_file_name` into an xlsx file with the
 * ```output_file_name``` (```str```): name of the output file (xlsx).
 * ```period``` (```int```, ```default=24```): presumed period; only used if `remove_lin_comp` is set to `True`.
 * ```trim``` (```bool```, ```default=False```): if ```True``` first line of the file should include the times describing the interval of the measurement to include in the analysis; other measurement are removed; if the interval is set to [-1, -1] all measurement are included in the analysis.
-* ```diff``` (```bool```, ```default=False```): if ```True``` differentials of the measurement are calculated (e.g. to remove the accumulation of luminiscence)
+* ```diff``` (```bool```, ```default=False```): if ```True``` differentials of the measurement are calculated (e.g. to remove the accumulation of luminescence)
 * ```remove_outliers``` (```bool```, ```default=False```): if ```True``` removes outliers.
 * ```rescale_median``` (```bool```, ```default=False```): if ```True``` timepoints with the same values within the same replicate are rescaled to an interval between the current timepoint and the next timepoint using the median values of each timepoint.
 * ```remove_lin_comp``` (```bool```, ```default=False```): if ```True``` linear component is identified and removed from the data.
