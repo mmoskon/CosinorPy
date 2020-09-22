@@ -110,14 +110,16 @@ def periodogram(X, Y, per_type='per', sampling_f = '', logscale = False, name = 
     elif per_type =='welch':
         # Welch
         f, Pxx_den = signal.welch(Y,sampling_f)
-    else:
+    elif per_type == 'lombscargle':
         # Lomb-Scargle
         min_per = 2
         #max_per = 50
         
         f = np.linspace(1/max_per, 1/min_per, 10)
         Pxx_den = signal.lombscargle(X, Y, f)
-        
+    else:
+        print("Invalid option")
+        return
         
 
     # significance
@@ -445,8 +447,11 @@ def generate_independents(X, n_components = 3, period = 24, lin_comp = False):
         X_fit = np.column_stack((A1, B1, A2, B2))        
     elif n_components == 3:
         X_fit = np.column_stack((A1, B1, A2, B2, A3, B3))        
-    else:
+    elif n_components == 4:
         X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4))
+    else:
+        print("Invalid option")
+        return
 
     if lin_comp and n_components:
         X_fit = np.column_stack((X, X_fit))
@@ -633,9 +638,13 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
     elif n_components == 3:
         X_fit = np.column_stack((A1, B1, A2, B2, A3, B3))
         X_fit_test = np.column_stack((A1_test, B1_test, A2_test, B2_test, A3_test, B3_test))
-    else:
+    elif n_components == 4:
         X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4))
         X_fit_test = np.column_stack((A1_test, B1_test, A2_test, B2_test, A3_test, B3_test, A4_test, B4_test))
+    else:
+        print("Invalid option")
+        return
+
     
     X_fit_eval_params = X_fit_test
     
@@ -671,7 +680,7 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
         model = statsmodels.discrete.count_model.ZeroInflatedNegativeBinomialP(Y,X_fit,p=2)
         #results = model.fit()
         results = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
-    else:
+    elif model_type == 'nb':
         #exposure = np.zeros(len(Y))
         #exposure[:] = np.mean(Y)
         #model = sm.GLM(Y, X_fit, family=sm.families.NegativeBinomial(), exposure = exposure)
@@ -680,6 +689,10 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
         else:
             model = sm.GLM(Y, X_fit, family=sm.families.NegativeBinomial())
         results = model.fit()
+    else:
+        print("Invalid option")
+        return
+
     
     if model_type =='gen_poisson':
         Y_fit = results.predict(X_fit)
@@ -1050,7 +1063,7 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
     N = Y.size
 
     F = (MSS/(n_params - 1)) / (RSS/(N - n_params)) 
-    p = 1 - stats.f.cdf(F, n_params - 1, N - n_params);
+    p = 1 - stats.f.cdf(F, n_params - 1, N - n_params)
     
     X_periodic = np.round_(X % period,2)                                    
     
@@ -1215,7 +1228,7 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
             X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A1_i, B1_i, A2_i, B2_i, A3_i, B3_i, H_i))
             #idx_params = [7, 8, 9, 10, 11, 12, 13]
             idx_params = [7, 8, 9, 10, 11, 12]
-    else:
+    elif n_components == 4:
         if non_rhythmic:
             X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4, H_i))
             idx_params = [9]
@@ -1223,6 +1236,10 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
             X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4, A1_i, B1_i, A2_i, B2_i, A3_i, B3_i, A4_i, B4_i, H_i))
             #idx_params = [9, 10, 11, 12, 13, 14, 15, 16, 17]
             idx_params = [9, 10, 11, 12, 13, 14, 15, 16]
+    else:
+        print("Invalid option")
+        return
+
            
         
     if lin_comp:
@@ -1254,7 +1271,7 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
         model = statsmodels.discrete.count_model.ZeroInflatedNegativeBinomialP(Y,X,p=2)
         #results = model.fit()
         results = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
-    else:
+    elif model_type == 'nb':
         #exposure = np.zeros(len(Y))
         #exposure[:] = np.mean(Y)
         #model = sm.GLM(Y, X, family=sm.families.NegativeBinomial(), exposure = exposure)
@@ -1263,6 +1280,10 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
         else:
             model = sm.GLM(Y, X, family=sm.families.NegativeBinomial())
         results = model.fit()
+    else:
+        print("Invalid option")
+        return
+
     
     
     """
@@ -1410,7 +1431,7 @@ def compare_pair(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components = 3, perio
             X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A1_i, B1_i, A2_i, B2_i, A3_i, B3_i, H_i))
             #idx_params = [7, 8, 9, 10, 11, 12, 13]
             idx_params = [7, 8, 9, 10, 11, 12]
-    else:
+    elif n_components == 4:
         if non_rhythmic:
             X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4, H_i))
             idx_params = [9]
@@ -1418,6 +1439,10 @@ def compare_pair(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components = 3, perio
             X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4, A1_i, B1_i, A2_i, B2_i, A3_i, B3_i, A4_i, B4_i, H_i))
             #idx_params = [9, 10, 11, 12, 13, 14, 15, 16, 17]
             idx_params = [9, 10, 11, 12, 13, 14, 15, 16]
+    else:
+        print("Invalid option")
+        return
+
            
     if lin_comp:
         X_fit = np.column_stack((X_i, X_fit))
@@ -1448,7 +1473,7 @@ def compare_pair(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components = 3, perio
         model = statsmodels.discrete.count_model.ZeroInflatedNegativeBinomialP(Y,X_fit,p=2)
         #results = model.fit()
         results = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
-    else:
+    elif model_type == 'nb':
         #exposure = np.zeros(len(Y))
         #exposure[:] = np.mean(Y)
         #model = sm.GLM(Y, X, family=sm.families.NegativeBinomial(), exposure = exposure)
@@ -1457,7 +1482,10 @@ def compare_pair(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components = 3, perio
         else:
             model = sm.GLM(Y, X_fit, family=sm.families.NegativeBinomial())
         results = model.fit()
-    
+    else:
+        print("Invalid option")
+        return
+
     
     """
     ###
@@ -1568,11 +1596,15 @@ def generate_independents_compare(X1, X2, n_components1 = 3, period1 = 24, n_com
             X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, H_i))            
         else:
             X_fit = np.column_stack((A1, B1, A2, B2, A3, B3))            
-    else:
+    elif n_components1 == 4:
         if non_rhythmic:
             X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4, H_i))            
         else:
             X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4))            
+    else:
+        print("Invalid option")
+        return
+
         
     if n_components2 == 1:
         if not non_rhythmic:
@@ -1583,9 +1615,13 @@ def generate_independents_compare(X1, X2, n_components1 = 3, period1 = 24, n_com
     elif n_components2 == 3:
         if not non_rhythmic:
             X_fit = np.column_stack((X_fit, np.column_stack((A1_i, B1_i, A2_i, B2_i, A3_i, B3_i, H_i))))
-    else:
+    elif n_components2 == 4:
         if not non_rhythmic:
             X_fit = np.column_stack((X_fit, np.column_stack((A1_i, B1_i, A2_i, B2_i, A3_i, B3_i, A4_i, B4_i, H_i))))
+    else:
+        print("Invalid option")
+        return
+
     if lin_comp:
         X_fit = np.column_stack((X_i, X_fit))
         X_fit = np.column_stack((X, X_fit))    
@@ -1643,12 +1679,16 @@ def compare_pair_extended(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components1 
             idx_params = [-1]
         else:
             X_fit = np.column_stack((A1, B1, A2, B2, A3, B3))            
-    else:
+    elif n_components1 == 4:
         if non_rhythmic:
             X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4, H_i))
             idx_params = [-1]
         else:
             X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4))            
+    else:
+        print("Invalid option")
+        return
+
         
     if n_components2 == 1:
         if not non_rhythmic:
@@ -1665,11 +1705,15 @@ def compare_pair_extended(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components1 
             X_fit = np.column_stack((X_fit, np.column_stack((A1_i, B1_i, A2_i, B2_i, A3_i, B3_i, H_i))))                                    
             #idx_params = [-7, -6, -5, -4, -3, -2, -1]
             idx_params = [-7, -6, -5, -4, -3, -2]
-    else:
+    elif n_components2 == 4:
         if not non_rhythmic:
             X_fit = np.column_stack((X_fit, np.column_stack((A1_i, B1_i, A2_i, B2_i, A3_i, B3_i, A4_i, B4_i, H_i))))
             #idx_params = [-9, -8, -7, -6, -5, -4, -3, -2, -1]
             idx_params = [-9, -8, -7, -6, -5, -4, -3, -2]
+    else:
+        print("Invalid option")
+        return
+
     if lin_comp:
         X_fit = np.column_stack((X_i, X_fit))
         X_fit = np.column_stack((X, X_fit))    
@@ -1697,7 +1741,7 @@ def compare_pair_extended(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components1 
         model = statsmodels.discrete.count_model.ZeroInflatedNegativeBinomialP(Y,X_fit,p=2)
         #results = model.fit()
         results = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
-    else:
+    elif model_type == 'nb':
         #exposure = np.zeros(len(Y))
         #exposure[:] = np.mean(Y)
         #model = sm.GLM(Y, X, family=sm.families.NegativeBinomial(), exposure = exposure)
@@ -1706,6 +1750,10 @@ def compare_pair_extended(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components1 
         else:
             model = sm.GLM(Y, X_fit, family=sm.families.NegativeBinomial())
         results = model.fit()
+    else:
+        print("Invalid option")
+        return
+
     
     
     """
@@ -1878,11 +1926,7 @@ def ct_test(count, poiss_results):
     return alpha       
 
 
-"""
-primerjava med rezimi:
-- ANOVA. Razmerje med variancami povprecij skupin in varianco na celotnem vzorcu.
-- Verjetno v redu, ce menjava rezima vpliva na amplitudo, ne pa, ce menjava vpliva na fazo ali periodo
-"""
+
 def compare_ANOVA(df, pairs, n_components = 3, period = 24):
     # https://pythonfordatascience.org/anova-python/
     # http://www.statistik.si/storitve/statisticne-analize-testi/anova-analiza-variance/
@@ -1931,8 +1975,6 @@ def test_phase(X1, Y1, X2, Y2, phase, period = 0, test1 = '', test2 = ''):
         X1 %= period
         X2 %= period
     
-    # test ali so variance enake - nasprotno od ANOVA
-    # t-test v vsaki tocki. V vseh tockah moras zavrniti hipotezo, da sta porazdelitvi razlicni
 
 
 def amp_phase_fit(predictor, Amp, Per, Phase, Base, dAmp, dPhase, dBase):
