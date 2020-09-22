@@ -11,7 +11,7 @@ To use these three modules include the following code in your python file:
 
 `from CosinorPy import file_parser, cosinor, cosinor1`
 
-CosinorPy can be used in a combination with different types of experimental data (e.g., qPCR data -- independent measurement, real-time luminescence data -- dependent measurements or even count data for which Poisson regression is used). Input data need to be formatted in accordance with the implementation of `file_parser` module (see [`file_parser`](docs/docs_file_parser.md)). This module implements several pre-processing functions that can be applied on the data, such as removal of outliers, removal of the accumulation of luminescence, removal of linear component in the measurements etc. Moreover, the user might as well preprocess the data with alternative methods, e.g., with the application of a lowpass filter. However, when collecting the data the user should follow the guideliness for circadian analyses as described in [1]. After the data has been imported, different types of analyses can be applied, which are described in the examples below. 
+CosinorPy can be used in a combination with different types of experimental data (e.g., qPCR data -- independent measurement, real-time luminescence data -- dependent measurements or even count data for which Poisson regression is used). Input data need to be formatted in accordance with the implementation of `file_parser` module (see [`file_parser`](docs/docs_file_parser.md)). This module implements several pre-processing functions that can be applied on the data, such as removal of outliers, removal of the accumulation of luminescence, removal of linear component in the measurements etc. Moreover, the user might as well preprocess the data with alternative methods, e.g., with the application of a lowpass filter. However, when collecting the data the user should follow the guideliness for circadian analyses as described in [1]. After the data has been imported, different types of analyses can be applied. These are described in the examples below. 
 
 ## Installation
 
@@ -25,6 +25,7 @@ Examples are given as interactive python notebook (ipynb) files:
 * [`demo_dependent.ipynb`](demo_dependent.ipynb): cosinor analysis of population (dependent) data
 * [`demo_csv.ipynb`](demo_csv.ipynb): reading from csv file 
 * [`demo_xlsx.ipynb`](demo_xlsx.ipynb): reading from xlsx file
+* [`multi_vs_single.ipynb`](multi_vs_single.ipynb): multi-component versus single-component cosinor model
 
 ## References
 
