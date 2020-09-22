@@ -68,13 +68,13 @@ Perform the basic Cosinor regression
 * tuple which includes
   * ```model```: if ```return_model``` was set to True
   * ```statistics```:
-   * `p`: significance of the model
-   * `p_reject`: goodness of fit of the model (only if `model_type='lin'`)
-   * `SNR`: signal to noise ratio (only if `model_type='lin'`)
-   * `RSS`: residual sum of squares 
-   * `resid_SE`: standard error of residuals (only if `model_type='lin'`)
-   * `ME`: margin of error (only if `model_type='lin'`)
-   * `count`: total sum of values within the measurements (only if `model_type!='lin'`)
+     * `p`: significance of the model
+     * `p_reject`: goodness of fit of the model (only if `model_type='lin'`)
+     * `SNR`: signal to noise ratio (only if `model_type='lin'`)
+     * `RSS`: residual sum of squares 
+     * `resid_SE`: standard error of residuals (only if `model_type='lin'`)
+     * `ME`: margin of error (only if `model_type='lin'`)
+     * `count`: total sum of values within the measurements (only if `model_type!='lin'`)
   * ```rhythm_params```: parameters describing the rhythmicity
   * ```X_test```: timepoints for additional plotting
   * ```Y_test```: measurement for additional plotting
