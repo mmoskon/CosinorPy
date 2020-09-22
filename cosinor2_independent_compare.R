@@ -86,4 +86,4 @@ p_d_acrophase <- c(t12_acr$global.test$p.value, t34_acr$global.test$p.value)
 res <- data.frame(test, amplitude1, p_amplitude1, amplitude2, p_amplitude2, d_amplitude, p_d_amplitude, acrophase1, p_acrophase1, acrophase2, p_acrophase2, d_acrophase, p_d_acrophase)
                   
                   
-write.csv(res, "test_data/cosinor2_independent_comparison.csv", row.names = FALSE)
+write.csv(res, "test_data/supp_table_6.csv", row.names = FALSE)

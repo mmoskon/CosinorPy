@@ -57,6 +57,6 @@ acrophase2 <- c(fit12[3,6], fit34[3,6])
 p_d_acrophase <- c(fit12[3,4], fit34[3,4])
 
 res <- data.frame(test, amplitude1, amplitude2, p_d_amplitude, acrophase1, acrophase2, p_d_acrophase)
-write.csv(res, "test_data/cosinor2_dependent_comparison.csv", row.names = FALSE)
+write.csv(res, "test_data/supp_table_8.csv", row.names = FALSE)
 
 
