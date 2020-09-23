@@ -900,7 +900,7 @@ def test_cosinor_pair(data, period):
     ind_Z_acr = diff_est_acr/np.sqrt(np.diag(diff_var_acr))
     interval_acr = np.array((diff_est_acr, diff_est_acr - 1.96 * np.sqrt(np.diag(diff_var_acr)), diff_est_acr + 1.96 * np.sqrt(np.diag(diff_var_acr))))
     df_acr = 1
-    global_p_value_acr = 1-stats.chi2.cdf(glob_chi_acr, df_amp)
+    global_p_value_acr = 1-stats.chi2.cdf(glob_chi_acr, df_acr)
     ind_p_value_acr = 2*norm.cdf(-abs(ind_Z_acr))
     
     
