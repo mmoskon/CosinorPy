@@ -5,6 +5,21 @@ library(magrittr)
 library(stringr)
 library(purrr)
 
+# the function cosinor.detect from cosinor2 package presumes a cosinor model with only 3-components: df1 is fixed to 2
+# here is a small correction that does not presume this (df1 should be set to 5 when doing comparison analyses)
+cdetect <- function(x, df1) {
+  
+  RSS<-sum((x$fit$residuals)^2)
+  MSS<-sum((x$fit$fitted.values-mean(x$fit$fitted.values+x$fit$residuals))^2)
+  Fvalue<-(MSS/df1)/(RSS/x$fit$df.residual)
+  pvalue<-pf(q=Fvalue,df1=df1,df2=x$fit$df.residual,lower.tail=F)
+  detection_test<-cbind(Fvalue,df1,x$fit$df.residual,pvalue)
+  colnames(detection_test)<-c("F","df1","df2","p")
+  
+  return(detection_test)  
+}
+
+
 options(stringsAsFactors=FALSE)
 
 file_name = "test_data/data.xlsx"
@@ -69,6 +84,8 @@ ps34 <- s34$p.value
 
 test <- c('test1 vs. test2', 'test3 vs. test4')
 
+p <- c(cdetect(fit12,5)[4], cdetect(fit34,5)[4])
+
 amplitude1 <- c(estimates12[3], estimates34[3])
 p_amplitude1 <- c(ps12[3], ps34[3])
 amplitude2 <- c(estimates12[4], estimates34[4])
@@ -83,7 +100,7 @@ p_acrophase2 <- c(ps12[6], ps34[6])
 d_acrophase <- acrophase2-acrophase1
 p_d_acrophase <- c(t12_acr$global.test$p.value, t34_acr$global.test$p.value)
 
-res <- data.frame(test, amplitude1, p_amplitude1, amplitude2, p_amplitude2, d_amplitude, p_d_amplitude, acrophase1, p_acrophase1, acrophase2, p_acrophase2, d_acrophase, p_d_acrophase)
+res <- data.frame(test, p, amplitude1, p_amplitude1, amplitude2, p_amplitude2, d_amplitude, p_d_amplitude, acrophase1, p_acrophase1, acrophase2, p_acrophase2, d_acrophase, p_d_acrophase)
                   
                   
 write.csv(res, "test_data/supp_table_6.csv", row.names = FALSE)
