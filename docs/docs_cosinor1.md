@@ -70,12 +70,12 @@ Perform the single-component population-mean cosinor analysis of differential ex
 #### Returns
 Dataframe containing the results.
 
-### `amplitude_detection(A, var, p = 0.05, alpha = 0.05)`
+### `amplitude_detection(A, var, p = 0.95, alpha = 0.05)`
 Approximates the minimal number of samples to obtain a statistically significant result for the zero amplitude test. The user must specify the presumed amplitude and residual variance.
 #### Parameters
 * `A`: presumed amplitude
 * `var`: presumed residual variance
-* `p`: threshold for statistical significance of the zero amplitude test
+* `p`: required probability of detecting nonzero amplitude (power of the test)
 * `alpha`: type I error probability 
 #### Returns
 Minimal number of samples (`int`).
