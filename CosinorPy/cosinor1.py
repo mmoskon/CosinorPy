@@ -3,11 +3,12 @@ import numpy as np
 import pandas as pd
 import statsmodels.formula.api as smf
 import matplotlib.pyplot as plt
-from scipy.stats import norm
+from scipy.stats import ncf, f, norm
 import scipy.stats as stats
 import statsmodels.stats.multitest as multi
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 import statsmodels.api as sm
+
 
 def prepare_df(X1, Y1, X2, Y2):
     H1 = np.zeros(X1.size)
@@ -928,4 +929,56 @@ def test_cosinor_pair(data, period):
     
     return results, statistics_raw, statistics_trans, global_test_amp, ind_test_amp, global_test_acr, ind_test_acr
                     
+
+# amplitude_detection: determines the minimal number of samples to obtain a statistically significant result for the zero amplitude test
+# A ... presumed amplitude
+# var ... residual variance
+# p ... threshold for statistical significance of the zero amplitude test
+# alpha ... type I error probability
+def amplitude_detection(A, var, p = 0.95, alpha = 0.05):
+
+    sigma2 = var
+    sigma = sigma2 ** 0.5
+    C = A/sigma
+
+    N = 4
     
+    while True:
+        lmbda = (N * C**2)/4       
+        f2 = f(2, N-3, 0).ppf(1-alpha)
+        F = 1-ncf(2,N-3,lmbda).cdf(f2)
+        if F >= p:
+            break
+        
+        N += 1
+        
+    return N
+
+# amplitude_confidence: determines the minimal number of samples to obtain a given length of the confidence interval for the estimated amplitude
+# L ... maximal acceptable length of the confidence interval
+# var ... residual variance
+# alpha ... 1-alpha = confidence level of the cofidence interval
+def amplitude_confidence(L, var, alpha = 0.05):
+    sigma2 = var
+    N = 8 * sigma2 * (norm.ppf(1-alpha/2)**2)/(L**2)
+    return int(np.ceil(N))
+
+# acrophase_confidence: determines the minimal number of samples to obtain a given length of the confidence interval for the estimated acrophase
+# L ... maximal acceptable length of the confidence interval
+# A_0 ... presumed minimal amplitude
+# var ... residual variance
+# alpha ... 1-alpha = confidence level of the cofidence interval
+def acrophase_confidence(L, A_0, var, alpha = 0.05):
+    sigma2 = var
+    #N = 8 * sigma2 * (norm.ppf(1-alpha/2)**2)/(L**2 * A_0**2) # approximation
+    N = (2 * norm.ppf(1-alpha/2)**2 * sigma2)/(A_0**2 * np.sin(L/2)**2) # accurate
+
+    return int(np.ceil(N))
+
+# acrophase_shift_detection: determines the minimal number of samples to detect a specific shift in the acrophase
+def acrophase_shift_detection(shift, A_0, var, alpha = 0.05):
+    L = 0.5*shift
+    return acrophase_confidence(L, A_0, var, alpha)    
+
+    
+

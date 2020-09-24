@@ -70,7 +70,7 @@ Perform the single-component population-mean cosinor analysis of differential ex
 #### Returns
 Dataframe containing the results.
 
-### `amplitude_detection(A, var, p = 0.95, alpha = 0.05)`
+### `cosinor1.amplitude_detection(A, var, p = 0.95, alpha = 0.05)`
 Approximates the minimal number of samples to obtain a statistically significant result for the zero amplitude test. The user must specify the presumed amplitude and residual variance.
 #### Parameters
 * `A`: presumed amplitude
@@ -80,7 +80,7 @@ Approximates the minimal number of samples to obtain a statistically significant
 #### Returns
 Minimal number of samples (`int`).
 
-### `amplitude_confidence(L, var, alpha = 0.05)`
+### `cosinor1.amplitude_confidence(L, var, alpha = 0.05)`
 Approximates the minimal number of samples to obtain a given length of the confidence interval for the estimated amplitude. The user must specify the maximal acceptable length of the confidence interval and presumed residual variance.
 #### Parameters
 * `L`: maximal acceptable length of the confidence interval
@@ -89,7 +89,7 @@ Approximates the minimal number of samples to obtain a given length of the confi
 #### Returns
 Minimal number of samples (`int`).
 
-### `acrophase_confidence(L, A_0, var, alpha = 0.05)`
+### `cosinor1.acrophase_confidence(L, A_0, var, alpha = 0.05)`
 Approximates the minimal number of samples to obtain a given length of the confidence interval for the estimated acrophase. The user must specify the maximal acceptable length of the confidence interval, presumed minimal amplitude, and presumed residual variance.
 #### Parameters
 * `L`: maximal acceptable length of the confidence interval
@@ -99,6 +99,14 @@ Approximates the minimal number of samples to obtain a given length of the confi
 #### Returns
 Minimal number of samples (`int`).
 
-
+### `cosinor1.acrophase_shift_detection(shift, A_0, var, alpha = 0.05)`
+Approximates the minimal number of samples to detect a given shift in the acrophase. The user must also specify the presumed minimal amplitude, and presumed residual variance.
+#### Parameters
+* `shift`: acrophase shift
+* `A_0`: presumed minimal amplitude
+* `var`: presumed residual variance
+* `alpha`: confidence level of the acrophase shift detection is specified by `1-alpha`
+#### Returns
+Minimal number of samples (`int`).
 
 
