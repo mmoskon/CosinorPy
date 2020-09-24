@@ -70,6 +70,34 @@ Perform the single-component population-mean cosinor analysis of differential ex
 #### Returns
 Dataframe containing the results.
 
+### `amplitude_detection(A, var, p = 0.05, alpha = 0.05)`
+Approximates the minimal number of samples to obtain a statistically significant result for the zero amplitude test. The user must specify the presumed amplitude and residual variance.
+#### Parameters
+* `A`: presumed amplitude
+* `var`: presumed residual variance
+* `p`: threshold for statistical significance of the zero amplitude test
+* `alpha`: type I error probability 
+#### Returns
+Minimal number of samples (`int`).
+
+### `amplitude_confidence(L, var, alpha = 0.05)`
+Approximates the minimal number of samples to obtain a given length of the confidence interval for the estimated amplitude. The user must specify the maximal acceptable length of the confidence interval and presumed residual variance.
+#### Parameters
+* `L`: maximal acceptable length of the confidence interval
+* `var`: presumed residual variance
+* `alpha`: confidence level of the cofidence interval is specified by `1-alpha`
+#### Returns
+Minimal number of samples (`int`).
+
+### `acrophase_confidence(L, A_0, var, alpha = 0.05)`
+Approximates the minimal number of samples to obtain a given length of the confidence interval for the estimated acrophase. The user must specify the maximal acceptable length of the confidence interval, presumed minimal amplitude, and presumed residual variance.
+#### Parameters
+* `L`: maximal acceptable length of the confidence interval
+* `A_0`: presumed minimal amplitude
+* `var`: presumed residual variance
+* `alpha`: confidence level of the cofidence interval is specified by `1-alpha`
+#### Returns
+Minimal number of samples (`int`).
 
 
 
