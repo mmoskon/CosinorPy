@@ -32,4 +32,4 @@ Examples are given as interactive python notebook (ipynb) files:
 
 [1] Hughes, Michael E., et al. "Guidelines for genome-scale analysis of biological rhythms." Journal of biological rhythms 32.5 (2017): 380-393.
 
-[2] Bingham, Christopher, et al. "Inferential statistical methods for estimating and comparing cosinor parameters." Chronobiologia 9.937(1982): 397-439.
+[2] Bingham, Christopher, et al. "Inferential statistical methods for estimating and comparing cosinor parameters." Chronobiologia 9.397(1982): 397-439.
