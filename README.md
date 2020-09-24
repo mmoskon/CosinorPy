@@ -11,7 +11,8 @@ To use these three modules include the following code in your python file:
 
 `from CosinorPy import file_parser, cosinor, cosinor1`
 
-CosinorPy can be used in a combination with different types of experimental data (e.g., qPCR data -- independent measurement, real-time luminescence data -- dependent measurements or even count data for which Poisson regression is used). Input data need to be formatted in accordance with the implementation of `file_parser` module (see [`file_parser`](docs/docs_file_parser.md)). This module implements several pre-processing functions that can be applied on the data, such as removal of outliers, removal of the accumulation of luminescence, removal of linear component in the measurements etc. Moreover, the user might as well preprocess the data with alternative methods, e.g., with the application of a lowpass filter. However, when collecting the data the user should follow the guideliness for circadian analyses as described in [1]. After the data has been imported, different types of analyses can be applied. These are described in the examples below. 
+CosinorPy can be used in a combination with different types of experimental data (e.g., qPCR data -- independent measurement, real-time luminescence data -- dependent measurements or even count data for which Poisson regression is used). Input data need to be formatted in accordance with the implementation of the `file_parser` module (see [`file_parser`](docs/docs_file_parser.md)). This module implements several pre-processing functions that can be applied to the data, such as removal of outliers, removal of the accumulation of luminescence, removal of a linear component in the measurements etc. Moreover, the user might as well preprocess the data with alternative methods, e.g., with the application of a lowpass filter. When collecting the data the user should follow the guideliness for circadian analyses as described in [1]. Moreover, before collecting the samples the user can approximate the minimal required sample size to obtain the required accuracy [2] (see `cosinor1.amplitude_detection`, `cosinor1.amplitude_confidence` and `cosinor1.acrophase_confidence`). After the data has been imported, different types of analyses can be applied. These are described in more details in the examples below.
+
 
 ## Installation
 
@@ -30,3 +31,4 @@ Examples are given as interactive python notebook (ipynb) files:
 ## References
 
 [1] Hughes, Michael E., et al. "Guidelines for genome-scale analysis of biological rhythms." Journal of biological rhythms 32.5 (2017): 380-393.
+[2] Bingham, Christopher, et al. "Inferential statistical methods for estimating and comparing cosinor parameters." Chronobiologia 9.937(1982): 397-439.
