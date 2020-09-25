@@ -64,7 +64,7 @@ for (i in 1:n_sheets) {
 }
 
 res <- data.frame(test, p, amplitude, LB_amplitude, UB_amplitude, acrophase, LB_acrophase, UB_acrophase)
-write.csv(res, "test_data/supp_table_7.csv", row.names = FALSE)
+write.csv(res, "supp_table_9.csv", row.names = FALSE)
 
 
 
