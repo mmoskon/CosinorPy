@@ -8,6 +8,7 @@ library(matrixStats)
 
 options(stringsAsFactors=FALSE)
 
+# the input file can be produced with the file_parser.export_cosinor2 function
 file_name = "test_data/dependent_data_cosinor2.xlsx"
 
 sheetNames <- getSheetNames(file_name)
