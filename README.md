@@ -22,7 +22,7 @@ CosinorPy can be installed using `pip` with the command:
 
 To install the software version described in [3], the following command should be issued:
 
-`pip install CosinorPy==1.0`
+`pip install CosinorPy==1.1`
 
 ## Examples
 Examples are given as interactive python notebook (ipynb) files:
