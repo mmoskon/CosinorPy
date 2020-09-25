@@ -32,7 +32,7 @@ Examples are given as interactive python notebook (ipynb) files:
 * [`demo_xlsx.ipynb`](demo_xlsx.ipynb): reading from xlsx file
 * [`multi_vs_single.ipynb`](multi_vs_single.ipynb): multi-component versus single-component cosinor model
 
-The repository as well includes R scripts, namely [`cosinor2_independent.R`](cosinor2_independent.R), [`cosinor2_independent_compare.R`](cosinor2_independent_compare.R), [`cosinor2_dependent.R`](cosinor2_dependent.R) and [`cosinor2_dependent_compare.R`](cosinor2_dependent_compare.R). These can be used to reproduce some of the results obtained with CosinorPy using cosinor and cosinor2 R packages.
+The repository as well includes the following R scripts: [`cosinor2_independent.R`](cosinor2_independent.R), [`cosinor2_independent_compare.R`](cosinor2_independent_compare.R), [`cosinor2_dependent.R`](cosinor2_dependent.R) and [`cosinor2_dependent_compare.R`](cosinor2_dependent_compare.R). These can be used to reproduce some of the results obtained with CosinorPy using cosinor and cosinor2 R packages.
 
 ## References
 
