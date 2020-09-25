@@ -938,13 +938,12 @@ def test_cosinor_pair(data, period):
 def amplitude_detection(A, var, p = 0.95, alpha = 0.05):
 
     sigma2 = var
-    sigma = sigma2 ** 0.5
-    C = A/sigma
+    C_2 = A**2/sigma2 
 
     N = 4
     
     while True:
-        lmbda = (N * C**2)/4       
+        lmbda = (N * C_2)/4       
         f2 = f(2, N-3, 0).ppf(1-alpha)
         F = 1-ncf(2,N-3,lmbda).cdf(f2)
         if F >= p:
