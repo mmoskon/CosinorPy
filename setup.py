@@ -8,7 +8,7 @@ setup(
   author = 'Miha Moskon',                   
   author_email = 'miha.moskon@fri.uni-lj.si',      
   url = 'https://github.com/mmoskon/CosinorPy',   
-  download_url = 'https://github.com/mmoskon/CosinorPy/archive/v_1.0.tar.gz',   
+  download_url = 'https://github.com/mmoskon/CosinorPy/archive/v1.0.tar.gz',   
   keywords = ['cosinor', 'rhytmometry', 'regression', 'bioinformatics'],  
   install_requires=[            
           'pandas',
