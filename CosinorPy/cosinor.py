@@ -672,14 +672,6 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
     elif model_type =='gen_poisson':
         model = statsmodels.discrete.discrete_model.GeneralizedPoisson(Y, X_fit)
         results = model.fit()
-    elif model_type == 'poisson_zeros':
-        model = statsmodels.discrete.count_model.ZeroInflatedPoisson(Y,X_fit, p=2)
-        #results = model.fit()
-        results = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
-    elif model_type == 'nb_zeros':
-        model = statsmodels.discrete.count_model.ZeroInflatedNegativeBinomialP(Y,X_fit,p=2)
-        #results = model.fit()
-        results = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
     elif model_type == 'nb':
         #exposure = np.zeros(len(Y))
         #exposure[:] = np.mean(Y)
@@ -694,16 +686,19 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
         return
 
     
-    if model_type =='gen_poisson':
-        Y_fit = results.predict(X_fit)
-    else:
+    if model_type =='lin':
         Y_fit = results.fittedvalues
+    else:
+        Y_fit = results.predict(X_fit)
+        
     
-    if model_type == 'lin':
+    if model_type in ['lin', 'poisson', 'nb']:
         statistics = calculate_statistics(X, Y, Y_fit, n_components, period, lin_comp)
+        if model_type in ['poisson', 'nb']:
+            statistics['count'] = np.sum(Y)                                
     else:
         RSS = sum((Y - Y_fit)**2)
-        p = results.llr_pvalue        
+        p = results.llr_pvalue
         statistics = {'p':p, 'RSS':RSS, 'count': np.sum(Y)}
     
     Y_test = results.predict(X_fit_test)
