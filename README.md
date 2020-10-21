@@ -44,4 +44,4 @@ Moškon, M. "CosinorPy: A Python Package for Cosinor-based Rhythmometry." BMC Bi
 
 [2] Bingham, Christopher, et al. "Inferential statistical methods for estimating and comparing cosinor parameters." Chronobiologia 9.4 (1982): 397-439.
 
-[3] Moškon, M. "CosinorPy: A Python Package for Cosinor-based Rhythmometry." BMC Bioinformatics (accepter for publication)
+[3] Moškon, M. "CosinorPy: A Python Package for Cosinor-based Rhythmometry." BMC Bioinformatics (accepted for publication)
