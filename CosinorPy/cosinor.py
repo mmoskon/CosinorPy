@@ -676,10 +676,25 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
         #exposure = np.zeros(len(Y))
         #exposure[:] = np.mean(Y)
         #model = sm.GLM(Y, X_fit, family=sm.families.NegativeBinomial(), exposure = exposure)
-        if alpha:
-            model = sm.GLM(Y, X_fit, family=sm.families.NegativeBinomial(alpha=alpha))
-        else:
-            model = sm.GLM(Y, X_fit, family=sm.families.NegativeBinomial())
+        
+        
+        # https://towardsdatascience.com/negative-binomial-regression-f99031bb25b4
+        if not alpha:
+            train_model = sm.GLM(Y, X_fit, family=sm.families.Poisson())
+            train_results = train_model.fit()
+
+            df_train = pd.DataFrame()
+            df_train['Y'] = Y
+            df_train['mu'] = train_results.mu
+            df_train['AUX_OLS_DEP'] = df_train.apply(lambda x: ((x['Y'] - x['mu'])**2 - x['Y']) / x['mu'], axis=1)
+            ols_expr = """AUX_OLS_DEP ~ mu - 1"""
+            aux_olsr_results = smf.ols(ols_expr, df_train).fit()
+
+            alpha=aux_olsr_results.params[0]
+            #print(alpha)
+
+        model = sm.GLM(Y, X_fit, family=sm.families.NegativeBinomial(alpha=alpha))
+        
         results = model.fit()
     else:
         print("Invalid option")
@@ -747,7 +762,10 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
                 mesor_CI = [rhythm_params['mesor']]
                 acrophase_CI = [rhythm_params['acrophase']]
                 
-                for i,p in enumerate(sample(list(itertools.product(*P)), N)):
+                param_samples = list(itertools.product(*P))
+                N = min(N, len(param_samples))
+                
+                for i,p in enumerate(sample(param_samples, N)):
                     res2.initialize(results.model, p)            
                     Y_test_CI = res2.predict(X_fit_test)
                     
