@@ -53,7 +53,7 @@ Perform the basic Cosinor regression
 * ```period```: period to fit
 * ```model_type```: by default linear model is used; if working with count data ```poisson```, ```gen_poisson``` (generalized Poisson) or ```nb```(negative binomial) can be specified.
 * ```lin_comp```: if ```True``` linear componet (y ~ x) will also be included in the model
-* ```alpha```: dispersion parameter - only with ```nb``` models
+* ```alpha```: dispersion parameter - only with ```nb``` models - if the parameter is omitted it is assessed using the basic Poisson model ([more](https://dius.com.au/2017/08/03/using-statsmodels-glms-to-model-beverage-consumption/#cameron))
 * ```name```: name to diplay
 * ```folder```: folder to which the files are stored; if empty plots will be displayed instead of stored
 * ```prefix```: prefix to the file names in which plots will be storedorms the fitting process on all measurement in the dataframe.
