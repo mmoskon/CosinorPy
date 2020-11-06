@@ -679,6 +679,7 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
         
         
         # https://towardsdatascience.com/negative-binomial-regression-f99031bb25b4
+        # https://dius.com.au/2017/08/03/using-statsmodels-glms-to-model-beverage-consumption/#cameron
         if not alpha:
             train_model = sm.GLM(Y, X_fit, family=sm.families.Poisson())
             train_results = train_model.fit()
