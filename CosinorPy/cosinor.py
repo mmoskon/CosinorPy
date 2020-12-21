@@ -1156,6 +1156,7 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, fo
                     d['param' + str(i+1)] = param
                     d['p' + str(i+1)] = p
                 
+                d['p(F test)'] = pvalues[-1]
                 
                 df_results = df_results.append(d, ignore_index=True)
   
@@ -1164,7 +1165,9 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, fo
     for i, (param, p) in enumerate(zip(params, pvalues)):        
         df_results['q'+str(i+1)] = multi.multipletests(df_results['p'+str(i+1)], method = 'fdr_bh')[1]
     
-    
+    df_results['q(F test)'] = multi.multipletests(df_results['p(F test)'], method = 'fdr_bh')[1]
+
+
     columns = df_results.columns
     columns = columns.sort_values()
     columns = np.delete(columns, np.where(columns == 'period'))
@@ -1271,6 +1274,10 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
     if model_type == 'lin':
         model = sm.OLS(Y, X_fit)
         results = model.fit()
+    else:
+        print("Invalid option")
+        return
+    """
     elif model_type == 'poisson':
         model = sm.GLM(Y, X, family=sm.families.Poisson())
         results = model.fit()
@@ -1294,12 +1301,8 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
         else:
             model = sm.GLM(Y, X, family=sm.families.NegativeBinomial())
         results = model.fit()
-    else:
-        print("Invalid option")
-        return
-
-    
-    
+    """
+   
     """
     ###
     # plot
@@ -1335,6 +1338,34 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
     
     #plt.plot(X1, Y_fit1, 'k', label = 'fit '+test1)    
     #plt.plot(X2, Y_fit2, 'r', label = 'fit '+test2)    
+
+    ### F-test
+    # for nested models
+    # using extra-sum-of-squares F test
+    # in a similar way as described in CYCLOPS
+    # https://www.pnas.org/content/114/20/5312#sec-8
+    # https://www.pnas.org/content/pnas/suppl/2017/04/20/1619320114.DCSupplemental/pnas.201619320SI.pdf?targetid=nameddest%3DSTXT
+
+    n_params_full = len(results.params)
+    n_params_small = n_params_full - len(idx_params) 
+    N = len(Y)
+
+    r_small = fit_me(X, Y, n_components, period, model_type, lin_comp, alpha)
+    RSS_small = r_small[1]['RSS']
+    RSS_full = sum((Y - Y_fit)**2)
+
+    DoF_small = N-n_params_small
+    DoF_full = N-n_params_full
+
+    """
+    print('RSS_small: ', RSS_small)
+    print('RSS_full: ', RSS_full)
+    print('n_small, dof: ', n_params_small, DoF_small)
+    print('n_full, dof: ', n_params_full, DoF_full)
+    """
+    p_f = compare_models(RSS_small, RSS_full, DoF_small, DoF_full)
+
+    
     
     ### plot with higher density
     
@@ -1378,8 +1409,10 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
         else:
             plt.show()
     
+
+    p_values = list(results.pvalues[idx_params]) + [p_f]
     
-    return (results.pvalues[idx_params], results.params[idx_params], results)
+    return (p_values, results.params[idx_params], results)
 
 
 def compare_pair(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components = 3, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False):

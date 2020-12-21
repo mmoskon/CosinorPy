@@ -144,7 +144,7 @@ Perform the LimoRhyde analysis of differential expression between the given pair
 * ```prefix```: prefix to the file names in which plots will be stored 
 * ```plot_measurements```: if True raw measurement are plotted
 #### Returns
-* dataframe with the results of comparison
+* dataframe with the results of comparison (include p values for each added parameter and p value for the F statistic - should the more complex model be accepted?)
 
 ### ```cosinor.compare_nonlinear(X1, Y1, X2, Y2, test1 = '', test2 = '', min_per = 18, max_per=36, compare_phase = False, compare_period = False, compare_amplitude = False, save_to = '', plot_residuals=False)```
 Perform the analysis of differential expression on the basis of non-linear cosinor model.
