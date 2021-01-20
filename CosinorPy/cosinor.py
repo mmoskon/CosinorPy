@@ -600,7 +600,7 @@ def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', li
     return params, statistics, statistics_params, rhythm_params, results
 
 
-def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True):
+def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False):
     """
     ###
     # prepare the independent variables
@@ -785,15 +785,24 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
         
         
         ###
-        if plot_measurements:                     
-            plt.plot(X,Y, 'ko', markersize=1, label = 'data')
+        if not color:
+            color = 'black'
+
+        if plot_measurements:        
+            if not hold:             
+                plt.plot(X,Y, 'ko', markersize=1, label = 'data', color=color)
+            else:
+                plt.plot(X,Y, 'ko', markersize=1, color=color)
         #plt.plot(X, results.fittedvalues, label = 'fit')
         
-        
-        if color and not plot_margins: 
+        if not hold:
             plt.plot(X_test, Y_test, 'k', label = 'fit', color=color)
         else:
-            plt.plot(X_test, Y_test, 'k', label = 'fit')
+            plt.plot(X_test, Y_test, 'k', label = name, color=color)
+        #if color and not plot_margins: 
+        #    plt.plot(X_test, Y_test, 'k', label = 'fit', color=color)
+        #else:
+        #    plt.plot(X_test, Y_test, 'k', label = 'fit')
         
         if plot_measurements:
             X = X % period
@@ -827,32 +836,32 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
         
 
         
-        
-        if save_to:
-            plt.savefig(save_to+'.png')
-            plt.savefig(save_to+'.pdf')
-            plt.close()
-        else:
-            plt.show()
-        if plot_residuals:
-            resid = results.resid
-            fig = sm.qqplot(resid)
-            plt.title(name)
+        if not hold:
             if save_to:
-                plt.savefig(save_to+'_resid.pdf', bbox_inches='tight')
-                plt.savefig(save_to+'_resid.png')                
+                plt.savefig(save_to+'.png')
+                plt.savefig(save_to+'.pdf')
                 plt.close()
             else:
                 plt.show()
-        
-        if plot_phase:
-            per = rhythm_params['period']
-            amp = rhythm_params['amplitude']
-            phase = rhythm_params['acrophase']
-            if save_to:
-                plot_phases([phase], [amp], [name], period=per, folder="\\".join(save_to.split("\\")[:-1]))
-            else:
-                plot_phases([phase], [amp], [name], period=per)
+            if plot_residuals:
+                resid = results.resid
+                fig = sm.qqplot(resid)
+                plt.title(name)
+                if save_to:
+                    plt.savefig(save_to+'_resid.pdf', bbox_inches='tight')
+                    plt.savefig(save_to+'_resid.png')                
+                    plt.close()
+                else:
+                    plt.show()
+            
+            if plot_phase:
+                per = rhythm_params['period']
+                amp = rhythm_params['amplitude']
+                phase = rhythm_params['acrophase']
+                if save_to:
+                    plot_phases([phase], [amp], [name], period=per, folder="\\".join(save_to.split("\\")[:-1]))
+                else:
+                    plot_phases([phase], [amp], [name], period=per)
 
     if return_model: 
         return results, statistics, rhythm_params, X_test, Y_test, model
@@ -1142,7 +1151,7 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, fo
                 else:
                     save_to = ''
                 
-                pvalues, params, results = compare_pair_df(df, test1, test2, n_components = n_comps, period = per, lin_comp = lin_comp, save_to = save_to, plot_measurements=plot_measurements)
+                pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, lin_comp = lin_comp, save_to = save_to, plot_measurements=plot_measurements)
                 
                 d = {}
                 d['test'] = test1 + ' vs. ' + test2
@@ -1178,6 +1187,71 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, fo
 
 
 
+
+
+
+def compare_pairs_best_models(df, df_best_models, pairs, lin_comp = False, folder = '', prefix = '', plot_measurements=True):
+    df_results = pd.DataFrame()
+    
+    for test1, test2 in pairs:
+        model1 = df_best_models[df_best_models["test"] == test1].iloc[0]
+        model2 = df_best_models[df_best_models["test"] == test2].iloc[0]
+    
+        n_components1 = model1.n_components
+        n_components2 = model2.n_components
+    
+        period1 = model1.period
+        period2 = model2.period
+
+
+        if n_components1 > n_components2:
+            test1, test2 = test2, test1
+            n_components1, n_components2 = n_components2, n_components1
+            period1, period2 = period2, period1
+
+
+        if folder:
+            save_to = folder + '\\' + prefix + test1 + '-' + test2 + '_per1=' + str(period1) + '_comps1=' + str(n_components1) + '_per1=' + str(period2) + '_comps1=' + str(n_components2)
+        else:
+            save_to = ''
+        
+        pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, lin_comp = lin_comp, save_to = save_to, plot_measurements=plot_measurements)
+        
+        d = {}
+        d['test'] = test1 + ' vs. ' + test2
+        d['period1'] = period1
+        d['n_components1'] = n_components1
+        d['period2'] = period2
+        d['n_components2'] = n_components2
+        for i, (param, p) in enumerate(zip(params, pvalues)):
+            d['param' + str(i+1)] = param
+            d['p' + str(i+1)] = p
+        
+        d['p(F test)'] = pvalues[-1]
+        
+        df_results = df_results.append(d, ignore_index=True)
+    
+        
+    
+    for i, (param, p) in enumerate(zip(params, pvalues)):        
+        df_results['q'+str(i+1)] = multi.multipletests(df_results['p'+str(i+1)], method = 'fdr_bh')[1]
+    
+    df_results['q(F test)'] = multi.multipletests(df_results['p(F test)'], method = 'fdr_bh')[1]
+
+
+    columns = df_results.columns
+    columns = columns.sort_values()
+    #columns = np.delete(columns, np.where(columns == 'period'))
+    #columns = np.append(['period'], columns)
+    #columns = np.append([columns[-1]], columns[:-1])
+    
+    df_results = df_results.reindex(columns, axis=1)
+    
+    return df_results
+
+    #return multi.multipletests(P, method = 'fdr_bh')[1]
+
+
 def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True):
     df_pair = df[(df.test == test1) | (df.test == test2)].copy()
     df_pair['h_i'] = 0
@@ -1207,7 +1281,7 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
         
     if non_rhythmic:
         X_fit = np.column_stack((X_fit, H_i))
-        idx_params = [2*n_components + 1]
+        idx_params = [-1]
     else:
         for i in range(n_components):
             n = i+1
@@ -1224,9 +1298,13 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
         # idx_params = [5, 6, 7, 8] # n = 2
         # idx_params = [7, 8, 9, 10, 11, 12] # n = 3
         # idx_params = [9, 10, 11, 12, 13, 14, 15, 16] # n = 4
-        strt = 2*n + 1
-        stp = strt + 2*n + 1
-        idx_params = np.arange(strt, stp)
+        
+        #strt = 2*n_components + 1
+        #stp = strt + 2*n_components + 1
+
+        strt = -2
+        stp = strt - 2*n_components - 1
+        idx_params = np.arange(strt, stp, -1)
 
 
            
@@ -1403,6 +1481,242 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
     
     return (p_values, results.params[idx_params], results)
 
+def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True):
+    n_components1 = n_components
+    period1 = period
+    if not n_components2:
+        n_components2 = n_components1
+    if not period2:
+        period2 = period1
+        
+    
+    df_pair = df[(df.test == test1) | (df.test == test2)].copy()
+    df_pair['h_i'] = 0
+    df_pair.loc[df_pair.test == test2, 'h_i'] = 1
+    
+    
+    X = df_pair.x
+    Y = df_pair.y
+    H_i = df_pair.h_i
+    
+    """
+    ###
+    # prepare the independent variables
+    ###
+    """
+    X_i = H_i * X 
+
+    for i in range(n_components1):
+        n = i+1
+
+        A = np.sin((X/(period1/n))*np.pi*2)        
+        B = np.cos((X/(period1/n))*np.pi*2) 
+        if not i:
+            X_fit = np.column_stack((A, B))        
+        else:
+            X_fit = np.column_stack((X_fit, np.column_stack((A, B))))
+        
+    if non_rhythmic:
+        X_fit = np.column_stack((X_fit, H_i))
+        idx_params = [-1]
+    else:
+        for i in range(n_components2):
+            n = i+1
+
+            A_i = H_i * np.sin((X/(period2/n))*np.pi*2)        
+            B_i = H_i * np.cos((X/(period2/n))*np.pi*2) 
+        
+               
+            X_fit = np.column_stack((X_fit, np.column_stack((A_i, B_i))))
+        
+        X_fit = np.column_stack((X_fit, H_i))
+        
+        # idx_params = [3, 4] # n = 1
+        # idx_params = [5, 6, 7, 8] # n = 2
+        # idx_params = [7, 8, 9, 10, 11, 12] # n = 3
+        # idx_params = [9, 10, 11, 12, 13, 14, 15, 16] # n = 4
+        
+        #strt = 2*n_components + 1
+        #stp = strt + 2*n_components + 1
+
+        strt = -2
+        stp = strt - 2*n_components2 - 1
+        idx_params = np.arange(strt, stp, -1)
+
+
+           
+        
+    if lin_comp:
+        X_fit = np.column_stack((X_i, X_fit))
+        X_fit = np.column_stack((X, X_fit))
+        idx_params = np.array(idx_params) + 2                                
+    
+    X_fit = sm.add_constant(X_fit, has_constant='add')
+
+    """
+    ###
+    # fit
+    ###
+    """       
+    if model_type == 'lin':
+        model = sm.OLS(Y, X_fit)
+        results = model.fit()
+    else:
+        print("Invalid option")
+        return
+    """
+    elif model_type == 'poisson':
+        model = sm.GLM(Y, X, family=sm.families.Poisson())
+        results = model.fit()
+    elif model_type =='gen_poisson':
+        model = statsmodels.discrete.discrete_model.GeneralizedPoisson(Y, X)
+        results = model.fit()
+    elif model_type == 'poisson_zeros':
+        model = statsmodels.discrete.count_model.ZeroInflatedPoisson(Y,X, p=2)
+        #results = model.fit()
+        results = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
+    elif model_type == 'nb_zeros':
+        model = statsmodels.discrete.count_model.ZeroInflatedNegativeBinomialP(Y,X,p=2)
+        #results = model.fit()
+        results = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
+    elif model_type == 'nb':
+        #exposure = np.zeros(len(Y))
+        #exposure[:] = np.mean(Y)
+        #model = sm.GLM(Y, X, family=sm.families.NegativeBinomial(), exposure = exposure)
+        if alpha:
+            model = sm.GLM(Y, X, family=sm.families.NegativeBinomial(alpha=alpha))
+        else:
+            model = sm.GLM(Y, X, family=sm.families.NegativeBinomial())
+        results = model.fit()
+    """
+   
+    """
+    ###
+    # plot
+    ###
+    """
+    
+    
+    ###
+    if plot_measurements:
+        plt.plot(df_pair[df_pair.test == test1].x, df_pair[df_pair.test == test1].y, 'ko', markersize=1, alpha = 0.75)
+        plt.plot(df_pair[df_pair.test == test2].x, df_pair[df_pair.test == test2].y, 'ro', markersize=1, alpha = 0.75)
+    #plt.plot(X, results.fittedvalues, label = 'fit')
+    
+    if model_type =='gen_poisson':
+        Y_fit = results.predict(X)
+    else:
+        Y_fit = results.fittedvalues
+    
+    
+    
+    X1 = X[H_i == 0]
+    #Y_fit1 = Y_fit[H_i == 0]
+    #L1 = list(zip(X1,Y_fit1))
+    #L1.sort()
+    #X1,Y_fit1 = list(zip(*L1))  
+    X2 = X[H_i == 1]
+    #Y_fit2 = Y_fit[H_i == 1]
+    #L2 = list(zip(X2,Y_fit2))
+    #L2.sort()
+    #X2,Y_fit2 = list(zip(*L2))  
+    
+    
+    
+    #plt.plot(X1, Y_fit1, 'k', label = 'fit '+test1)    
+    #plt.plot(X2, Y_fit2, 'r', label = 'fit '+test2)    
+
+    ### F-test
+    # for nested models
+    # using extra-sum-of-squares F test
+    # in a similar way as described in CYCLOPS
+    # https://www.pnas.org/content/114/20/5312#sec-8
+    # https://www.pnas.org/content/pnas/suppl/2017/04/20/1619320114.DCSupplemental/pnas.201619320SI.pdf?targetid=nameddest%3DSTXT
+
+    n_params_full = len(results.params)
+    n_params_small = n_params_full - len(idx_params) 
+    N = len(Y)
+
+    r_small = fit_me(X, Y, n_components, period, model_type, lin_comp, alpha, plot=False)
+    RSS_small = r_small[1]['RSS']
+    RSS_full = sum((Y - Y_fit)**2)
+
+    DoF_small = N-n_params_small
+    DoF_full = N-n_params_full
+
+    """
+    print('RSS_small: ', RSS_small)
+    print('RSS_full: ', RSS_full)
+    print('n_small, dof: ', n_params_small, DoF_small)
+    print('n_full, dof: ', n_params_full, DoF_full)
+    """
+    p_f = compare_models(RSS_small, RSS_full, DoF_small, DoF_full)
+
+    
+    
+    ### plot with higher density
+    
+    n_points = 1000
+    X_full = np.linspace(min(min(X1),min(X2)), max(max(X1), max(X2)), n_points)
+    
+    X_fit_full = generate_independents_compare(X_full, X_full, n_components1 = n_components1, period1 = period1, n_components2 = n_components2, period2 = period2, lin_comp= lin_comp)
+    
+    H_i = X_fit_full[:,-1]
+    locs = H_i == 0
+
+    #Y_fit_full = results.predict(X_fit_full)
+    #plt.plot(X_full, Y_fit_full[0:n_points], 'k', label = test1)    
+    #plt.plot(X_full, Y_fit_full[n_points:], 'r', label = test2)    
+    
+    Y_fit_full1 = results.predict(X_fit_full[locs])
+    Y_fit_full2 = results.predict(X_fit_full[~locs])
+
+    plt.plot(X_full, Y_fit_full1, 'k', label = test1)    
+    plt.plot(X_full, Y_fit_full2, 'r', label = test2)    
+    
+    if plot_margins:
+        sdev, lower, upper = wls_prediction_std(results, exog=X_fit_full[locs], alpha=0.05)
+        plt.fill_between(X_full, lower, upper, color='black', alpha=0.1)   
+        sdev, lower, upper = wls_prediction_std(results, exog=X_fit_full[~locs], alpha=0.05)
+        plt.fill_between(X_full, lower, upper, color='red', alpha=0.1)
+
+    
+    ### end of plot with higher density
+    
+    
+    #p = min(results.pvalues[idx_params])
+    #plt.title(test1 + ' vs. ' + test2 + ', p-value=' + "{0:.5f}".format(p))
+    plt.title(test1 + ' vs. ' + test2 + ', p-value=' + "{0:.5f}".format(p_f))
+    plt.xlabel('time [h]')
+    plt.ylabel('measurements')
+    plt.legend()
+    
+    #fig = plt.gcf()
+    #fig.set_size_inches(11,8)
+    
+    if save_to:
+        plt.savefig(save_to+'.png')
+        plt.savefig(save_to+'.pdf')
+        plt.close()
+    else:
+        plt.show()
+    
+    if plot_residuals:
+        
+        resid = results.resid
+        fig = sm.qqplot(resid)
+        plt.title(test1 + ' vs. ' + test2)
+        save_to_resid = save_to.split(".")[0] + '_resid' + save_to.split(".")[1]
+        if save_to:
+            plt.savefig(save_to_resid)
+            plt.close()
+        else:
+            plt.show()
+    
+
+    p_values = list(results.pvalues[idx_params]) + [p_f]
+    
+    return (p_values, results.params[idx_params], results)
 
 
 def compare_pair(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components = 3, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False):
@@ -1893,7 +2207,49 @@ def plot_df_models(df, df_models, plot_residuals=True, folder =""):
             fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = folder+'\\'+test+'_compnts='+str(n_components) +'_per=' + str(period), plot_residuals = plot_residuals)
         else:
             fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = "", plot_residuals = plot_residuals)
+
+
+def plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'], folder = ''):
     
+    
+    for T in tuples:
+        min_x = 1000
+        max_x = -1000
+        min_y = 1000
+        max_y = -1000
+
+
+        for test, color in zip(T, colors):
+            model = df_best_models[df_best_models["test"] == test].iloc[0]
+            n_components = model.n_components
+            period = model.period
+            X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)  
+
+            min_x = min(min(X), min_x)
+            max_x = max(max(X % period), max_x)
+            min_y = min(min(Y), min_y)
+            max_y = max(max(Y), max_y)
+
+            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = "", plot_residuals = False, hold=True, color = color)
+        
+        plt.title(" + ".join(T))
+        if folder:
+            save_to = folder+'\\'+"+".join(T)
+        else:
+            save_to = "+".join(T)
+
+                
+        plt.axis([min(min_x,0), max_x, 0.9*min_y, 1.1*max_y])
+
+
+        plt.legend()
+
+        plt.savefig(save_to+'.png')
+        plt.savefig(save_to+'.pdf')
+        plt.close()
+
+
+
 def plot_df_models_population(df, df_models, folder=""):
     for row in df_models.iterrows():
         pop = row[1].test
@@ -2246,4 +2602,5 @@ def compare_nonlinear(X1, Y1, X2, Y2, test1 = '', test2 = '', min_per = 18, max_
     
     return statistics, p_dict
     
+ 
  
