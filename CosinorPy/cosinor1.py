@@ -786,7 +786,7 @@ def test_cosinor_single(data, period = 24):
     b_r = (1 / (1 + (beta_s**2 / beta_r**2))) * (-beta_s / beta_r**2)
     b_s = (1 / (1 + (beta_s**2 / beta_r**2))) * (1 / beta_r)
     
-    jac = np.array([[a_r, a_s], [b_r, b_s]]) # preveri, če je tole ok
+    jac = np.array([[a_r, a_s], [b_r, b_s]]) 
     
     cov_trans = np.dot(np.dot(jac, indVmat), np.transpose(jac))
     se_trans_only =np.sqrt(np.diag(cov_trans))

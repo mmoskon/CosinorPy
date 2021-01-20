@@ -265,7 +265,7 @@ def plot_data_pairs(df, names, folder = '', prefix =''):
         else:
             plt.show()
 def fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], folder = '', prefix='', plot_measurements = True, plot = True):
-    df_results = pd.DataFrame(columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'RSS', 'R2', 'R2_adj', 'log-likelihood', 'period(est)', 'amplitude', 'acrophase', 'mesor'])
+    df_results = pd.DataFrame(columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'RSS', 'R2', 'R2_adj', 'log-likelihood', 'period(est)', 'amplitude', 'acrophase', 'mesor', 'peaks', 'heights'])
 
     if type(period) == int:
         period = [period]
@@ -304,7 +304,9 @@ def fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], f
                                             'period(est)': rhythm_param['period'],
                                             'amplitude': rhythm_param['amplitude'],
                                             'acrophase': rhythm_param['acrophase'],
-                                            'mesor': rhythm_param['mesor']}, ignore_index=True)
+                                            'mesor': rhythm_param['mesor'],
+                                            'peaks': rhythm_param['peaks'],
+                                            'heights': rhythm_param['heights']}, ignore_index=True)
                 if n_comps == 0:
                     break
     
@@ -604,46 +606,27 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
     # prepare the independent variables
     ###
     """
-    A1 = np.sin((X/period)*np.pi*2)
-    B1 = np.cos((X/period)*np.pi*2)
-    A2 = np.sin((X/(period/2))*np.pi*2)
-    B2 = np.cos((X/(period/2))*np.pi*2)
-    A3 = np.sin((X/(period/3))*np.pi*2)
-    B3 = np.cos((X/(period/3))*np.pi*2)
-    A4 = np.sin((X/(period/4))*np.pi*2)
-    B4 = np.cos((X/(period/4))*np.pi*2)
-
-
-
     X_test = np.linspace(0, 100, 1000)
-    A1_test = np.sin((X_test/period)*np.pi*2)
-    B1_test = np.cos((X_test/period)*np.pi*2)
-    A2_test = np.sin((X_test/(period/2))*np.pi*2)
-    B2_test = np.cos((X_test/(period/2))*np.pi*2)
-    A3_test = np.sin((X_test/(period/3))*np.pi*2)
-    B3_test = np.cos((X_test/(period/3))*np.pi*2)
-    A4_test = np.sin((X_test/(period/4))*np.pi*2)
-    B4_test = np.cos((X_test/(period/4))*np.pi*2)
-        
+
     if n_components == 0:
         X_fit = X
         X_fit_test = X_test
         lin_comp = True
-    elif n_components == 1:
-        X_fit = np.column_stack((A1, B1))
-        X_fit_test = np.column_stack((A1_test, B1_test))      
-    elif n_components == 2:
-        X_fit = np.column_stack((A1, B1, A2, B2))
-        X_fit_test = np.column_stack((A1_test, B1_test, A2_test, B2_test))                      
-    elif n_components == 3:
-        X_fit = np.column_stack((A1, B1, A2, B2, A3, B3))
-        X_fit_test = np.column_stack((A1_test, B1_test, A2_test, B2_test, A3_test, B3_test))
-    elif n_components == 4:
-        X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4))
-        X_fit_test = np.column_stack((A1_test, B1_test, A2_test, B2_test, A3_test, B3_test, A4_test, B4_test))
     else:
-        print("Invalid option")
-        return
+        for i in range(n_components):
+            n = i+1
+
+            A = np.sin((X/(period/n))*np.pi*2)
+            B = np.cos((X/(period/n))*np.pi*2)                
+            A_test = np.sin((X_test/(period/n))*np.pi*2)
+            B_test = np.cos((X_test/(period/n))*np.pi*2)
+
+            if not i:
+                X_fit = np.column_stack((A, B))
+                X_fit_test = np.column_stack((A_test, B_test))     
+            else:
+                X_fit = np.column_stack((X_fit, np.column_stack((A, B))))
+                X_fit_test = np.column_stack((X_fit_test, np.column_stack((A_test, B_test))))
 
     
     X_fit_eval_params = X_fit_test
@@ -813,12 +796,15 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
             plt.plot(X_test, Y_test, 'k', label = 'fit')
         
         if plot_measurements:
-            if model_type == 'lin':
-                plt.axis([min(min(X),0), 1.1*max(max(X),period), 0.9*min(min(Y), min(Y_test)), 1.1*max(max(Y), max(Y_test))])
+            X = X % period
+
+            if model_type == 'lin':               
+                #plt.axis([min(min(X),0), 1.1*max(max(X),period), 0.9*min(min(Y), min(Y_test)), 1.1*max(max(Y), max(Y_test))])
+                plt.axis([min(min(X),0), max(X), 0.9*min(min(Y), min(Y_test)), 1.1*max(max(Y), max(Y_test))])
             else:
                 plt.axis([min(min(X),0), max(X), 0.9*min(min(Y), min(Y_test)), 1.1*max(max(Y), max(Y_test))])
         else:
-            plt.axis([min(X_test), 50, min(Y_test)*0.9, max(Y_test)*1.1])
+            plt.axis([min(X_test), period, min(Y_test)*0.9, max(Y_test)*1.1])
         #plt.title(name + ', components=' + str(n_components) +' , period=' + str(period) + '\np-value=' + str(statistics['p']) + ', p-value(gof)=' + str(statistics['p_reject']))
         #plt.title(name + ', components=' + str(n_components) +' , period=' + str(period) + '\np-value=' + str(statistics['p']))
         if model_type == 'lin':
@@ -1000,8 +986,18 @@ def evaluate_rhythm_params(X,Y):
         ACROPHASE = phase_to_radians(PHASE, PERIOD)
     else:
         ACROPHASE = np.nan
+
     
-    return {'period':PERIOD, 'amplitude':AMPLITUDE, 'acrophase':ACROPHASE, 'mesor':MESOR}
+    # peaks and heights
+    Y = Y[X < 24]
+    X = X[X < 24]
+    locs, heights = signal.find_peaks(Y, height = MESOR)
+    heights = heights['peak_heights'] 
+
+    peaks = X[locs]
+    heights = Y[locs]
+    
+    return {'period':PERIOD, 'amplitude':AMPLITUDE, 'acrophase':ACROPHASE, 'mesor':MESOR, 'peaks': peaks, 'heights': heights }
     
 def calculate_statistics(X, Y, Y_fit, n_components, period, lin_comp = False):
     # statistics according to Cornelissen (eqs (8) - (9))
@@ -1182,7 +1178,7 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, fo
 
 
 
-def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False):
+def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True):
     df_pair = df[(df.test == test1) | (df.test == test2)].copy()
     df_pair['h_i'] = 0
     df_pair.loc[df_pair.test == test2, 'h_i'] = 1
@@ -1197,65 +1193,41 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
     # prepare the independent variables
     ###
     """
-    A1 = np.sin((X/period)*np.pi*2)
-    B1 = np.cos((X/period)*np.pi*2)
-    A2 = np.sin((X/(period/2))*np.pi*2)
-    B2 = np.cos((X/(period/2))*np.pi*2)
-    A3 = np.sin((X/(period/3))*np.pi*2)
-    B3 = np.cos((X/(period/3))*np.pi*2)
-    A4 = np.sin((X/(period/4))*np.pi*2)
-    B4 = np.cos((X/(period/4))*np.pi*2)
-   
-    
-    X_i = H_i * X              
-    A1_i = H_i * A1
-    B1_i = H_i * B1
-    A2_i = H_i * A2
-    B2_i = H_i * B2
-    A3_i = H_i * A3
-    B3_i = H_i * B3
-    A4_i = H_i * A4
-    B4_i = H_i * B4
-                  
-    if n_components == 1:
-        if non_rhythmic:
-            X_fit = np.column_stack((A1, B1, H_i))
-            idx_params = [3]
+    X_i = H_i * X 
+
+    for i in range(n_components):
+        n = i+1
+
+        A = np.sin((X/(period/n))*np.pi*2)        
+        B = np.cos((X/(period/n))*np.pi*2) 
+        if not i:
+            X_fit = np.column_stack((A, B))        
         else:
-            X_fit = np.column_stack((A1, B1, A1_i, B1_i, H_i))
-            idx_params = [3, 4, 5]
-            
-           
+            X_fit = np.column_stack((X_fit, np.column_stack((A, B))))
         
-    elif n_components == 2:        
-        if non_rhythmic:
-            X_fit = np.column_stack((A1, B1, A2, B2, H_i))
-            idx_params = [5]
-        else:
-            X_fit = np.column_stack((A1, B1, A2, B2, A1_i, B1_i, A2_i, B2_i, H_i))
-            #idx_params = [5, 6, 7, 8, 9]
-            idx_params = [5, 6, 7, 8]
-            
-                    
-    elif n_components == 3:
-        if non_rhythmic:
-            X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, H_i))
-            idx_params = [7]
-        else:
-            X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A1_i, B1_i, A2_i, B2_i, A3_i, B3_i, H_i))
-            #idx_params = [7, 8, 9, 10, 11, 12, 13]
-            idx_params = [7, 8, 9, 10, 11, 12]
-    elif n_components == 4:
-        if non_rhythmic:
-            X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4, H_i))
-            idx_params = [9]
-        else:
-            X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4, A1_i, B1_i, A2_i, B2_i, A3_i, B3_i, A4_i, B4_i, H_i))
-            #idx_params = [9, 10, 11, 12, 13, 14, 15, 16, 17]
-            idx_params = [9, 10, 11, 12, 13, 14, 15, 16]
+    if non_rhythmic:
+        X_fit = np.column_stack((X_fit, H_i))
+        idx_params = [2*n_components + 1]
     else:
-        print("Invalid option")
-        return
+        for i in range(n_components):
+            n = i+1
+
+            A_i = H_i * np.sin((X/(period/n))*np.pi*2)        
+            B_i = H_i * np.cos((X/(period/n))*np.pi*2) 
+        
+               
+            X_fit = np.column_stack((X_fit, np.column_stack((A_i, B_i))))
+        
+        X_fit = np.column_stack((X_fit, H_i))
+        
+        # idx_params = [3, 4] # n = 1
+        # idx_params = [5, 6, 7, 8] # n = 2
+        # idx_params = [7, 8, 9, 10, 11, 12] # n = 3
+        # idx_params = [9, 10, 11, 12, 13, 14, 15, 16] # n = 4
+        strt = 2*n + 1
+        stp = strt + 2*n + 1
+        idx_params = np.arange(strt, stp)
+
 
            
         
@@ -1312,8 +1284,8 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
     
     ###
     if plot_measurements:
-        plt.plot(df_pair[df_pair.test == test1].x, df_pair[df_pair.test == test1].y, 'ko', markersize=1)
-        plt.plot(df_pair[df_pair.test == test2].x, df_pair[df_pair.test == test2].y, 'ro', markersize=1)
+        plt.plot(df_pair[df_pair.test == test1].x, df_pair[df_pair.test == test1].y, 'ko', markersize=1, alpha = 0.75)
+        plt.plot(df_pair[df_pair.test == test2].x, df_pair[df_pair.test == test2].y, 'ro', markersize=1, alpha = 0.75)
     #plt.plot(X, results.fittedvalues, label = 'fit')
     
     if model_type =='gen_poisson':
@@ -1350,7 +1322,7 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
     n_params_small = n_params_full - len(idx_params) 
     N = len(Y)
 
-    r_small = fit_me(X, Y, n_components, period, model_type, lin_comp, alpha)
+    r_small = fit_me(X, Y, n_components, period, model_type, lin_comp, alpha, plot=False)
     RSS_small = r_small[1]['RSS']
     RSS_full = sum((Y - Y_fit)**2)
 
@@ -1373,16 +1345,33 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
     X_full = np.linspace(min(min(X1),min(X2)), max(max(X1), max(X2)), n_points)
     
     X_fit_full = generate_independents_compare(X_full, X_full, n_components1 = n_components, period1 = period, n_components2 = n_components, period2 = period, lin_comp= lin_comp)
-    Y_fit_full = results.predict(X_fit_full)
     
-    plt.plot(X_full, Y_fit_full[0:n_points], 'k', label = test1)    
-    plt.plot(X_full, Y_fit_full[n_points:], 'r', label = test2)    
+    H_i = X_fit_full[:,-1]
+    locs = H_i == 0
+
+    #Y_fit_full = results.predict(X_fit_full)
+    #plt.plot(X_full, Y_fit_full[0:n_points], 'k', label = test1)    
+    #plt.plot(X_full, Y_fit_full[n_points:], 'r', label = test2)    
+    
+    Y_fit_full1 = results.predict(X_fit_full[locs])
+    Y_fit_full2 = results.predict(X_fit_full[~locs])
+
+    plt.plot(X_full, Y_fit_full1, 'k', label = test1)    
+    plt.plot(X_full, Y_fit_full2, 'r', label = test2)    
+    
+    if plot_margins:
+        sdev, lower, upper = wls_prediction_std(results, exog=X_fit_full[locs], alpha=0.05)
+        plt.fill_between(X_full, lower, upper, color='black', alpha=0.1)   
+        sdev, lower, upper = wls_prediction_std(results, exog=X_fit_full[~locs], alpha=0.05)
+        plt.fill_between(X_full, lower, upper, color='red', alpha=0.1)
+
+    
     ### end of plot with higher density
     
     
-    p = min(results.pvalues[idx_params])
-    #plt.title(test1 + ' vs. ' + test2 + '\ncomponents=' + str(n_components) +' , period=' + str(period)+', p-value=' + str(p))
-    plt.title(test1 + ' vs. ' + test2 + ', p-value=' + "{0:.5f}".format(p))
+    #p = min(results.pvalues[idx_params])
+    #plt.title(test1 + ' vs. ' + test2 + ', p-value=' + "{0:.5f}".format(p))
+    plt.title(test1 + ' vs. ' + test2 + ', p-value=' + "{0:.5f}".format(p_f))
     plt.xlabel('time [h]')
     plt.ylabel('measurements')
     plt.legend()
@@ -1413,6 +1402,7 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
     p_values = list(results.pvalues[idx_params]) + [p_f]
     
     return (p_values, results.params[idx_params], results)
+
 
 
 def compare_pair(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components = 3, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False):
@@ -1601,73 +1591,46 @@ def compare_pair(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components = 3, perio
     
         
     return (results.pvalues[idx_params], results.params[idx_params], results)
-
+    
 def generate_independents_compare(X1, X2, n_components1 = 3, period1 = 24, n_components2 = 3, period2 = 24, lin_comp = False, non_rhythmic=False):
     H1 = np.zeros(X1.size)
     H2 = np.ones(X2.size)
     
     X = np.concatenate((X1, X2))
     H_i = np.concatenate((H1, H2))
-   
-    A1 = np.sin((X/period1)*np.pi*2)
-    B1 = np.cos((X/period1)*np.pi*2)
-    A2 = np.sin((X/(period1/2))*np.pi*2)
-    B2 = np.cos((X/(period1/2))*np.pi*2)
-    A3 = np.sin((X/(period1/3))*np.pi*2)
-    B3 = np.cos((X/(period1/3))*np.pi*2)
-    A4 = np.sin((X/(period1/4))*np.pi*2)
-    B4 = np.cos((X/(period1/4))*np.pi*2)
-    
     X_i = H_i * X
-    A1_i = H_i * np.sin((X/period2)*np.pi*2)
-    B1_i = H_i * np.cos((X/period2)*np.pi*2)
-    A2_i = H_i * np.sin((X/(period2/2))*np.pi*2)
-    B2_i = H_i * np.cos((X/(period2/2))*np.pi*2)
-    A3_i = H_i * np.sin((X/(period2/3))*np.pi*2)
-    B3_i = H_i * np.cos((X/(period2/3))*np.pi*2)
-    A4_i = H_i * np.sin((X/(period2/4))*np.pi*2)
-    B4_i = H_i * np.cos((X/(period2/4))*np.pi*2)
    
-    if n_components1 == 1:
-        if non_rhythmic:
-            X_fit = np.column_stack((A1, B1, H_i))            
-        else:
-            X_fit = np.column_stack((A1, B1))            
-    elif n_components1 == 2:        
-        if non_rhythmic:
-            X_fit = np.column_stack((A1, B1, A2, B2, H_i))            
-        else:
-            X_fit = np.column_stack((A1, B1, A2, B2))            
-    elif n_components1 == 3:
-        if non_rhythmic:
-            X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, H_i))            
-        else:
-            X_fit = np.column_stack((A1, B1, A2, B2, A3, B3))            
-    elif n_components1 == 4:
-        if non_rhythmic:
-            X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4, H_i))            
-        else:
-            X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4))            
-    else:
-        print("Invalid option")
-        return
 
+    for i in range(n_components1):
+        n = i+1
+
+        A = np.sin((X/(period1/n))*np.pi*2)        
+        B = np.cos((X/(period1/n))*np.pi*2) 
+        if not i:
+            X_fit = np.column_stack((A, B))        
+        else:
+            X_fit = np.column_stack((X_fit, np.column_stack((A, B))))
         
-    if n_components2 == 1:
-        if not non_rhythmic:
-            X_fit = np.column_stack((X_fit, np.column_stack((A1_i, B1_i, H_i))))            
-    elif n_components2 == 2:        
-        if not non_rhythmic:
-            X_fit = np.column_stack((X_fit, np.column_stack((A1_i, B1_i, A2_i, B2_i, H_i))))                                    
-    elif n_components2 == 3:
-        if not non_rhythmic:
-            X_fit = np.column_stack((X_fit, np.column_stack((A1_i, B1_i, A2_i, B2_i, A3_i, B3_i, H_i))))
-    elif n_components2 == 4:
-        if not non_rhythmic:
-            X_fit = np.column_stack((X_fit, np.column_stack((A1_i, B1_i, A2_i, B2_i, A3_i, B3_i, A4_i, B4_i, H_i))))
+    if non_rhythmic:
+        X_fit = np.column_stack((X_fit, H_i))                
     else:
-        print("Invalid option")
-        return
+        for i in range(n_components2):
+            n = i+1
+
+            A_i = H_i * np.sin((X/(period2/n))*np.pi*2)        
+            B_i = H_i * np.cos((X/(period2/n))*np.pi*2) 
+        
+               
+            X_fit = np.column_stack((X_fit, np.column_stack((A_i, B_i))))
+        
+        X_fit = np.column_stack((X_fit, H_i))
+        
+       
+        
+    if lin_comp:
+        X_fit = np.column_stack((X_i, X_fit))
+        X_fit = np.column_stack((X, X_fit))
+   
 
     if lin_comp:
         X_fit = np.column_stack((X_i, X_fit))
