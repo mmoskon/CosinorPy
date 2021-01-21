@@ -25,6 +25,9 @@ Plots the raw data pairs (two groups of measurement on the same plot).
 * ```folder```: folder to which the files are stored; if empty plots will be displayed instead of stored
 * ```prefix```: prefix to the file names in which plots will be stored
 
+### `plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'], folder = '')`
+Plots the tests (raw data and fits) from `tuples` into the same graph using the data from `df` and models from `df_best_models`. If more than two tests are given in `tuples` colors should be specified. 
+
 
 ### ```cosinor.plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green", "blue"), folder = "", prefix="", legend=True, CI_acrs = [], CI_amps = [], linestyles = [], title = "", labels = [])```
 Plots the phases in a polar coordinate system.
@@ -144,7 +147,13 @@ Perform the LimoRhyde analysis of differential expression between the given pair
 * ```prefix```: prefix to the file names in which plots will be stored 
 * ```plot_measurements```: if True raw measurement are plotted
 #### Returns
-* dataframe with the results of comparison (include p values for each added parameter and p value for the F statistic - should the more complex model be accepted?)
+* dataframe with the results of comparison. These include p values for each added parameter and p value for the F statistic - should the more complex model be accepted? In the plot, the latter value is reported.
+
+### `compare_pairs_best_models(df, df_best_models, pairs, lin_comp = False, folder = '', prefix = '', plot_measurements=True)`
+Compares pairs from `pairs` using the data from `df` and an optimal number of components from `df_best_models`.
+
+### `compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True)`
+Compare two tests from `pair` using `n_components` cosinor with period equal to `period`. If `n_components2` or `period2` are specified, using a different number of components and/or period for the second model. 
 
 ### ```cosinor.compare_nonlinear(X1, Y1, X2, Y2, test1 = '', test2 = '', min_per = 18, max_per=36, compare_phase = False, compare_period = False, compare_amplitude = False, save_to = '', plot_residuals=False)```
 Perform the analysis of differential expression on the basis of non-linear cosinor model.
