@@ -264,7 +264,7 @@ def plot_data_pairs(df, names, folder = '', prefix =''):
             plt.close()
         else:
             plt.show()
-def fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], folder = '', prefix='', plot_measurements = True, plot = True):
+def fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], folder = '', prefix='', plot_measurements = True, plot = True, x_label = "", y_label = ""):
     df_results = pd.DataFrame(columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'RSS', 'R2', 'R2_adj', 'log-likelihood', 'period(est)', 'amplitude', 'acrophase', 'mesor', 'peaks', 'heights'])
 
     if type(period) == int:
@@ -288,7 +288,7 @@ def fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], f
                 else:
                     save_to = ''
                 
-                results, statistics, rhythm_param, X_full, Y_full = fit_me(X, Y, n_components = n_comps, period = per, model_type = 'lin', lin_comp = lin_comp, name = test, save_to = save_to, plot_measurements = plot_measurements, plot=plot)
+                results, statistics, rhythm_param, X_full, Y_full = fit_me(X, Y, n_components = n_comps, period = per, model_type = 'lin', lin_comp = lin_comp, name = test, save_to = save_to, plot_measurements = plot_measurements, plot=plot, x_label = x_label, y_label = y_label)
             
                 df_results = df_results.append({'test': test, 
                                             'period': per,
@@ -490,7 +490,7 @@ def generate_independents(X, n_components = 3, period = 24, lin_comp = False):
     return X_fit
     """
     
-def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', lin_comp= False, plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = ''):
+def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', lin_comp= False, plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label=''):
  
     params = -1
 
@@ -521,7 +521,7 @@ def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', li
         max_Y = max(max_Y, np.max(y))
         
         
-        results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, model_type = model_type, lin_comp=lin_comp, plot = False, return_model = True, plot_phase=False)
+        results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, model_type = model_type, lin_comp=lin_comp, plot = False, return_model = True, plot_phase=False, x_label=x_label, y_label = y_label)
         if type(params) == int:
             params = results.params
         else:
@@ -628,7 +628,7 @@ def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', li
     return params, statistics, statistics_params, rhythm_params, results
 
 
-def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False):
+def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = ""):
     """
     ###
     # prepare the independent variables
@@ -854,8 +854,14 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
                 plt.title(name + ', p-value=' + '{0:.3f}'.format(statistics['p']) + ' (n='+str(statistics['count'])+ ')')            
             else:
                 plt.title('p-value=' + '{0:.3f}'.format(statistics['p']) + ' (n='+str(statistics['count'])+ ')')
-        plt.xlabel('Time [h]')
-        if model_type == 'lin':
+        if x_label:
+            plt.xlabel(x_label)
+        else:
+            plt.xlabel('Time [h]')
+        
+        if y_label:
+            plt.ylabel(y_label)
+        elif model_type == 'lin':
             plt.ylabel('Measurements')
         else:
             plt.ylabel('Count')
@@ -1280,7 +1286,7 @@ def compare_pairs_best_models(df, df_best_models, pairs, lin_comp = False, folde
     #return multi.multipletests(P, method = 'fdr_bh')[1]
 
 
-def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True):
+def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label='', y_label=''):
     df_pair = df[(df.test == test1) | (df.test == test2)].copy()
     df_pair['h_i'] = 0
     df_pair.loc[df_pair.test == test2, 'h_i'] = 1
@@ -1428,7 +1434,7 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
     n_params_small = n_params_full - len(idx_params) 
     N = len(Y)
 
-    r_small = fit_me(X, Y, n_components, period, model_type, lin_comp, alpha, plot=False)
+    r_small = fit_me(X, Y, n_components, period, model_type, lin_comp, alpha, plot=False, x_label = x_label, y_label = y_label)
     RSS_small = r_small[1]['RSS']
     RSS_full = sum((Y - Y_fit)**2)
 
@@ -1509,7 +1515,7 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
     
     return (p_values, results.params[idx_params], results)
 
-def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True):
+def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = ''):
     n_components1 = n_components
     period1 = period
     if not n_components2:
@@ -1665,7 +1671,7 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     n_params_small = n_params_full - len(idx_params) 
     N = len(Y)
 
-    r_small = fit_me(X, Y, n_components, period, model_type, lin_comp, alpha, plot=False)
+    r_small = fit_me(X, Y, n_components, period, model_type, lin_comp, alpha, plot=False, x_label = x_label, y_label = y_label)
     RSS_small = r_small[1]['RSS']
     RSS_full = sum((Y - Y_fit)**2)
 
@@ -2224,7 +2230,7 @@ def get_best_models(df, df_models, n_components = [1,2,3], lin_comp = False, cri
     
     return df_best
 
-def plot_df_models(df, df_models, plot_residuals=True, plot_phase = True, folder =""):
+def plot_df_models(df, df_models, plot_residuals=True, plot_phase = True, folder ="", x_label = '', y_label = ''):
     for row in df_models.iterrows():
         test = row[1].test
         n_components = row[1].n_components
@@ -2232,12 +2238,12 @@ def plot_df_models(df, df_models, plot_residuals=True, plot_phase = True, folder
         X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)   
         
         if folder:
-            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = folder+'\\'+test+'_compnts='+str(n_components) +'_per=' + str(period), plot_residuals = plot_residuals, plot_phase = plot_phase)
+            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = folder+'\\'+test+'_compnts='+str(n_components) +'_per=' + str(period), plot_residuals = plot_residuals, plot_phase = plot_phase, x_label = x_label, y_label = y_label)
         else:
-            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = "", plot_residuals = plot_residuals, plot_phase = plot_phase)
+            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = "", plot_residuals = plot_residuals, plot_phase = plot_phase, x_label = x_label, y_label = y_label)
 
 
-def plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'], folder = ''):
+def plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'], folder = '', x_label = '', y_label = ''):
     
     
     for T in tuples:
@@ -2258,7 +2264,7 @@ def plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'
             min_y = min(min(Y), min_y)
             max_y = max(max(Y), max_y)
 
-            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = "", plot_residuals = False, hold=True, color = color)
+            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = "", plot_residuals = False, hold=True, color = color, x_label = x_label, y_label = y_label)
         
         plt.title(" + ".join(T))
         if folder:
