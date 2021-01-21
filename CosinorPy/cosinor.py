@@ -425,12 +425,39 @@ def remove_lin_comp(X, Y, n_components = 1, period = 24):
     return X, Y
     
 
-
 def generate_independents(X, n_components = 3, period = 24, lin_comp = False):
     """
     ###
     # prepare the independent variables
     ###
+    """    
+
+    if n_components == 0:
+        X_fit = X       
+        lin_comp = True
+    else:
+        for i in range(n_components):
+            n = i+1
+
+            A = np.sin((X/(period/n))*np.pi*2)
+            B = np.cos((X/(period/n))*np.pi*2)                        
+
+            if not i:
+                X_fit = np.column_stack((A, B))            
+            else:
+                X_fit = np.column_stack((X_fit, np.column_stack((A, B))))                
+    if lin_comp and n_components:
+        X_fit = np.column_stack((X, X_fit))
+    
+    X_fit = sm.add_constant(X_fit, has_constant='add')
+    
+    return X_fit
+    
+    """
+    ###
+    # prepare the independent variables old
+    ###
+    """
     """
     A1 = np.sin((X/period)*np.pi*2)
     B1 = np.cos((X/period)*np.pi*2)
@@ -461,6 +488,7 @@ def generate_independents(X, n_components = 3, period = 24, lin_comp = False):
     X_fit = sm.add_constant(X_fit, has_constant='add')
     
     return X_fit
+    """
     
 def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', lin_comp= False, plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = ''):
  
