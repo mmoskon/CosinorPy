@@ -2224,7 +2224,7 @@ def get_best_models(df, df_models, n_components = [1,2,3], lin_comp = False, cri
     
     return df_best
 
-def plot_df_models(df, df_models, plot_residuals=True, folder =""):
+def plot_df_models(df, df_models, plot_residuals=True, plot_phase = True, folder =""):
     for row in df_models.iterrows():
         test = row[1].test
         n_components = row[1].n_components
@@ -2232,9 +2232,9 @@ def plot_df_models(df, df_models, plot_residuals=True, folder =""):
         X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)   
         
         if folder:
-            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = folder+'\\'+test+'_compnts='+str(n_components) +'_per=' + str(period), plot_residuals = plot_residuals)
+            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = folder+'\\'+test+'_compnts='+str(n_components) +'_per=' + str(period), plot_residuals = plot_residuals, plot_phase = plot_phase)
         else:
-            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = "", plot_residuals = plot_residuals)
+            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = "", plot_residuals = plot_residuals, plot_phase = plot_phase)
 
 
 def plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'], folder = ''):
