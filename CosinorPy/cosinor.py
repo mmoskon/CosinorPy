@@ -265,7 +265,7 @@ def plot_data_pairs(df, names, folder = '', prefix =''):
         else:
             plt.show()
 def fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], folder = '', prefix='', plot_measurements = True, plot = True, x_label = "", y_label = ""):
-    df_results = pd.DataFrame(columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'RSS', 'R2', 'R2_adj', 'log-likelihood', 'period(est)', 'amplitude', 'acrophase', 'mesor', 'peaks', 'heights'])
+    df_results = pd.DataFrame(columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'RSS', 'R2', 'R2_adj', 'log-likelihood', 'period(est)', 'amplitude', 'acrophase', 'mesor', 'peaks', 'heights', 'troughs', 'heights2'])
 
     if type(period) == int:
         period = [period]
@@ -306,7 +306,11 @@ def fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], f
                                             'acrophase': rhythm_param['acrophase'],
                                             'mesor': rhythm_param['mesor'],
                                             'peaks': rhythm_param['peaks'],
-                                            'heights': rhythm_param['heights']}, ignore_index=True)
+                                            'heights': rhythm_param['heights'],
+                                            'troughs': rhythm_param['troughs'],
+                                            'heights2': rhythm_param['heights2']
+                                            
+                                            }, ignore_index=True)
                 if n_comps == 0:
                     break
     
@@ -1030,7 +1034,7 @@ def evaluate_rhythm_params(X,Y):
     else:
         ACROPHASE = np.nan
 
-    
+
     # peaks and heights
     Y = Y[X < 24]
     X = X[X < 24]
@@ -1039,8 +1043,16 @@ def evaluate_rhythm_params(X,Y):
 
     peaks = X[locs]
     heights = Y[locs]
-    
-    return {'period':PERIOD, 'amplitude':AMPLITUDE, 'acrophase':ACROPHASE, 'mesor':MESOR, 'peaks': peaks, 'heights': heights }
+
+    Y2 = M - Y    
+    locs2, heights2 = signal.find_peaks(Y2, height = MESOR-m)
+    heights2 = heights2['peak_heights'] 
+
+    troughs = X[locs2]
+    heights2 = Y[locs2]
+
+
+    return {'period':PERIOD, 'amplitude':AMPLITUDE, 'acrophase':ACROPHASE, 'mesor':MESOR, 'peaks': peaks, 'heights': heights, 'troughs': troughs, 'heights2': heights2}
     
 def calculate_statistics(X, Y, Y_fit, n_components, period, lin_comp = False):
     # statistics according to Cornelissen (eqs (8) - (9))
