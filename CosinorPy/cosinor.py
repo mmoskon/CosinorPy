@@ -12,6 +12,7 @@ from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from scipy.stats import t
 from scipy.optimize import curve_fit
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
+from scipy.stats import percentileofscore
 
 import copy
 import itertools
@@ -630,6 +631,159 @@ def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', li
     
     
     return params, statistics, statistics_params, rhythm_params, results
+
+
+"""
+generate random permutations of two populations
+"""
+def generate_permutations(n_pop1, n_pop2, N):
+    n = n_pop1 + n_pop2
+    permutations = []
+    
+    for _ in range(N):
+        R = np.random.permutation(n)
+        permutations.append((R[:n_pop1], R[n_pop1:]))
+
+    return permutations
+
+"""
+generate all possible permutations of two populations. Presumption: populations should be of equal sizes.
+"""
+def generate_permutations_all(pop1, pop2):
+    n_pop1 = len(pop1)
+    n_pop2 = len(pop2)
+
+    permutations = set()
+
+    full = set(pop1 + pop2)
+
+    for i in range(1,n_pop1):
+        p1 = itertools.combinations(pop1,i)
+        p2 = itertools.combinations(pop2,n_pop1-i)
+
+        #print(list(p1))
+        #print(list(p2))
+
+        X = list(itertools.product(p1,p2))
+
+        # flatten
+        for i in range(len(X)):
+            X[i] = [a for b in X[i] for a in b]
+
+        for x in X:
+            x.sort()
+            y = list(set(full)-set(x))
+            y.sort()
+            z = [tuple(x), tuple(y)]
+            z.sort()
+            permutations.add(tuple(z))
+
+
+    return(permutations)
+
+"""
+Permutation test - does not work as well as it should. The problem: both populations in a permutation need to be rhythmic to assess the differences.
+"""
+def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_comp = False):#, N=10=, permutations=[]):
+    
+    
+    df_results = pd.DataFrame(columns = ['pair', "d_amp", "p_d_amp", "d_acr", "p_d_acr", "d_mesor", "p_d_mesor"])
+
+    for pair in pairs:
+
+        
+
+        df_pop1 = df[df.test.str.startswith(pair[0])] 
+        df_pop2 = df[df.test.str.startswith(pair[1])] 
+
+        _, statistics1, _, rhythm_params1, _ = population_fit(df_pop1, n_components = n_components, period = period, model_type = 'lin', lin_comp= lin_comp, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
+        _, statistics2, _, rhythm_params2, _ = population_fit(df_pop2, n_components = n_components, period = period, model_type = 'lin', lin_comp= lin_comp, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
+
+        p1, amplitude1, acrophase1, mesor1 = statistics1['p'], rhythm_params1['amplitude'], rhythm_params1['acrophase'], rhythm_params1['mesor']
+        p2, amplitude2, acrophase2, mesor2 = statistics2['p'], rhythm_params2['amplitude'], rhythm_params2['acrophase'], rhythm_params2['mesor']
+
+        if p1 > 0.05 or p2 > 0.05:
+            print(pair, "rhythmicity in one is not significant")
+            continue
+
+        d_amp = abs(amplitude1 - amplitude2)
+        d_acr = abs(acrophase1 - acrophase2)
+        d_mesor = abs(mesor1 - mesor2)
+        amps, acrs, mesors = [d_amp], [d_acr], [d_mesor]
+
+        tests1 = list(df_pop1.test.unique())
+        tests2 = list(df_pop2.test.unique())
+        n_pop1 = len(tests1)
+        n_pop2 = len(tests2)
+
+        #print(tests1)
+        #print(tests2)
+
+        tests = np.array(tests1 + tests2)
+
+        """
+        if not permutations:            
+            permutations = []
+            permutations_idxs = generate_permutations(n_pop1, n_pop2, N)
+            for perm1, perm2 in permutations_idxs:
+                permutations.append((tests[perm1], tests[perm2]))
+        """
+        permutations = generate_permutations_all(tests1, tests2)
+
+        #print(permutations)
+
+        for perm1, perm2 in permutations:
+            df_test1 = df[df.test.isin(perm1)]
+            df_test2 = df[df.test.isin(perm2)]
+
+            _, statistics_test1, _, rhythm_params_test1, _ = population_fit(df_test1, n_components = n_components, period = period, model_type = 'lin', lin_comp= lin_comp, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
+            _, statistics_test2, _, rhythm_params_test2, _ = population_fit(df_test2, n_components = n_components, period = period, model_type = 'lin', lin_comp= lin_comp, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
+
+            p_test1, amplitude_test1, acrophase_test1, mesor_test1 = statistics_test1['p'], rhythm_params_test1['amplitude'], rhythm_params_test1['acrophase'], rhythm_params_test1['mesor']
+            p_test2, amplitude_test2, acrophase_test2, mesor_test2 = statistics_test2['p'], rhythm_params_test2['amplitude'], rhythm_params_test2['acrophase'], rhythm_params_test2['mesor']
+
+            if p_test1 <= 0.05 and p_test2 <= 0.05:
+                d_amp_test = abs(amplitude_test1 - amplitude_test2)
+                d_acr_test = abs(acrophase_test1 - acrophase_test2)
+                d_mesor_test = abs(mesor_test1 - mesor_test2)
+            else:
+                d_amp_test, d_acr_test, d_mesor_test = 0, 0, 0
+
+           
+
+            amps.append(d_amp_test)
+            acrs.append(d_acr_test)
+            mesors.append(d_mesor_test)
+        
+
+        #print(amps)
+        #print(acrs)
+        #print(mesors)
+
+       
+        
+        p_d_amp = 1 - percentileofscore(amps, d_amp, 'rank')/100
+        p_d_acr = 1 - percentileofscore(acrs, d_acr, 'rank')/100
+        p_d_mesor = 1 - percentileofscore(mesors, d_mesor, 'rank')/100
+
+        #print(p_d_amp, p_d_acr, p_d_mesor)
+
+        d = {"pair": tuple(pair),
+             "d_amp": d_amp, 
+             "p_d_amp": p_d_amp, 
+             "d_acr": d_acr, 
+             "p_d_acr": p_d_acr, 
+             "d_mesor": d_mesor, 
+             "p_d_mesor": p_d_mesor}
+        
+        df_results = df_results.append(d, ignore_index=True)
+
+
+    return df_results
+
+                      
+                                           
+
 
 
 def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = ""):
