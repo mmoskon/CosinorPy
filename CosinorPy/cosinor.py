@@ -321,7 +321,7 @@ def fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], f
     
     return df_results
 
-def population_fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], folder = '', prefix='', plot_measurements = True):
+def population_fit_group(df, n_components = 2, period = 24, model_type="lin", lin_comp = False, alpha = 0, names = [], folder = '', prefix='', plot_measurements = True):
     df_results = pd.DataFrame(columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'RSS', 'period(est)', 'amplitude', 'acrophase', 'mesor'])
 
     if type(period) == int:
@@ -346,9 +346,9 @@ def population_fit_group(df, n_components = 2, period = 24, lin_comp = False, na
                 df_pop = df[df.test.str.startswith(name)]   
 
                 if folder:
-                    params, statistics, statistics_params, rhythm_params, results = population_fit(df_pop, n_components = n_comps, period = per, lin_comp= lin_comp, save_to=folder+'\\'+prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per))
+                    params, statistics, statistics_params, rhythm_params, results = population_fit(df_pop, n_components = n_comps, period = per, model_type = model_type, lin_comp= lin_comp, alpha = alpha, save_to=folder+'\\'+prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per))
                 else:
-                    params, statistics, statistics_params, rhythm_params, results = population_fit(df_pop, n_components = n_comps, period = per, lin_comp= lin_comp, plot_on = True)
+                    params, statistics, statistics_params, rhythm_params, results = population_fit(df_pop, n_components = n_comps, period = per, model_type = model_type, lin_comp= lin_comp, alpha = alpha, plot_on = True)
                     
                             
                 df_results = df_results.append({'test': name, 
@@ -495,7 +495,7 @@ def generate_independents(X, n_components = 3, period = 24, lin_comp = False):
     return X_fit
     """
     
-def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', lin_comp= False, plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label=''):
+def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', lin_comp= False, alpha=0, plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label=''):
  
     params = -1
 
@@ -526,7 +526,7 @@ def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', li
         max_Y = max(max_Y, np.max(y))
         
         
-        results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, model_type = model_type, lin_comp=lin_comp, plot = False, return_model = True, plot_phase=False, x_label=x_label, y_label = y_label)
+        results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, model_type = model_type, lin_comp=lin_comp, alpha=alpha, plot = False, return_model = True, plot_phase=False, x_label=x_label, y_label = y_label)
         if type(params) == int:
             params = results.params
         else:
@@ -846,10 +846,10 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
         #exposure[:] = np.mean(Y)
         #model = sm.GLM(Y, X_fit, family=sm.families.NegativeBinomial(), exposure = exposure)
         
-        
         # https://towardsdatascience.com/negative-binomial-regression-f99031bb25b4
         # https://dius.com.au/2017/08/03/using-statsmodels-glms-to-model-beverage-consumption/#cameron
         if not alpha:
+            
             train_model = sm.GLM(Y, X_fit, family=sm.families.Poisson())
             train_results = train_model.fit()
 
@@ -2245,7 +2245,7 @@ def plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'
 
 
 
-def plot_df_models_population(df, df_models, folder=""):
+def plot_df_models_population(df, df_models, folder="", model_type="lin"):
     for row in df_models.iterrows():
         pop = row[1].test
         n_components = row[1].n_components
@@ -2256,7 +2256,7 @@ def plot_df_models_population(df, df_models, folder=""):
             save_to = folder+'\\'+pop+'_pop_compnts='+str(n_components) +'_per=' + str(period)
         else:
             save_to = ""
-        population_fit(df_pop, n_components = n_components, period = period, save_to = save_to)
+        population_fit(df_pop, n_components = n_components, period = period, model_type = model_type, save_to = save_to)
 
 def compare_models(RSS1, RSS2, DF1, DF2):
     if DF2 < DF1:
