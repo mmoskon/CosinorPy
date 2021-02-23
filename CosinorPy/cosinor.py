@@ -1332,7 +1332,7 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
 primerjava med rezimi:
 - LymoRhyde (Singer:2019)
 """
-def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, folder = '', prefix = '', plot_measurements=True):
+def compare_pairs(df, pairs, n_components = 3, period = 24, model_type = 'lin', lin_comp = False, alpha=0, folder = '', prefix = '', plot_measurements=True):
     
     df_results = pd.DataFrame()
 
@@ -1351,7 +1351,7 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, fo
                 else:
                     save_to = ''
                 
-                pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, lin_comp = lin_comp, save_to = save_to, plot_measurements=plot_measurements)
+                pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, model_type = model_type, lin_comp = lin_comp, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
                 
                 d = {}
                 d['test'] = test1 + ' vs. ' + test2
@@ -1390,7 +1390,7 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, fo
 
 
 
-def compare_pairs_best_models(df, df_best_models, pairs, lin_comp = False, folder = '', prefix = '', plot_measurements=True):
+def compare_pairs_best_models(df, df_best_models, pairs, model_type = 'lin', lin_comp = False, alpha = 0, folder = '', prefix = '', plot_measurements=True):
     df_results = pd.DataFrame()
     
     for test1, test2 in pairs:
@@ -1415,7 +1415,7 @@ def compare_pairs_best_models(df, df_best_models, pairs, lin_comp = False, folde
         else:
             save_to = ''
         
-        pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, lin_comp = lin_comp, save_to = save_to, plot_measurements=plot_measurements)
+        pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, model_type = model_type, lin_comp = lin_comp, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
         
         d = {}
         d['test'] = test1 + ' vs. ' + test2
@@ -1681,7 +1681,9 @@ def compare_pair_df(df, test1, test2, n_components = 3, period = 24, lin_comp = 
     
     return (p_values, results.params[idx_params], results)
 
-def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = ''):
+
+
+def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, model_type = 'lin', lin_comp = False, alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = ''):
     n_components1 = n_components
     period1 = period
     if not n_components2:
@@ -1761,9 +1763,33 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     if model_type == 'lin':
         model = sm.OLS(Y, X_fit)
         results = model.fit()
+    elif model_type == 'poisson':
+        model = sm.GLM(Y, X_fit, family=sm.families.Poisson())
+        results = model.fit()
+    elif model_type =='gen_poisson':
+        model = statsmodels.discrete.discrete_model.GeneralizedPoisson(Y, X_fit)
+        results = model.fit()
+    elif model_type == 'nb':
+        if not alpha:
+            train_model = sm.GLM(Y, X_fit, family=sm.families.Poisson())
+            train_results = train_model.fit()
+
+            df_train = pd.DataFrame()
+            df_train['Y'] = Y
+            df_train['mu'] = train_results.mu
+            df_train['AUX_OLS_DEP'] = df_train.apply(lambda x: ((x['Y'] - x['mu'])**2 - x['Y']) / x['mu'], axis=1)
+            ols_expr = """AUX_OLS_DEP ~ mu - 1"""
+            aux_olsr_results = smf.ols(ols_expr, df_train).fit()
+
+            alpha=aux_olsr_results.params[0]
+            #print(alpha)
+
+        model = sm.GLM(Y, X_fit, family=sm.families.NegativeBinomial(alpha=alpha))
+        
+        results = model.fit()
     else:
         print("Invalid option")
-        return
+        return    
     """
     elif model_type == 'poisson':
         model = sm.GLM(Y, X, family=sm.families.Poisson())
@@ -1803,10 +1829,11 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
         plt.plot(df_pair[df_pair.test == test2].x, df_pair[df_pair.test == test2].y, 'ro', markersize=1, alpha = 0.75)
     #plt.plot(X, results.fittedvalues, label = 'fit')
     
-    if model_type =='gen_poisson':
-        Y_fit = results.predict(X)
+    if model_type =='lin':
+        Y_fit = results.fittedvalues        
     else:
-        Y_fit = results.fittedvalues
+        Y_fit = results.predict(X_fit)
+        
     
     
     
@@ -1874,7 +1901,7 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     plt.plot(X_full, Y_fit_full1, 'k', label = test1)    
     plt.plot(X_full, Y_fit_full2, 'r', label = test2)    
     
-    if plot_margins:
+    if model_type == 'lin' and plot_margins:
         sdev, lower, upper = wls_prediction_std(results, exog=X_fit_full[locs], alpha=0.05)
         plt.fill_between(X_full, lower, upper, color='black', alpha=0.1)   
         sdev, lower, upper = wls_prediction_std(results, exog=X_fit_full[~locs], alpha=0.05)
