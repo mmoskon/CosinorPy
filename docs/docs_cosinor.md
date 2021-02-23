@@ -83,7 +83,7 @@ Perform the basic Cosinor regression
   * `Y_test`: measurement for additional plotting
 
 
-### `cosinor.population_fit(df, n_components = 2, period = 24, lin_comp = False, names = [], folder = '', prefix='', plot_measurements = True)`
+### `cosinor.population_fit(df, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0,names = [], folder = '', prefix='', plot_measurements = True)`
 Population fit (accordign to Cornelissen). For parameters and returns see `cosinor_fit.fit_me`
 
 
@@ -102,7 +102,7 @@ Perform the multi-component cosinor fit to the measurement in the dataframe. Cal
 #### Returns
 * dataframe with statistics and parameters of each fit
 
-### `cosinor.population_fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], folder = '', prefix='', plot_measurements = True)`
+### `cosinor.population_fit_group(df, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, names = [], folder = '', prefix='', plot_measurements = True)`
 Perform the multi-component population-mean cosinor fit to the measurements in the dataframe. Parameters and returns are the same as in `cosinor.fit_group`. Calls `cosinor.population_fit`.
 
 ### `cosinor.get_best_fits(df_results, criterium = 'R2_adj', reverse = False, n_components = [])`
