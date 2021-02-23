@@ -136,7 +136,7 @@ Plots the given models with the given data.
 ### `cosinor.plot_df_models_population(df, df_models, plot_residuals=True, folder ="")`
 Plots the given population-mean models with the given data.
 
-### `cosinor.compare_pairs(df, pairs, n_components = 3, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, , folder = '', prefix = '', plot_measurements=True)`
+### `cosinor.compare_pairs(df, pairs, n_components = 3, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, folder = '', prefix = '', plot_measurements=True)`
 Perform the LimoRhyde analysis of differential expression between the given pairs of measurements.
 #### Parameters
 * `df`: pandas dataframe of measurements
