@@ -593,7 +593,7 @@ def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', li
     
         
 
-    if plot_on and plot_margins:
+    if plot_on and plot_margins and model_type=='lin':
         sdev, lower, upper = wls_prediction_std(results, exog=X_fit_eval_params, alpha=0.05)
         plt.fill_between(X_test, lower, upper, color='#888888', alpha=0.1)                   
     
