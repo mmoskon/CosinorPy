@@ -8,7 +8,7 @@ import scipy.stats as stats
 import statsmodels.stats.multitest as multi
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 import statsmodels.api as sm
-
+import os
 
 def prepare_df(X1, Y1, X2, Y2):
     H1 = np.zeros(X1.size)
@@ -331,7 +331,8 @@ def population_fit_group(df, period = 24, save_folder='', plot_on=True):
         df_pop = df[df.test.str.startswith(name)] 
         
         if save_folder:
-            save_to = save_folder+"\\pop_"+name+'.pdf'
+            #save_to = save_folder+"\\pop_"+name+'.pdf'
+            save_to = os.path.join(save_folder,"pop_"+name+'.pdf')
         else:
             save_to = ""
 
@@ -638,7 +639,8 @@ def fit_group(df, period = 24, save_folder='', plot_on=True):
         x, y = df[df.test == test].x, df[df.test == test].y
         for per in period:
             if save_folder:
-                fit_results, amp, acr, statistics = fit_cosinor(x, y, per, test=test, save_to=save_folder+"\\"+test+"_"+str(per)+".pdf",  plot_on = plot_on)
+                #fit_results, amp, acr, statistics = fit_cosinor(x, y, per, test=test, save_to=save_folder+"\\"+test+"_"+str(per)+".pdf",  plot_on = plot_on)
+                fit_results, amp, acr, statistics = fit_cosinor(x, y, per, test=test, save_to=os.path.join(save_folder,test+"_"+str(per)+".pdf"),  plot_on = plot_on)
             else:
                 fit_results, amp, acr, statistics = fit_cosinor(x, y, per, test=test, plot_on = plot_on)
             if acr <0:
@@ -702,7 +704,8 @@ def test_cosinor_pairs(df, pairs, period = 24, folder = '', prefix='', plot_meas
     
     for test1, test2 in pairs:    
         if folder:
-            save_to = folder +'\\'+prefix+ test1 + '-' + test2
+            #save_to = folder +'\\'+prefix+ test1 + '-' + test2
+            save_to = os.path.join(folder,prefix+ test1 + '-' + test2)
         else:
             save_to = ''
         

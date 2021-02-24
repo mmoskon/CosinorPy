@@ -18,6 +18,9 @@ import copy
 import itertools
 from matplotlib.lines import Line2D
 from random import sample
+
+import os
+
 def plot_components(X, Y, n_components = 3, period = 24, name = '', save_to = ''):
     
     A = np.sin((X/period)*np.pi*2)
@@ -73,12 +76,13 @@ def plot_components(X, Y, n_components = 3, period = 24, name = '', save_to = ''
     
 def periodogram_df(df, per_type='per', sampling_f = '', logscale = False, name = '', folder = '', prominent = False, max_per = 240):
     names = list(df.test.unique())
-    names.sort()
+    names.sort()  
 
     for name in names:
         x, y = np.array(df[df.test == name].x), np.array(df[df.test == name].y)
         if folder:
-            save_to = folder + "\\per_" + name
+            #save_to = folder + "\\per_" + name
+            save_to = os.path.join(folder, "per_" + name)            
         else:
             save_to = ""
 
@@ -240,9 +244,14 @@ def plot_data(df, names = [], folder = '', prefix = ''):
         
        
         if folder:
-            plt.savefig(folder+'\\'+prefix+test+'.png')
-            plt.savefig(folder+'\\'+prefix+test+'.pdf')
+
             
+            #plt.savefig(folder+'\\'+prefix+test+'.png')
+            #plt.savefig(folder+'\\'+prefix+test+'.pdf')
+            plt.savefig(os.path.join(folder, prefix+test+'.png'))
+            plt.savefig(os.path.join(folder, prefix+test+'.pdf'))
+            
+
             plt.close()
         else:
             plt.show()
@@ -260,8 +269,11 @@ def plot_data_pairs(df, names, folder = '', prefix =''):
         plt.title(test1 + ' vs. ' + test2)
        
         if folder:
-            plt.savefig(folder+'\\'+prefix+test1+'_'+test2+'.png')
-            plt.savefig(folder+'\\'+prefix+test1+'_'+test2+'.pdf')
+            #plt.savefig(folder+'\\'+prefix+test1+'_'+test2+'.png')
+            #plt.savefig(folder+'\\'+prefix+test1+'_'+test2+'.pdf')
+            plt.savefig(os.path.join(folder,prefix+test1+'_'+test2+'.png'))
+            plt.savefig(os.path.join(folder,prefix+test1+'_'+test2+'.pdf'))
+
             plt.close()
         else:
             plt.show()
@@ -285,7 +297,8 @@ def fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], f
                     per = 100000
                 X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)        
                 if folder:
-                    save_to = folder+'\\'+prefix+test+'_compnts='+str(n_comps) +'_per=' + str(per)
+                    #save_to = folder+'\\'+prefix+test+'_compnts='+str(n_comps) +'_per=' + str(per)
+                    save_to = os.path.join(folder,prefix+test+'_compnts='+str(n_comps) +'_per=' + str(per))
                 else:
                     save_to = ''
                 
@@ -346,7 +359,8 @@ def population_fit_group(df, n_components = 2, period = 24, model_type="lin", li
                 df_pop = df[df.test.str.startswith(name)]   
 
                 if folder:
-                    params, statistics, statistics_params, rhythm_params, results = population_fit(df_pop, n_components = n_comps, period = per, model_type = model_type, lin_comp= lin_comp, alpha = alpha, save_to=folder+'\\'+prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per))
+                    #params, statistics, statistics_params, rhythm_params, results = population_fit(df_pop, n_components = n_comps, period = per, model_type = model_type, lin_comp= lin_comp, alpha = alpha, save_to=folder+'\\'+prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per))
+                    params, statistics, statistics_params, rhythm_params, results = population_fit(df_pop, n_components = n_comps, period = per, model_type = model_type, lin_comp= lin_comp, alpha = alpha, save_to=os.path.join(folder,prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per)))
                 else:
                     params, statistics, statistics_params, rhythm_params, results = population_fit(df_pop, n_components = n_comps, period = per, model_type = model_type, lin_comp= lin_comp, alpha = alpha, plot_on = True)
                     
@@ -1051,7 +1065,9 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
                 amp = rhythm_params['amplitude']
                 phase = rhythm_params['acrophase']
                 if save_to:
-                    plot_phases([phase], [amp], [name], period=per, folder="\\".join(save_to.split("\\")[:-1]))
+                    folder = os.path.join(*os.path.split(save_to)[:-1])                    
+                    #plot_phases([phase], [amp], [name], period=per, folder="\\".join(save_to.split("\\")[:-1]))
+                    plot_phases([phase], [amp], [name], period=per, folder=folder)
                 else:
                     plot_phases([phase], [amp], [name], period=per)
 
@@ -1158,8 +1174,10 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
             plt.legend(lines, tests, bbox_to_anchor=(1.0, 1), loc='upper left', borderaxespad=0., frameon=False)
         #ax.legend()
     if folder:
-        plt.savefig(folder+"\\"+prefix+name+"_phase.pdf")
-        plt.savefig(folder+"\\"+prefix+name+"_phase.png")
+        #plt.savefig(folder+"\\"+prefix+name+"_phase.pdf")
+        #plt.savefig(folder+"\\"+prefix+name+"_phase.png")
+        plt.savefig(os.path.join(folder,prefix+name+"_phase.pdf"))
+        plt.savefig(os.path.join(folder,prefix+name+"_phase.png"))
         plt.close()
     else:
         plt.show()
@@ -1347,7 +1365,8 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, model_type = 'lin', 
         for per in period:
             for n_comps in n_components:                                
                 if folder:
-                    save_to = folder + '\\' + prefix + test1 + '-' + test2 + '_per=' + str(per) + '_comps=' + str(n_comps)
+                    #save_to = folder + '\\' + prefix + test1 + '-' + test2 + '_per=' + str(per) + '_comps=' + str(n_comps)
+                    save_to = os.path.join(folder,prefix + test1 + '-' + test2 + '_per=' + str(per) + '_comps=' + str(n_comps))
                 else:
                     save_to = ''
                 
@@ -1411,7 +1430,8 @@ def compare_pairs_best_models(df, df_best_models, pairs, model_type = 'lin', lin
 
 
         if folder:
-            save_to = folder + '\\' + prefix + test1 + '-' + test2 + '_per1=' + str(period1) + '_comps1=' + str(n_components1) + '_per1=' + str(period2) + '_comps1=' + str(n_components2)
+            #save_to = folder + '\\' + prefix + test1 + '-' + test2 + '_per1=' + str(period1) + '_comps1=' + str(n_components1) + '_per1=' + str(period2) + '_comps1=' + str(n_components2)
+            save_to = os.path.join(folder, prefix + test1 + '-' + test2 + '_per1=' + str(period1) + '_comps1=' + str(n_components1) + '_per1=' + str(period2) + '_comps1=' + str(n_components2))
         else:
             save_to = ''
         
@@ -2199,7 +2219,8 @@ def plot_df_models(df, df_models, plot_residuals=True, plot_phase = True, folder
         X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)   
         
         if folder:
-            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = folder+'\\'+test+'_compnts='+str(n_components) +'_per=' + str(period), plot_residuals = plot_residuals, plot_phase = plot_phase, x_label = x_label, y_label = y_label)
+            #fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = folder+'\\'+test+'_compnts='+str(n_components) +'_per=' + str(period), plot_residuals = plot_residuals, plot_phase = plot_phase, x_label = x_label, y_label = y_label)
+            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = os.path.join(folder,test+'_compnts='+str(n_components) +'_per=' + str(period)), plot_residuals = plot_residuals, plot_phase = plot_phase, x_label = x_label, y_label = y_label)
         else:
             fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = "", plot_residuals = plot_residuals, plot_phase = plot_phase, x_label = x_label, y_label = y_label)
 
@@ -2229,7 +2250,8 @@ def plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'
         
         plt.title(" + ".join(T))
         if folder:
-            save_to = folder+'\\'+"+".join(T)
+            #save_to = folder+'\\'+"+".join(T)
+            save_to = os.path.join(folder,"+".join(T))
         else:
             save_to = "+".join(T)
 
@@ -2253,7 +2275,8 @@ def plot_df_models_population(df, df_models, folder="", model_type="lin"):
         #X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)  
         df_pop = df[df.test.str.startswith(pop)]
         if folder:
-            save_to = folder+'\\'+pop+'_pop_compnts='+str(n_components) +'_per=' + str(period)
+            #save_to = folder+'\\'+pop+'_pop_compnts='+str(n_components) +'_per=' + str(period)
+            save_to = os.path.join(folder, pop+'_pop_compnts='+str(n_components) +'_per=' + str(period))
         else:
             save_to = ""
         population_fit(df_pop, n_components = n_components, period = period, model_type = model_type, save_to = save_to)
@@ -2368,7 +2391,8 @@ def compare_phase_pairs(df, pairs, min_per = 18, max_per = 36, folder = '', pref
 
     for test1, test2 in pairs: 
         if folder:
-            save_to = folder + '\\' + prefix + test1 + '-' + test2
+            #save_to = folder + '\\' + prefix + test1 + '-' + test2
+            save_to = os.path.join(folder, prefix + test1 + '-' + test2)
         else:
             save_to = ''
         
@@ -2420,7 +2444,8 @@ def compare_nonlinear_pairs(df, pairs, min_per = 18, max_per = 36, folder = '', 
 
     for test1, test2 in pairs: 
         if folder:
-            save_to = folder + '\\' + prefix + test1 + '-' + test2
+            #save_to = folder + '\\' + prefix + test1 + '-' + test2
+            save_to = os.path.join(folder, prefix + test1 + '-' + test2)
         else:
             save_to = ''
         
