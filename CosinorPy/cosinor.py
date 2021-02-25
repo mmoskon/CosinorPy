@@ -502,7 +502,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         
         
         #results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, lin_comp=lin_comp, model_type = model_type, alpha=alpha, plot = False, return_model = True)
-        results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, plot = False, return_model = True, **kwargs)
+        results, statistics, rhythm_params, X_test, _, model = fit_me(x, y, n_components = n_components, period = period, plot = False, return_model = True, **kwargs)
         if type(params) == int:
             params = results.params
         else:
@@ -577,7 +577,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         
 
     if plot_on and plot_margins and model_type=='lin':
-        sdev, lower, upper = wls_prediction_std(results, exog=X_fit_eval_params, alpha=0.05)
+        _, lower, upper = wls_prediction_std(results, exog=X_fit_eval_params, alpha=0.05)
         plt.fill_between(X_test, lower, upper, color='#888888', alpha=0.1)                   
     
     if plot_measurements:
@@ -634,7 +634,7 @@ generate all possible permutations of two populations. Presumption: populations 
 """
 def generate_permutations_all(pop1, pop2):
     n_pop1 = len(pop1)
-    n_pop2 = len(pop2)
+    #n_pop2 = len(pop2)
 
     permutations = set()
 
@@ -696,13 +696,10 @@ def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_co
 
         tests1 = list(df_pop1.test.unique())
         tests2 = list(df_pop2.test.unique())
-        n_pop1 = len(tests1)
-        n_pop2 = len(tests2)
+        #n_pop1 = len(tests1)
+        #n_pop2 = len(tests2)
 
-        #print(tests1)
-        #print(tests2)
-
-        tests = np.array(tests1 + tests2)
+        #tests = np.array(tests1 + tests2)
 
         """
         if not permutations:            
@@ -881,7 +878,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
     if plot:
         if plot_margins:
             if model_type == 'lin':
-                sdev, lower, upper = wls_prediction_std(results, exog=X_fit_test, alpha=0.05)
+                _, lower, upper = wls_prediction_std(results, exog=X_fit_test, alpha=0.05)
                 if color:
                     plt.fill_between(X_test, lower, upper, color=color, alpha=0.1)
                 else:
@@ -1019,7 +1016,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                 plt.show()
             if plot_residuals:
                 resid = results.resid
-                fig = sm.qqplot(resid)
+                sm.qqplot(resid)
                 plt.title(name)
                 if save_to:
                     plt.savefig(save_to+'_resid.pdf', bbox_inches='tight')
@@ -1076,7 +1073,7 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
     ax.set_theta_direction(-1) 
     lines = []
 
-    for i, (acr, amp, test, color) in enumerate(zip(acrs, amps, tests, colors)):
+    for i, (acr, amp, _, color) in enumerate(zip(acrs, amps, tests, colors)):
         
         """
         if "LDL" in test:
@@ -1336,7 +1333,7 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
                     save_to = ''
                 
                 #pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
-                pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to, **kwargs)
+                pvalues, params, _ = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to, **kwargs)
                 
                 d = {}
                 d['test'] = test1 + ' vs. ' + test2
@@ -1370,11 +1367,6 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
 
     #return multi.multipletests(P, method = 'fdr_bh')[1]
 
-
-
-
-
-
 #def compare_pairs_best_models(df, df_best_models, pairs, lin_comp = False, model_type = 'lin', alpha = 0, folder = '', prefix = '', plot_measurements=True):
 def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "", **kwargs):
     df_results = pd.DataFrame()
@@ -1402,7 +1394,7 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
             save_to = ''
         
         #pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
-        pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, **kwargs)
+        pvalues, params, _ = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, save_to = save_to, **kwargs)
         
         d = {}
         d['test'] = test1 + ' vs. ' + test2
@@ -1633,9 +1625,9 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     plt.plot(X_full, Y_fit_full2, 'r', label = test2)    
     
     if model_type == 'lin' and plot_margins:
-        sdev, lower, upper = wls_prediction_std(results, exog=X_fit_full[locs], alpha=0.05)
+        _, lower, upper = wls_prediction_std(results, exog=X_fit_full[locs], alpha=0.05)
         plt.fill_between(X_full, lower, upper, color='black', alpha=0.1)   
-        sdev, lower, upper = wls_prediction_std(results, exog=X_fit_full[~locs], alpha=0.05)
+        _, lower, upper = wls_prediction_std(results, exog=X_fit_full[~locs], alpha=0.05)
         plt.fill_between(X_full, lower, upper, color='red', alpha=0.1)
 
     
@@ -1662,7 +1654,7 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     if plot_residuals:
         
         resid = results.resid
-        fig = sm.qqplot(resid)
+        sm.qqplot(resid)
         plt.title(test1 + ' vs. ' + test2)
         save_to_resid = save_to.split(".")[0] + '_resid' + save_to.split(".")[1]
         if save_to:
@@ -1852,7 +1844,7 @@ def compare_pair(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components = 3, perio
     if plot_residuals:
         
         resid = results.resid
-        fig = sm.qqplot(resid)
+        sm.qqplot(resid)
         plt.title(test1 + ' vs. ' + test2)
         save_to_resid = save_to.split(".")[0] + '_resid' + save_to.split(".")[1]
         if save_to:
@@ -2086,7 +2078,7 @@ def compare_pair_extended(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components1 
     if plot_residuals:
         
         resid = results.resid
-        fig = sm.qqplot(resid)
+        sm.qqplot(resid)
         plt.title(test1 + ' vs. ' + test2)
         save_to_resid = save_to.split(".")[0] + '_resid' + save_to.split(".")[1]
         if save_to:
@@ -2519,8 +2511,8 @@ def compare_nonlinear(X1, Y1, X2, Y2, test1 = '', test2 = '', min_per = 18, max_
     plt.plot(X1, Y1, 'ko', markersize=1, label = test1)
     plt.plot(X2, Y2, 'ro', markersize=1, label = test2)
    
-    Y_fit1 = Y_fit[H == 0]
-    Y_fit2 = Y_fit[H == 1]
+    #Y_fit1 = Y_fit[H == 0]
+    #Y_fit2 = Y_fit[H == 1]
     
     plt.plot(X_full, Y1_full, 'k', label = 'fit '+test1)    
     plt.plot(X_full, Y2_full, 'r', label = 'fit '+test2)    
@@ -2542,7 +2534,7 @@ def compare_nonlinear(X1, Y1, X2, Y2, test1 = '', test2 = '', min_per = 18, max_
     if plot_residuals:
         
         resid = Y-Y_fit
-        fig = sm.qqplot(resid)
+        sm.qqplot(resid)
         plt.title(test1 + ' vs. ' + test2)
         save_to_resid = save_to + '_resid' 
         if save_to:

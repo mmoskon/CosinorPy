@@ -74,12 +74,12 @@ def plot_pair(data, results, test1='1', test2='2', plot_measurements=True, save_
           
             D1 = np.column_stack((H1_fit, rrr_fit_M, sss_fit_M, H1_fit*rrr_fit_M, H1_fit*sss_fit_M))
             D1 = sm.add_constant(D1, has_constant='add')
-            sdev, lower, upper = wls_prediction_std(results, exog=D1, alpha=0.05)
+            _, lower, upper = wls_prediction_std(results, exog=D1, alpha=0.05)
             plt.fill_between(X_fit_M, lower, upper, color=color1, alpha=0.1)   
         
             D2 = np.column_stack((H2_fit, rrr_fit_M, sss_fit_M, H2_fit*rrr_fit_M, H2_fit*sss_fit_M))
             D2 = sm.add_constant(D2, has_constant='add')
-            sdev, lower, upper = wls_prediction_std(results, exog=D2, alpha=0.05)
+            _, lower, upper = wls_prediction_std(results, exog=D2, alpha=0.05)
             plt.fill_between(X_fit_M, lower, upper, color=color2, alpha=0.1)   
         
         
@@ -157,7 +157,7 @@ def plot_single(data, results, test='', plot_measurements=True, save_to='', plot
         D = sm.add_constant(D, has_constant='add')
 
         if plot_margins:
-            sdev, lower, upper = wls_prediction_std(results, exog=D, alpha=0.05)
+            _, lower, upper = wls_prediction_std(results, exog=D, alpha=0.05)
             plt.fill_between(X_fit, lower, upper, color=color, alpha=0.1)   
             #plt.fill_between(X_fit, lower, upper, color='#888888', alpha=0.1)   
 
@@ -402,7 +402,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
     
     for test in tests:
         x,y = np.array(df_pop[df_pop.test == test].x), np.array(df_pop[df_pop.test == test].y)
-        fit_results, amp, acr, statistics = fit_cosinor(x, y, period = period, save_to=save_to, plot_on = False)
+        fit_results, amp, acr, _ = fit_cosinor(x, y, period = period, save_to=save_to, plot_on = False)
         if plot_on and plot_individuals:
             X_fit = np.linspace(min(x), max(x), 100)
             rrr_fit= np.cos(2*np.pi*X_fit/period)
@@ -555,27 +555,27 @@ def population_test_cosinor(pop1, pop2):
     mesors2 = params2[:,0]
     mesor2 = means2[0]
     betas1 = params1[:,1]
-    beta1 = means1[1]
+    #beta1 = means1[1]
     betas2 = params2[:,1]
-    beta2 = means2[1]
+    #beta2 = means2[1]
     gammas1 = params1[:,2]
-    gamma1 = means1[2]
+    #gamma1 = means1[2]
     gammas2 = params2[:,2]
-    gamma2 = means2[2]
-    amps1 = params1[:,3]
+    #gamma2 = means2[2]
+    #amps1 = params1[:,3]
     amp1 = means1[3]
-    amps2 = params2[:,3]
+    #amps2 = params2[:,3]
     amp2 = means2[3]
-    acrs1 = params1[:,4]
+    #acrs1 = params1[:,4]
     acr1 = means1[4]
-    acrs2 = params2[:,4]
+    #acrs2 = params2[:,4]
     acr2 = means2[4]
     
     M = (k1*mesor1 + k2*mesor2)/K
     A = (k1*amp1 + k2*amp2)/K
     FI = (k1*acr1 + k2*acr2)/K
-    BETA = (k1*beta1 + k2*beta2)/K
-    GAMMA = (k1*gamma1 + k2*gamma2)/K
+    #BETA = (k1*beta1 + k2*beta2)/K
+    #GAMMA = (k1*gamma1 + k2*gamma2)/K
     TM = (k1 * (mesor1 - M)**2) + (k2 * (mesor2 - M)**2)
 
     
@@ -719,10 +719,10 @@ def test_cosinor_pairs(df, pairs, period = 24, folder = '', prefix='', plot_meas
         idx_group_acr = 5
 
         if type(df_best_models) == int:
-            fit_results, statistics_raw, statistics_trans, global_test_amp, ind_test_amp, global_test_acr, ind_test_acr = test_cosinor_pair(df_pair, period)
+            fit_results, _, statistics_trans, _, ind_test_amp, _, ind_test_acr = test_cosinor_pair(df_pair, period)
         else:            
             period = df_best_models[df_best_models.test == test1].period.iloc[0]
-            fit_results, statistics_raw, statistics_trans, global_test_amp, ind_test_amp, global_test_acr, ind_test_acr = test_cosinor_pair(df_pair, period)
+            fit_results, _, statistics_trans, _, ind_test_amp, _, ind_test_acr = test_cosinor_pair(df_pair, period)
             #print(period)
         
         acr1, acr2 = statistics_trans['values'][idx_acr], statistics_trans['values'][idx_group_acr]
