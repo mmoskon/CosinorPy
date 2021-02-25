@@ -74,19 +74,18 @@ def plot_components(X, Y, n_components = 3, period = 24, name = '', save_to = ''
     else:
         plt.show()
     
-def periodogram_df(df, per_type='per', sampling_f = '', logscale = False, name = '', folder = '', prominent = False, max_per = 240):
+def periodogram_df(df, folder = '', **kwargs):
     names = list(df.test.unique())
     names.sort()  
 
     for name in names:
         x, y = np.array(df[df.test == name].x), np.array(df[df.test == name].y)
         if folder:
-            #save_to = folder + "\\per_" + name
             save_to = os.path.join(folder, "per_" + name)            
         else:
             save_to = ""
 
-        periodogram(x,y, per_type = per_type, sampling_f = sampling_f, logscale = logscale, name=name, save_to = save_to, prominent = prominent, max_per=max_per)
+        periodogram(x,y, save_to = save_to, name=name, **kwargs)
 
 
 def periodogram(X, Y, per_type='per', sampling_f = '', logscale = False, name = '', save_to = '', prominent = False, max_per = 240):
@@ -106,9 +105,7 @@ def periodogram(X, Y, per_type='per', sampling_f = '', logscale = False, name = 
             sampling_f = 1/(X[1]-X[0])
         
         Y = Y_u
-        
-  
-    
+            
     if per_type == 'per':
         # Fourier
         f, Pxx_den = signal.periodogram(Y,sampling_f)
@@ -146,23 +143,25 @@ def periodogram(X, Y, per_type='per', sampling_f = '', logscale = False, name = 
     per = per[per <= max_per]
     
     
-    
-    if logscale:
-        plt.semilogx(per, Pxx, 'ko')
-        plt.semilogx(per, Pxx, 'k--', linewidth=0.5)
-        plt.semilogx([min(per), max(per)], [T, T], 'k--', linewidth=1)
-    else:
-        plt.plot(per, Pxx, 'ko')
-        plt.plot(per, Pxx, 'k--', linewidth=0.5)
-        plt.plot([min(per), max(per)], [T, T], 'k--', linewidth=1)
-
+    try:
+        if logscale:
+            plt.semilogx(per, Pxx, 'ko')
+            plt.semilogx(per, Pxx, 'k--', linewidth=0.5)
+            plt.semilogx([min(per), max(per)], [T, T], 'k--', linewidth=1)
+        else:
+            plt.plot(per, Pxx, 'ko')
+            plt.plot(per, Pxx, 'k--', linewidth=0.5)
+            plt.plot([min(per), max(per)], [T, T], 'k--', linewidth=1)
+    except:
+        print("Could not plot!")
+        return
 
     peak_label = ''
 
     if prominent:    
         locs, heights = signal.find_peaks(Pxx, height = T)
         
-        if locs:        
+        if any(locs):        
             heights = heights['peak_heights']
             s = list(zip(heights, locs))
             s.sort(reverse=True)
@@ -170,14 +169,7 @@ def periodogram(X, Y, per_type='per', sampling_f = '', logscale = False, name = 
             
             heights = np.array(heights)
             locs = np.array(locs)
-            
-            """
-            if logscale:
-                plt.semilogx(per[locs[:10]], heights[:10], 'x')
-            else:
-                plt.plot(per[locs[:10]], heights[:10], 'x')
-            """
-                
+               
             peak_label = ', max peak=' + str(per[locs[0]])            
     
     else:
@@ -244,14 +236,8 @@ def plot_data(df, names = [], folder = '', prefix = ''):
         
        
         if folder:
-
-            
-            #plt.savefig(folder+'\\'+prefix+test+'.png')
-            #plt.savefig(folder+'\\'+prefix+test+'.pdf')
             plt.savefig(os.path.join(folder, prefix+test+'.png'))
             plt.savefig(os.path.join(folder, prefix+test+'.pdf'))
-            
-
             plt.close()
         else:
             plt.show()
@@ -268,16 +254,17 @@ def plot_data_pairs(df, names, folder = '', prefix =''):
         plt.legend()
         plt.title(test1 + ' vs. ' + test2)
        
-        if folder:
-            #plt.savefig(folder+'\\'+prefix+test1+'_'+test2+'.png')
-            #plt.savefig(folder+'\\'+prefix+test1+'_'+test2+'.pdf')
+        if folder:            
             plt.savefig(os.path.join(folder,prefix+test1+'_'+test2+'.png'))
             plt.savefig(os.path.join(folder,prefix+test1+'_'+test2+'.pdf'))
 
             plt.close()
         else:
             plt.show()
-def fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], folder = '', prefix='', plot_measurements = True, plot = True, x_label = "", y_label = ""):
+
+
+#def fit_group(df, n_components = 2, period = 24, folder = '', prefix='', lin_comp = False, names = [], plot_measurements = True, plot = True, x_label = "", y_label = ""):
+def fit_group(df, n_components = 2, period = 24, names = "", folder = '', prefix='', **kwargs):
     df_results = pd.DataFrame(columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'RSS', 'R2', 'R2_adj', 'log-likelihood', 'period(est)', 'amplitude', 'acrophase', 'mesor', 'peaks', 'heights', 'troughs', 'heights2'], dtype=float)
 
     if type(period) == int:
@@ -287,7 +274,7 @@ def fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], f
         n_components = [n_components]
         
 
-    if not names:
+    if not any(names):
         names = np.unique(df.test) 
 
     for test in names:
@@ -296,22 +283,27 @@ def fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], f
                 if n_comps == 0:
                     per = 100000
                 X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)        
-                if folder:
-                    #save_to = folder+'\\'+prefix+test+'_compnts='+str(n_comps) +'_per=' + str(per)
+                if folder:                    
                     save_to = os.path.join(folder,prefix+test+'_compnts='+str(n_comps) +'_per=' + str(per))
                 else:
                     save_to = ''
                 
-                results, statistics, rhythm_param, X_full, Y_full = fit_me(X, Y, n_components = n_comps, period = per, lin_comp = lin_comp, model_type = 'lin', name = test, save_to = save_to, plot_measurements = plot_measurements, plot=plot, x_label = x_label, y_label = y_label)
+                #results, statistics, rhythm_param, X_full, Y_full = fit_me(X, Y, n_components = n_comps, period = per, lin_comp = lin_comp, model_type = 'lin', name = test, save_to = save_to, plot_measurements = plot_measurements, plot=plot, x_label = x_label, y_label = y_label)
+                results, statistics, rhythm_param, _, _ = fit_me(X, Y, n_components = n_comps, period = per, name = test, save_to = save_to, **kwargs)
             
+                try:
+                    R2, R2_adj = results.rsquared,results.rsquared_adj
+                except:
+                    R2, R2_adj = np.nan, np.nan
+
                 df_results = df_results.append({'test': test, 
                                             'period': per,
                                             'n_components': n_comps,
                                             'p': statistics['p'], 
                                             'p_reject': statistics['p_reject'],
                                             'RSS': statistics['RSS'],
-                                            'R2': results.rsquared,
-                                            'R2_adj': results.rsquared_adj,
+                                            'R2': R2, 
+                                            'R2_adj': R2_adj,
                                             'ME': statistics['ME'],
                                             'resid_SE': statistics['resid_SE'],
                                             'log-likelihood': results.llf,        
@@ -334,7 +326,9 @@ def fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], f
     
     return df_results
 
-def population_fit_group(df, n_components = 2, period = 24, lin_comp = False, model_type="lin", alpha = 0, names = [], folder = '', prefix='', plot_measurements = True):
+#def population_fit_group(df, n_components = 2, period = 24, lin_comp = False, model_type="lin", alpha = 0, names = [], folder = '', prefix='', plot_measurements = True):
+def population_fit_group(df, n_components = 2, period = 24, folder = '', prefix='', names = [], **kwargs):
+
     df_results = pd.DataFrame(columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'RSS', 'period(est)', 'amplitude', 'acrophase', 'mesor'], dtype=float)
 
     if type(period) == int:
@@ -344,7 +338,7 @@ def population_fit_group(df, n_components = 2, period = 24, lin_comp = False, mo
         n_components = [n_components]
         
 
-    if not names:
+    if not any(names):
         names = np.unique(df.test) 
 
     names = list(map(lambda x:x.split('_rep')[0], names))
@@ -359,9 +353,12 @@ def population_fit_group(df, n_components = 2, period = 24, lin_comp = False, mo
                 df_pop = df[df.test.str.startswith(name)]   
 
                 if folder:                    
-                    params, statistics, statistics_params, rhythm_params, results = population_fit(df_pop, n_components = n_comps, period = per, lin_comp= lin_comp, model_type = model_type, alpha = alpha, save_to=os.path.join(folder,prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per)))
+                    save_to=os.path.join(folder,prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per))
+                    #_, statistics, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, save_to = save_to, lin_comp= lin_comp, model_type = model_type, alpha = alpha)
+                    _, statistics, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, save_to = save_to, **kwargs)
                 else:
-                    params, statistics, statistics_params, rhythm_params, results = population_fit(df_pop, n_components = n_comps, period = per, lin_comp= lin_comp, model_type = model_type, alpha = alpha, plot_on = True)
+                    #_, statistics, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, lin_comp= lin_comp, model_type = model_type, alpha = alpha, plot_on = True)
+                    _, statistics, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, **kwargs)
                     
                             
                 df_results = df_results.append({'test': name, 
@@ -471,44 +468,9 @@ def generate_independents(X, n_components = 3, period = 24, lin_comp = False):
     
     return X_fit
     
-    """
-    ###
-    # prepare the independent variables old
-    ###
-    """
-    """
-    A1 = np.sin((X/period)*np.pi*2)
-    B1 = np.cos((X/period)*np.pi*2)
-    A2 = np.sin((X/(period/2))*np.pi*2)
-    B2 = np.cos((X/(period/2))*np.pi*2)
-    A3 = np.sin((X/(period/3))*np.pi*2)
-    B3 = np.cos((X/(period/3))*np.pi*2)
-    A4 = np.sin((X/(period/4))*np.pi*2)
-    B4 = np.cos((X/(period/4))*np.pi*2)
-   
-    if n_components == 0:
-        X_fit = X        
-    elif n_components == 1:
-        X_fit = np.column_stack((A1, B1))        
-    elif n_components == 2:
-        X_fit = np.column_stack((A1, B1, A2, B2))        
-    elif n_components == 3:
-        X_fit = np.column_stack((A1, B1, A2, B2, A3, B3))        
-    elif n_components == 4:
-        X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4))
-    else:
-        print("Invalid option")
-        return
-
-    if lin_comp and n_components:
-        X_fit = np.column_stack((X, X_fit))
     
-    X_fit = sm.add_constant(X_fit, has_constant='add')
-    
-    return X_fit
-    """
-    
-def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', alpha=0, plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label=''):
+#def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', alpha=0, plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label=''):
+def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label='', **kwargs):
  
     params = -1
 
@@ -539,7 +501,8 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         max_Y = max(max_Y, np.max(y))
         
         
-        results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, lin_comp=lin_comp, model_type = model_type, alpha=alpha, plot = False, return_model = True, plot_phase=False, x_label=x_label, y_label = y_label)
+        #results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, lin_comp=lin_comp, model_type = model_type, alpha=alpha, plot = False, return_model = True)
+        results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, plot = False, return_model = True, **kwargs)
         if type(params) == int:
             params = results.params
         else:
@@ -598,8 +561,15 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         #plt.plot(x,Y_fit,'r', label="population fit")
         plt.plot(X_test,Y_eval_params,'r', label="population fit")
         plt.legend()
-        plt.xlabel('time [h]')
-        plt.ylabel('measurements')
+        if x_label:
+            plt.xlabel(x_label)    
+        else:
+            plt.xlabel('time [h]')
+
+        if y_label:
+            plt.ylabel(y_label)    
+        else:
+            plt.ylabel('measurements')
     
         min_Y_test = min(min_Y_test, np.min(Y_eval_params))
         max_Y_test = max(max_Y_test, np.max(Y_eval_params))
@@ -1063,8 +1033,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                 amp = rhythm_params['amplitude']
                 phase = rhythm_params['acrophase']
                 if save_to:
-                    folder = os.path.join(*os.path.split(save_to)[:-1])                    
-                    #plot_phases([phase], [amp], [name], period=per, folder="\\".join(save_to.split("\\")[:-1]))
+                    folder = os.path.join(*os.path.split(save_to)[:-1])                                        
                     plot_phases([phase], [amp], [name], period=per, folder=folder)
                 else:
                     plot_phases([phase], [amp], [name], period=per)
@@ -1172,13 +1141,12 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
             plt.legend(lines, tests, bbox_to_anchor=(1.0, 1), loc='upper left', borderaxespad=0., frameon=False)
         #ax.legend()
     if folder:
-        #plt.savefig(folder+"\\"+prefix+name+"_phase.pdf")
-        #plt.savefig(folder+"\\"+prefix+name+"_phase.png")
         plt.savefig(os.path.join(folder,prefix+name+"_phase.pdf"))
         plt.savefig(os.path.join(folder,prefix+name+"_phase.png"))
         plt.close()
     else:
         plt.show()
+
 def evaluate_rhythm_params(X,Y):
     m = min(Y)
     M = max(Y)
@@ -1348,8 +1316,8 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
 primerjava med rezimi:
 - LymoRhyde (Singer:2019)
 """
-def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, model_type = 'lin', alpha=0, folder = '', prefix = '', plot_measurements=True):
-#def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix = "", **kwargs):
+#def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, model_type = 'lin', alpha=0, folder = '', prefix = '', plot_measurements=True):
+def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix = "", **kwargs):
     
     df_results = pd.DataFrame()
 
@@ -1367,8 +1335,8 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, mo
                 else:
                     save_to = ''
                 
-                pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
-                #pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, **kwargs)
+                #pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
+                pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to, **kwargs)
                 
                 d = {}
                 d['test'] = test1 + ' vs. ' + test2
@@ -1407,8 +1375,8 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, mo
 
 
 
-def compare_pairs_best_models(df, df_best_models, pairs, lin_comp = False, model_type = 'lin', alpha = 0, folder = '', prefix = '', plot_measurements=True):
-#def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "", **kwargs):
+#def compare_pairs_best_models(df, df_best_models, pairs, lin_comp = False, model_type = 'lin', alpha = 0, folder = '', prefix = '', plot_measurements=True):
+def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "", **kwargs):
     df_results = pd.DataFrame()
 
     
@@ -1433,8 +1401,8 @@ def compare_pairs_best_models(df, df_best_models, pairs, lin_comp = False, model
         else:
             save_to = ''
         
-        pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
-        #pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, **kwargs)
+        #pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
+        pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, **kwargs)
         
         d = {}
         d['test'] = test1 + ' vs. ' + test2
@@ -1929,16 +1897,10 @@ def generate_independents_compare(X1, X2, n_components1 = 3, period1 = 24, n_com
         
         X_fit = np.column_stack((X_fit, H_i))
         
-       
-        
-    if lin_comp:
-        X_fit = np.column_stack((X_i, X_fit))
-        X_fit = np.column_stack((X, X_fit))
-   
-
     if lin_comp:
         X_fit = np.column_stack((X_i, X_fit))
         X_fit = np.column_stack((X, X_fit))    
+
     X_fit = sm.add_constant(X_fit, has_constant='add')
 
     return X_fit
@@ -2186,21 +2148,20 @@ def get_best_models(df, df_models, n_components = [1,2,3], lin_comp = False, cri
     
     return df_best
 
-def plot_df_models(df, df_models, plot_residuals=True, plot_phase = True, folder ="", x_label = '', y_label = ''):
+def plot_df_models(df, df_models, folder ="", **kwargs):
     for row in df_models.iterrows():
         test = row[1].test
         n_components = row[1].n_components
         period = row[1].period
         X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)   
         
-        if folder:
-            #fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = folder+'\\'+test+'_compnts='+str(n_components) +'_per=' + str(period), plot_residuals = plot_residuals, plot_phase = plot_phase, x_label = x_label, y_label = y_label)
-            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = os.path.join(folder,test+'_compnts='+str(n_components) +'_per=' + str(period)), plot_residuals = plot_residuals, plot_phase = plot_phase, x_label = x_label, y_label = y_label)
+        if folder:            
+            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = os.path.join(folder,test+'_compnts='+str(n_components) +'_per=' + str(period)), **kwargs)
         else:
-            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = "", plot_residuals = plot_residuals, plot_phase = plot_phase, x_label = x_label, y_label = y_label)
+            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = "", **kwargs)
 
 
-def plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'], folder = '', x_label = '', y_label = ''):
+def plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'], folder = '', **kwargs):
     
     
     for T in tuples:
@@ -2221,23 +2182,22 @@ def plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'
             min_y = min(min(Y), min_y)
             max_y = max(max(Y), max_y)
 
-            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = "", plot_residuals = False, hold=True, color = color, x_label = x_label, y_label = y_label)
+            fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = "", plot_residuals = False, hold=True, color = color, **kwargs)
         
         plt.title(" + ".join(T))
-        if folder:
-            #save_to = folder+'\\'+"+".join(T)
-            save_to = os.path.join(folder,"+".join(T))
-        else:
-            save_to = "+".join(T)
-
+        
                 
         plt.axis([min(min_x,0), max_x, 0.9*min_y, 1.1*max_y])
 
 
         plt.legend()
 
-        plt.savefig(save_to+'.png')
-        plt.savefig(save_to+'.pdf')
+        if folder:            
+            save_to = os.path.join(folder,"+".join(T))   
+            plt.savefig(save_to+'.png')
+            plt.savefig(save_to+'.pdf')
+        else:
+            plt.show()
         plt.close()
 
 
@@ -2249,8 +2209,7 @@ def plot_df_models_population(df, df_models, folder="", model_type="lin"):
         period = row[1].period
         #X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)  
         df_pop = df[df.test.str.startswith(pop)]
-        if folder:
-            #save_to = folder+'\\'+pop+'_pop_compnts='+str(n_components) +'_per=' + str(period)
+        if folder:            
             save_to = os.path.join(folder, pop+'_pop_compnts='+str(n_components) +'_per=' + str(period))
         else:
             save_to = ""
@@ -2366,7 +2325,6 @@ def compare_phase_pairs(df, pairs, min_per = 18, max_per = 36, folder = '', pref
 
     for test1, test2 in pairs: 
         if folder:
-            #save_to = folder + '\\' + prefix + test1 + '-' + test2
             save_to = os.path.join(folder, prefix + test1 + '-' + test2)
         else:
             save_to = ''
@@ -2418,8 +2376,7 @@ def compare_nonlinear_pairs(df, pairs, min_per = 18, max_per = 36, folder = '', 
     df_results = pd.DataFrame()
 
     for test1, test2 in pairs: 
-        if folder:
-            #save_to = folder + '\\' + prefix + test1 + '-' + test2
+        if folder:            
             save_to = os.path.join(folder, prefix + test1 + '-' + test2)
         else:
             save_to = ''
