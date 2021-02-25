@@ -454,7 +454,7 @@ def generate_independents(X, n_components = 3, period = 24, lin_comp = False):
         X_fit = X       
         lin_comp = True
     else:
-        for i in range(n_components):
+        for i in np.arange(n_components):
             n = i+1
 
             A = np.sin((X/(period/n))*np.pi*2)
@@ -812,7 +812,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
         X_fit_test = X_test
         lin_comp = True
     else:
-        for i in range(n_components):
+        for i in np.arange(n_components):
             n = i+1
 
             A = np.sin((X/(period/n))*np.pi*2)
@@ -1349,6 +1349,7 @@ primerjava med rezimi:
 - LymoRhyde (Singer:2019)
 """
 def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, model_type = 'lin', alpha=0, folder = '', prefix = '', plot_measurements=True):
+#def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix = "", **kwargs):
     
     df_results = pd.DataFrame()
 
@@ -1357,18 +1358,17 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, mo
         
     if type(n_components) == int:
         n_components = [n_components]
-        
-
+                
     for test1, test2 in pairs: 
         for per in period:
             for n_comps in n_components:                                
-                if folder:
-                    #save_to = folder + '\\' + prefix + test1 + '-' + test2 + '_per=' + str(per) + '_comps=' + str(n_comps)
+                if folder:                                       
                     save_to = os.path.join(folder,prefix + test1 + '-' + test2 + '_per=' + str(per) + '_comps=' + str(n_comps))
                 else:
                     save_to = ''
                 
                 pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
+                #pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, **kwargs)
                 
                 d = {}
                 d['test'] = test1 + ' vs. ' + test2
@@ -1408,7 +1408,9 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, mo
 
 
 def compare_pairs_best_models(df, df_best_models, pairs, lin_comp = False, model_type = 'lin', alpha = 0, folder = '', prefix = '', plot_measurements=True):
+#def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "", **kwargs):
     df_results = pd.DataFrame()
+
     
     for test1, test2 in pairs:
         model1 = df_best_models[df_best_models["test"] == test1].iloc[0]
@@ -1425,15 +1427,14 @@ def compare_pairs_best_models(df, df_best_models, pairs, lin_comp = False, model
             test1, test2 = test2, test1
             n_components1, n_components2 = n_components2, n_components1
             period1, period2 = period2, period1
-
-
-        if folder:
-            #save_to = folder + '\\' + prefix + test1 + '-' + test2 + '_per1=' + str(period1) + '_comps1=' + str(n_components1) + '_per1=' + str(period2) + '_comps1=' + str(n_components2)
+        
+        if folder:            
             save_to = os.path.join(folder, prefix + test1 + '-' + test2 + '_per1=' + str(period1) + '_comps1=' + str(n_components1) + '_per1=' + str(period2) + '_comps1=' + str(n_components2))
         else:
             save_to = ''
         
         pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
+        #pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, **kwargs)
         
         d = {}
         d['test'] = test1 + ' vs. ' + test2
@@ -1470,6 +1471,7 @@ def compare_pairs_best_models(df, df_best_models, pairs, lin_comp = False, model
     #return multi.multipletests(P, method = 'fdr_bh')[1]
 
 def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = ''):
+       
     n_components1 = n_components
     period1 = period
     if not n_components2:
@@ -1494,7 +1496,7 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     """
     X_i = H_i * X 
 
-    for i in range(n_components1):
+    for i in np.arange(n_components1):
         n = i+1
 
         A = np.sin((X/(period1/n))*np.pi*2)        
@@ -1508,7 +1510,7 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
         X_fit = np.column_stack((X_fit, H_i))
         idx_params = [-1]
     else:
-        for i in range(n_components2):
+        for i in np.arange(n_components2):
             n = i+1
 
             A_i = H_i * np.sin((X/(period2/n))*np.pi*2)        
@@ -1903,7 +1905,7 @@ def generate_independents_compare(X1, X2, n_components1 = 3, period1 = 24, n_com
     X_i = H_i * X
    
 
-    for i in range(n_components1):
+    for i in np.arange(n_components1):
         n = i+1
 
         A = np.sin((X/(period1/n))*np.pi*2)        
@@ -1916,7 +1918,7 @@ def generate_independents_compare(X1, X2, n_components1 = 3, period1 = 24, n_com
     if non_rhythmic:
         X_fit = np.column_stack((X_fit, H_i))                
     else:
-        for i in range(n_components2):
+        for i in np.arange(n_components2):
             n = i+1
 
             A_i = H_i * np.sin((X/(period2/n))*np.pi*2)        
@@ -2546,7 +2548,7 @@ def compare_nonlinear(X1, Y1, X2, Y2, test1 = '', test2 = '', min_per = 18, max_
     perr = np.sqrt(np.diag(pcov))
     DoF = len(Y) - len(popt)
     p=np.zeros(len(popt))
-    for i in range(len(perr)):
+    for i in np.arange(len(perr)):
         T0 = popt[i]/perr[i]
         p[i] = 2 * (1 - stats.t.cdf(abs(T0), DoF))
     
