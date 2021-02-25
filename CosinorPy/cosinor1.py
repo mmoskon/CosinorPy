@@ -321,7 +321,7 @@ def evaluate_cosinor(x, MESOR, amp, acr, period):
     return MESOR + amp*np.cos((2*np.pi*x/period) + acr)
 
 def population_fit_group(df, period = 24, save_folder='', plot_on=True):
-    df_cosinor1_fits = pd.DataFrame(columns = ['test', 'p', 'q', 'amplitude', 'LB(amplitude)', 'UB(amplitude)', 'acrophase', 'LB(acrophase)','UB(acrophase)'])
+    df_cosinor1_fits = pd.DataFrame(columns = ['test', 'p', 'q', 'amplitude', 'LB(amplitude)', 'UB(amplitude)', 'acrophase', 'LB(acrophase)','UB(acrophase)'], dtype=float)
     
     names = df.test.unique()
     names = list(set(map(lambda x:x.split('_rep')[0], names)))
@@ -365,7 +365,7 @@ def population_test_cosinor_pairs(df, pairs, period = 24):
                                     'acrophase1',
                                     'acrophase2',
                                     'p(d_acrophase)',
-                                    'q(d_acrophase)'])
+                                    'q(d_acrophase)'], dtype=float)
 
     for pair in pairs:
         df_pop1 = df[df.test.str.startswith(pair[0])] 
@@ -630,7 +630,7 @@ def population_test_cosinor(pop1, pop2):
             
 
 def fit_group(df, period = 24, save_folder='', plot_on=True):
-    df_cosinor1_fits = pd.DataFrame(columns = ['test', 'p', 'q', 'amplitude', 'p(amplitude)', 'q(amplitude)', 'acrophase', 'p(acrophase)','q(acrophase)'])
+    df_cosinor1_fits = pd.DataFrame(columns = ['test', 'p', 'q', 'amplitude', 'p(amplitude)', 'q(amplitude)', 'acrophase', 'p(acrophase)','q(acrophase)'], dtype=float)
     
     if (type(period) == int) or (type(period)==float):
         period = [period] 
@@ -700,7 +700,7 @@ def test_cosinor_pairs(df, pairs, period = 24, folder = '', prefix='', plot_meas
                                          'q(acrophase2)',
                                          'd_acrophase',
                                          'p(d_acrophase)',
-                                         'q(d_acrophase)'])
+                                         'q(d_acrophase)'], dtype=float)
     
     for test1, test2 in pairs:    
         if folder:

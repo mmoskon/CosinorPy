@@ -17,7 +17,7 @@ def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=T
     names = []
      
         
-    df = pd.DataFrame(columns=['x', 'y', 'test'])
+    df = pd.DataFrame(columns=['x', 'y', 'test'], dtype=float)
         
         
     xls_file = pd.ExcelFile(file_name)
@@ -83,7 +83,7 @@ def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=T
     return df
 
 def generate_test_data(n_components=1, period = 24, amplitudes = 0, baseline = 0, phase = 0, min_time = 0, max_time = 48, time_step = 2, replicates = 1, independent = True, name="test", noise = 0):
-    df = pd.DataFrame(columns=['test','x','y'])
+    df = pd.DataFrame(columns=['test','x','y'], dtype=float)
     x = np.arange(min_time, max_time+time_step, time_step)
 
     if not amplitudes:
@@ -105,7 +105,7 @@ def generate_test_data(n_components=1, period = 24, amplitudes = 0, baseline = 0
         sigma = noise
         y += np.random.normal(mu, sigma, y.shape) 
         
-        df2 = pd.DataFrame(columns=['test','x','y'])
+        df2 = pd.DataFrame(columns=['test','x','y'], dtype=float)
         df2['x'] = x
         df2['y'] = y
         df2['test'] = test
@@ -142,9 +142,9 @@ def read_csv(file_name, sep="\t"):
     Y = df1.iloc[:,shuffle+1].values
     names = df1.iloc[:,0].values
 
-    df2 = pd.DataFrame(columns=['test','x','y'])
+    df2 = pd.DataFrame(columns=['test','x','y'], dtype=float)
     for y, name in zip(Y, names):
-        df_tmp = pd.DataFrame(columns=['test','x','y'])
+        df_tmp = pd.DataFrame(columns=['test','x','y'], dtype=float)
         df_tmp['x'] = x
         df_tmp['y'] = y
         df_tmp['test'] = name
@@ -223,7 +223,7 @@ def export_JTK(df, file_name, descriptor = "", names = [], individual=False):
     samples_in_one = (maxtime-mintime)//timestep + 1
                
     columns = ["gene"] + ["T"+str(i)+"_Rep"+str(j+1) for i in range(mintime, maxtime+1,timestep) for j in range(0,reps)]
-    df = pd.DataFrame(columns=columns)
+    df = pd.DataFrame(columns=columns, dtype=float)
         
     x_full = np.arange(mintime, maxtime+1, timestep)
     x_fuller = np.array(list(range(mintime, maxtime+1, timestep)) * reps)

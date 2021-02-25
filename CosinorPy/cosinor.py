@@ -209,7 +209,7 @@ def periodogram(X, Y, per_type='per', sampling_f = '', logscale = False, name = 
 
 
 def get_best_fits(df_results, criterium = 'R2_adj', reverse = False, n_components = []):
-    df_best = pd.DataFrame(columns = df_results.columns)
+    df_best = pd.DataFrame(columns = df_results.columns, dtype=float)
     names = np.unique(df_results.test)
     
     for name in names:
@@ -278,7 +278,7 @@ def plot_data_pairs(df, names, folder = '', prefix =''):
         else:
             plt.show()
 def fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], folder = '', prefix='', plot_measurements = True, plot = True, x_label = "", y_label = ""):
-    df_results = pd.DataFrame(columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'RSS', 'R2', 'R2_adj', 'log-likelihood', 'period(est)', 'amplitude', 'acrophase', 'mesor', 'peaks', 'heights', 'troughs', 'heights2'])
+    df_results = pd.DataFrame(columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'RSS', 'R2', 'R2_adj', 'log-likelihood', 'period(est)', 'amplitude', 'acrophase', 'mesor', 'peaks', 'heights', 'troughs', 'heights2'], dtype=float)
 
     if type(period) == int:
         period = [period]
@@ -302,7 +302,7 @@ def fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], f
                 else:
                     save_to = ''
                 
-                results, statistics, rhythm_param, X_full, Y_full = fit_me(X, Y, n_components = n_comps, period = per, model_type = 'lin', lin_comp = lin_comp, name = test, save_to = save_to, plot_measurements = plot_measurements, plot=plot, x_label = x_label, y_label = y_label)
+                results, statistics, rhythm_param, X_full, Y_full = fit_me(X, Y, n_components = n_comps, period = per, lin_comp = lin_comp, model_type = 'lin', name = test, save_to = save_to, plot_measurements = plot_measurements, plot=plot, x_label = x_label, y_label = y_label)
             
                 df_results = df_results.append({'test': test, 
                                             'period': per,
@@ -334,8 +334,8 @@ def fit_group(df, n_components = 2, period = 24, lin_comp = False, names = [], f
     
     return df_results
 
-def population_fit_group(df, n_components = 2, period = 24, model_type="lin", lin_comp = False, alpha = 0, names = [], folder = '', prefix='', plot_measurements = True):
-    df_results = pd.DataFrame(columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'RSS', 'period(est)', 'amplitude', 'acrophase', 'mesor'])
+def population_fit_group(df, n_components = 2, period = 24, lin_comp = False, model_type="lin", alpha = 0, names = [], folder = '', prefix='', plot_measurements = True):
+    df_results = pd.DataFrame(columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'RSS', 'period(est)', 'amplitude', 'acrophase', 'mesor'], dtype=float)
 
     if type(period) == int:
         period = [period]
@@ -358,11 +358,10 @@ def population_fit_group(df, n_components = 2, period = 24, model_type="lin", li
                     
                 df_pop = df[df.test.str.startswith(name)]   
 
-                if folder:
-                    #params, statistics, statistics_params, rhythm_params, results = population_fit(df_pop, n_components = n_comps, period = per, model_type = model_type, lin_comp= lin_comp, alpha = alpha, save_to=folder+'\\'+prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per))
-                    params, statistics, statistics_params, rhythm_params, results = population_fit(df_pop, n_components = n_comps, period = per, model_type = model_type, lin_comp= lin_comp, alpha = alpha, save_to=os.path.join(folder,prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per)))
+                if folder:                    
+                    params, statistics, statistics_params, rhythm_params, results = population_fit(df_pop, n_components = n_comps, period = per, lin_comp= lin_comp, model_type = model_type, alpha = alpha, save_to=os.path.join(folder,prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per)))
                 else:
-                    params, statistics, statistics_params, rhythm_params, results = population_fit(df_pop, n_components = n_comps, period = per, model_type = model_type, lin_comp= lin_comp, alpha = alpha, plot_on = True)
+                    params, statistics, statistics_params, rhythm_params, results = population_fit(df_pop, n_components = n_comps, period = per, lin_comp= lin_comp, model_type = model_type, alpha = alpha, plot_on = True)
                     
                             
                 df_results = df_results.append({'test': name, 
@@ -387,7 +386,7 @@ def population_fit_group(df, n_components = 2, period = 24, model_type="lin", li
 
 def get_best_models_population(df, df_models, n_components = [1,2,3], lin_comp = False, criterium = 'RSS', reverse = True):    
     names = np.unique(df_models.test)   
-    df_best = pd.DataFrame(columns = df_models.columns)
+    df_best = pd.DataFrame(columns = df_models.columns, dtype=float)
     df_models = get_best_fits(df_models, criterium = criterium, reverse = reverse, n_components=n_components)
     for test in names:
         n_points = df[df.test.str.startswith(test)].x.shape[0] # razlika med get_best_models in get_best_models_population
@@ -509,7 +508,7 @@ def generate_independents(X, n_components = 3, period = 24, lin_comp = False):
     return X_fit
     """
     
-def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', lin_comp= False, alpha=0, plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label=''):
+def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', alpha=0, plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label=''):
  
     params = -1
 
@@ -540,7 +539,7 @@ def population_fit(df_pop, n_components = 2, period = 24, model_type = 'lin', li
         max_Y = max(max_Y, np.max(y))
         
         
-        results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, model_type = model_type, lin_comp=lin_comp, alpha=alpha, plot = False, return_model = True, plot_phase=False, x_label=x_label, y_label = y_label)
+        results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, lin_comp=lin_comp, model_type = model_type, alpha=alpha, plot = False, return_model = True, plot_phase=False, x_label=x_label, y_label = y_label)
         if type(params) == int:
             params = results.params
         else:
@@ -701,7 +700,7 @@ Permutation test - does not work as well as it should. The problem: both populat
 def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_comp = False):#, N=10=, permutations=[]):
     
     
-    df_results = pd.DataFrame(columns = ['pair', "d_amp", "p_d_amp", "d_acr", "p_d_acr", "d_mesor", "p_d_mesor"])
+    df_results = pd.DataFrame(columns = ['pair', "d_amp", "p_d_amp", "d_acr", "p_d_acr", "d_mesor", "p_d_mesor"], dtype=float)
 
     for pair in pairs:
 
@@ -710,8 +709,8 @@ def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_co
         df_pop1 = df[df.test.str.startswith(pair[0])] 
         df_pop2 = df[df.test.str.startswith(pair[1])] 
 
-        _, statistics1, _, rhythm_params1, _ = population_fit(df_pop1, n_components = n_components, period = period, model_type = 'lin', lin_comp= lin_comp, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
-        _, statistics2, _, rhythm_params2, _ = population_fit(df_pop2, n_components = n_components, period = period, model_type = 'lin', lin_comp= lin_comp, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
+        _, statistics1, _, rhythm_params1, _ = population_fit(df_pop1, n_components = n_components, period = period, lin_comp= lin_comp, model_type = 'lin', plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
+        _, statistics2, _, rhythm_params2, _ = population_fit(df_pop2, n_components = n_components, period = period, lin_comp= lin_comp, model_type = 'lin', plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
 
         p1, amplitude1, acrophase1, mesor1 = statistics1['p'], rhythm_params1['amplitude'], rhythm_params1['acrophase'], rhythm_params1['mesor']
         p2, amplitude2, acrophase2, mesor2 = statistics2['p'], rhythm_params2['amplitude'], rhythm_params2['acrophase'], rhythm_params2['mesor']
@@ -750,8 +749,8 @@ def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_co
             df_test1 = df[df.test.isin(perm1)]
             df_test2 = df[df.test.isin(perm2)]
 
-            _, statistics_test1, _, rhythm_params_test1, _ = population_fit(df_test1, n_components = n_components, period = period, model_type = 'lin', lin_comp= lin_comp, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
-            _, statistics_test2, _, rhythm_params_test2, _ = population_fit(df_test2, n_components = n_components, period = period, model_type = 'lin', lin_comp= lin_comp, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
+            _, statistics_test1, _, rhythm_params_test1, _ = population_fit(df_test1, n_components = n_components, period = period, lin_comp = lin_comp, model_type = 'lin', plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
+            _, statistics_test2, _, rhythm_params_test2, _ = population_fit(df_test2, n_components = n_components, period = period, lin_comp = lin_comp, model_type = 'lin', plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
 
             p_test1, amplitude_test1, acrophase_test1, mesor_test1 = statistics_test1['p'], rhythm_params_test1['amplitude'], rhythm_params_test1['acrophase'], rhythm_params_test1['mesor']
             p_test2, amplitude_test2, acrophase_test2, mesor_test2 = statistics_test2['p'], rhythm_params_test2['amplitude'], rhythm_params_test2['acrophase'], rhythm_params_test2['mesor']
@@ -800,7 +799,7 @@ def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_co
 
 
 
-def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = ""):
+def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = ""):
     """
     ###
     # prepare the independent variables
@@ -837,7 +836,6 @@ def fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = F
         X_fit_test = np.column_stack((X_test, X_fit_test))                              
 
 
-    #if model_type == 'lin':
     X_fit = sm.add_constant(X_fit, has_constant='add')
     X_fit_test = sm.add_constant(X_fit_test, has_constant='add')
     X_fit_eval_params = sm.add_constant(X_fit_eval_params, has_constant='add')
@@ -1350,7 +1348,7 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
 primerjava med rezimi:
 - LymoRhyde (Singer:2019)
 """
-def compare_pairs(df, pairs, n_components = 3, period = 24, model_type = 'lin', lin_comp = False, alpha=0, folder = '', prefix = '', plot_measurements=True):
+def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, model_type = 'lin', alpha=0, folder = '', prefix = '', plot_measurements=True):
     
     df_results = pd.DataFrame()
 
@@ -1370,7 +1368,7 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, model_type = 'lin', 
                 else:
                     save_to = ''
                 
-                pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, model_type = model_type, lin_comp = lin_comp, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
+                pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
                 
                 d = {}
                 d['test'] = test1 + ' vs. ' + test2
@@ -1409,7 +1407,7 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, model_type = 'lin', 
 
 
 
-def compare_pairs_best_models(df, df_best_models, pairs, model_type = 'lin', lin_comp = False, alpha = 0, folder = '', prefix = '', plot_measurements=True):
+def compare_pairs_best_models(df, df_best_models, pairs, lin_comp = False, model_type = 'lin', alpha = 0, folder = '', prefix = '', plot_measurements=True):
     df_results = pd.DataFrame()
     
     for test1, test2 in pairs:
@@ -1435,7 +1433,7 @@ def compare_pairs_best_models(df, df_best_models, pairs, model_type = 'lin', lin
         else:
             save_to = ''
         
-        pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, model_type = model_type, lin_comp = lin_comp, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
+        pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
         
         d = {}
         d['test'] = test1 + ' vs. ' + test2
@@ -1471,7 +1469,7 @@ def compare_pairs_best_models(df, df_best_models, pairs, model_type = 'lin', lin
 
     #return multi.multipletests(P, method = 'fdr_bh')[1]
 
-def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, model_type = 'lin', lin_comp = False, alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = ''):
+def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = ''):
     n_components1 = n_components
     period1 = period
     if not n_components2:
@@ -1578,31 +1576,6 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     else:
         print("Invalid option")
         return    
-    """
-    elif model_type == 'poisson':
-        model = sm.GLM(Y, X, family=sm.families.Poisson())
-        results = model.fit()
-    elif model_type =='gen_poisson':
-        model = statsmodels.discrete.discrete_model.GeneralizedPoisson(Y, X)
-        results = model.fit()
-    elif model_type == 'poisson_zeros':
-        model = statsmodels.discrete.count_model.ZeroInflatedPoisson(Y,X, p=2)
-        #results = model.fit()
-        results = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
-    elif model_type == 'nb_zeros':
-        model = statsmodels.discrete.count_model.ZeroInflatedNegativeBinomialP(Y,X,p=2)
-        #results = model.fit()
-        results = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
-    elif model_type == 'nb':
-        #exposure = np.zeros(len(Y))
-        #exposure[:] = np.mean(Y)
-        #model = sm.GLM(Y, X, family=sm.families.NegativeBinomial(), exposure = exposure)
-        if alpha:
-            model = sm.GLM(Y, X, family=sm.families.NegativeBinomial(alpha=alpha))
-        else:
-            model = sm.GLM(Y, X, family=sm.families.NegativeBinomial())
-        results = model.fit()
-    """
    
     """
     ###
@@ -1652,7 +1625,7 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     n_params_small = n_params_full - len(idx_params) 
     N = len(Y)
 
-    r_small = fit_me(X, Y, n_components, period, model_type, lin_comp, alpha, plot=False, x_label = x_label, y_label = y_label)
+    r_small = fit_me(X, Y, n_components, period, lin_comp=lin_comp, model_type=model_type, alpha=alpha, plot=False, x_label = x_label, y_label = y_label)
     RSS_small = r_small[1]['RSS']
     RSS_full = sum((Y - Y_fit)**2)
 
@@ -2177,7 +2150,7 @@ def compare_pair_extended(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components1 
 def get_best_models(df, df_models, n_components = [1,2,3], lin_comp = False, criterium='p', reverse = True):
        
     names = np.unique(df_models.test)   
-    df_best = pd.DataFrame(columns = df_models.columns)
+    df_best = pd.DataFrame(columns = df_models.columns, dtype=float)
     df_models = get_best_fits(df_models, n_components = n_components, criterium=criterium, reverse = reverse)
 
 
