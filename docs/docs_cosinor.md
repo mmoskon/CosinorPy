@@ -170,7 +170,9 @@ When the number of samples is large, the 0.05 significance level should be decre
 ##### Keyword arguments:
 Should include
 * `n_params`: number of params in a model
+
 or
+
 * `n_components`: number of components in a cosinor model 
 * `lin_comp`: additional linear component (`bool`) (optional)
 * `return_T`: By default the function returns a significance level for the F-test used in a regression process. If `return_T` is `True`, the function returns a significance level for the T-test.
