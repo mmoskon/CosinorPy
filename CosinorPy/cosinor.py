@@ -1668,194 +1668,6 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     
     return (p_values, results.params[idx_params], results)
 
-
-def compare_pair(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components = 3, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False):
-    
-    
-    H1 = np.zeros(X1.size)
-    H2 = np.ones(X2.size)
-       
-    X = np.concatenate((X1, X2))
-    Y = np.concatenate((Y1, Y2))
-    H_i = np.concatenate((H1, H2))
-    
-    """
-    ###
-    # prepare the independent variables
-    ###
-    """
-    A1 = np.sin((X/period)*np.pi*2)
-    B1 = np.cos((X/period)*np.pi*2)
-    A2 = np.sin((X/(period/2))*np.pi*2)
-    B2 = np.cos((X/(period/2))*np.pi*2)
-    A3 = np.sin((X/(period/3))*np.pi*2)
-    B3 = np.cos((X/(period/3))*np.pi*2)
-    A4 = np.sin((X/(period/4))*np.pi*2)
-    B4 = np.cos((X/(period/4))*np.pi*2)
-   
-    X_i = H_i * X
-    A1_i = H_i * A1
-    B1_i = H_i * B1
-    A2_i = H_i * A2
-    B2_i = H_i * B2
-    A3_i = H_i * A3
-    B3_i = H_i * B3
-    A4_i = H_i * A4
-    B4_i = H_i * B4
-                  
-    if n_components == 1:
-        if non_rhythmic:
-            X_fit = np.column_stack((A1, B1, H_i))
-            idx_params = [3]
-        else:
-            X_fit = np.column_stack((A1, B1, A1_i, B1_i, H_i))
-            #idx_params = [3, 4, 5]
-            idx_params = [3, 4]
-            
-           
-        
-    elif n_components == 2:        
-        if non_rhythmic:
-            X_fit = np.column_stack((A1, B1, A2, B2, H_i))
-            idx_params = [5]
-        else:
-            X_fit = np.column_stack((A1, B1, A2, B2, A1_i, B1_i, A2_i, B2_i, H_i))
-            #idx_params = [5, 6, 7, 8, 9]
-            idx_params = [5, 6, 7, 8]
-            
-                    
-    elif n_components == 3:
-        if non_rhythmic:
-            X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, H_i))
-            idx_params = [7]
-        else:
-            X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A1_i, B1_i, A2_i, B2_i, A3_i, B3_i, H_i))
-            #idx_params = [7, 8, 9, 10, 11, 12, 13]
-            idx_params = [7, 8, 9, 10, 11, 12]
-    elif n_components == 4:
-        if non_rhythmic:
-            X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4, H_i))
-            idx_params = [9]
-        else:
-            X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4, A1_i, B1_i, A2_i, B2_i, A3_i, B3_i, A4_i, B4_i, H_i))
-            #idx_params = [9, 10, 11, 12, 13, 14, 15, 16, 17]
-            idx_params = [9, 10, 11, 12, 13, 14, 15, 16]
-    else:
-        print("Invalid option")
-        return
-
-           
-    if lin_comp:
-        X_fit = np.column_stack((X_i, X_fit))
-        X_fit = np.column_stack((X, X_fit))
-        idx_params = np.array(idx_params) + 2
-        
-    X_fit = sm.add_constant(X_fit, has_constant='add')
-
-    """
-    ###
-    # fit
-    ###
-    """       
-    if model_type == 'lin':
-        model = sm.OLS(Y, X_fit)
-        results = model.fit()
-    elif model_type == 'poisson':
-        model = sm.GLM(Y, X_fit, family=sm.families.Poisson())
-        results = model.fit()
-    elif model_type =='gen_poisson':
-        model = statsmodels.discrete.discrete_model.GeneralizedPoisson(Y, X_fit)
-        results = model.fit()
-    elif model_type == 'poisson_zeros':
-        model = statsmodels.discrete.count_model.ZeroInflatedPoisson(Y,X_fit, p=2)
-        #results = model.fit()
-        results = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
-    elif model_type == 'nb_zeros':
-        model = statsmodels.discrete.count_model.ZeroInflatedNegativeBinomialP(Y,X_fit,p=2)
-        #results = model.fit()
-        results = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
-    elif model_type == 'nb':
-        #exposure = np.zeros(len(Y))
-        #exposure[:] = np.mean(Y)
-        #model = sm.GLM(Y, X, family=sm.families.NegativeBinomial(), exposure = exposure)
-        if alpha:
-            model = sm.GLM(Y, X_fit, family=sm.families.NegativeBinomial(alpha=alpha))
-        else:
-            model = sm.GLM(Y, X_fit, family=sm.families.NegativeBinomial())
-        results = model.fit()
-    else:
-        print("Invalid option")
-        return
-
-    
-    """
-    ###
-    # plot
-    ###
-    """
-    
-    
-    ###
-    if plot_measurements:
-        plt.plot(X1, Y1, 'ko', markersize=1, label = test1)
-        plt.plot(X2, Y2, 'ro', markersize=1, label = test2)
-    #plt.plot(X, results.fittedvalues, label = 'fit')
-    
-    if model_type =='gen_poisson':
-        Y_fit = results.predict(X_fit)
-    else:
-        Y_fit = results.fittedvalues
-    
-  
-    
-    X1 = X[H_i == 0]
-    Y_fit1 = Y_fit[H_i == 0]
-    L1 = list(zip(X1,Y_fit1))
-    L1.sort()
-    X1,Y_fit1 = list(zip(*L1))  
-    X2 = X[H_i == 1]
-    Y_fit2 = Y_fit[H_i == 1]
-    L2 = list(zip(X2,Y_fit2))
-    L2.sort()
-    X2,Y_fit2 = list(zip(*L2))  
-    
-    
-    plt.plot(X1, Y_fit1, 'k', label = 'fit '+test1)    
-    plt.plot(X2, Y_fit2, 'r', label = 'fit '+test2)    
-    
-    p = min(results.pvalues[idx_params])
-    #plt.title(test1 + ' vs. ' + test2 + '\ncomponents=' + str(n_components) +' , period=' + str(period)+', p-value=' + str(p))
-    plt.title(test1 + ' vs. ' + test2 + ', p-value=' + "{0:.5f}".format(p))
-    plt.xlabel('time [h]')
-    plt.ylabel('measurements')
-    plt.legend()
-    
-    #fig = plt.gcf()
-    #fig.set_size_inches(11,8)
-    
-    
-    if save_to:
-        plt.savefig(save_to+'.png')
-        plt.savefig(save_to+'.pdf')
-        plt.close()
-    else:
-        plt.show()
-        
-    if plot_residuals:
-        
-        resid = results.resid
-        sm.qqplot(resid)
-        plt.title(test1 + ' vs. ' + test2)
-        save_to_resid = save_to.split(".")[0] + '_resid' + save_to.split(".")[1]
-        if save_to:
-            plt.savefig(save_to_resid)
-            plt.close()
-        else:
-            plt.show()
-    
-        
-    return (results.pvalues[idx_params], results.params[idx_params], results)
-    
 def generate_independents_compare(X1, X2, n_components1 = 3, period1 = 24, n_components2 = 3, period2 = 24, lin_comp = False, non_rhythmic=False):
     H1 = np.zeros(X1.size)
     H2 = np.ones(X2.size)
@@ -1896,207 +1708,6 @@ def generate_independents_compare(X1, X2, n_components1 = 3, period1 = 24, n_com
     X_fit = sm.add_constant(X_fit, has_constant='add')
 
     return X_fit
-
-def compare_pair_extended(X1, Y1, X2, Y2, test1 = '', test2 = '', n_components1 = 3, period1 = 24, n_components2 = 3, period2 = 24, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_residuals=False):
-    H1 = np.zeros(X1.size)
-    H2 = np.ones(X2.size)
-       
-    X = np.concatenate((X1, X2))
-    Y = np.concatenate((Y1, Y2))
-    H_i = np.concatenate((H1, H2))
-    
-    """
-    ###
-    # prepare the independent variables
-    ###
-    """
-    A1 = np.sin((X/period1)*np.pi*2)
-    B1 = np.cos((X/period1)*np.pi*2)
-    A2 = np.sin((X/(period1/2))*np.pi*2)
-    B2 = np.cos((X/(period1/2))*np.pi*2)
-    A3 = np.sin((X/(period1/3))*np.pi*2)
-    B3 = np.cos((X/(period1/3))*np.pi*2)
-    A4 = np.sin((X/(period1/4))*np.pi*2)
-    B4 = np.cos((X/(period1/4))*np.pi*2)
-   
-    X_i = H_i * X
-    A1_i = H_i * np.sin((X/period2)*np.pi*2)
-    B1_i = H_i * np.cos((X/period2)*np.pi*2)
-    A2_i = H_i * np.sin((X/(period2/2))*np.pi*2)
-    B2_i = H_i * np.cos((X/(period2/2))*np.pi*2)
-    A3_i = H_i * np.sin((X/(period2/3))*np.pi*2)
-    B3_i = H_i * np.cos((X/(period2/3))*np.pi*2)
-    A4_i = H_i * np.sin((X/(period2/4))*np.pi*2)
-    B4_i = H_i * np.cos((X/(period2/4))*np.pi*2)
-                  
-    if n_components1 == 1:
-        if non_rhythmic:
-            X_fit = np.column_stack((A1, B1, H_i))
-            idx_params = [-1]
-        else:
-            X_fit = np.column_stack((A1, B1))            
-    elif n_components1 == 2:        
-        if non_rhythmic:
-            X_fit = np.column_stack((A1, B1, A2, B2, H_i))
-            idx_params = [-1]
-        else:
-            X_fit = np.column_stack((A1, B1, A2, B2))            
-    elif n_components1 == 3:
-        if non_rhythmic:
-            X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, H_i))
-            idx_params = [-1]
-        else:
-            X_fit = np.column_stack((A1, B1, A2, B2, A3, B3))            
-    elif n_components1 == 4:
-        if non_rhythmic:
-            X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4, H_i))
-            idx_params = [-1]
-        else:
-            X_fit = np.column_stack((A1, B1, A2, B2, A3, B3, A4, B4))            
-    else:
-        print("Invalid option")
-        return
-
-        
-    if n_components2 == 1:
-        if not non_rhythmic:
-            X_fit = np.column_stack((X_fit, np.column_stack((A1_i, B1_i, H_i))))
-            #idx_params = [-3, -2, -1]
-            idx_params = [-3, -2]
-    elif n_components2 == 2:        
-        if not non_rhythmic:
-            X_fit = np.column_stack((X_fit, np.column_stack((A1_i, B1_i, A2_i, B2_i, H_i))))                        
-            #idx_params = [-5, -4, -3, -2, -1]            
-            idx_params = [-5, -4, -3, -2]            
-    elif n_components2 == 3:
-        if not non_rhythmic:
-            X_fit = np.column_stack((X_fit, np.column_stack((A1_i, B1_i, A2_i, B2_i, A3_i, B3_i, H_i))))                                    
-            #idx_params = [-7, -6, -5, -4, -3, -2, -1]
-            idx_params = [-7, -6, -5, -4, -3, -2]
-    elif n_components2 == 4:
-        if not non_rhythmic:
-            X_fit = np.column_stack((X_fit, np.column_stack((A1_i, B1_i, A2_i, B2_i, A3_i, B3_i, A4_i, B4_i, H_i))))
-            #idx_params = [-9, -8, -7, -6, -5, -4, -3, -2, -1]
-            idx_params = [-9, -8, -7, -6, -5, -4, -3, -2]
-    else:
-        print("Invalid option")
-        return
-
-    if lin_comp:
-        X_fit = np.column_stack((X_i, X_fit))
-        X_fit = np.column_stack((X, X_fit))    
-    X_fit = sm.add_constant(X_fit, has_constant='add')
-
-    """
-    ###
-    # fit
-    ###
-    """       
-    if model_type == 'lin':
-        model = sm.OLS(Y, X_fit)
-        results = model.fit()
-    elif model_type == 'poisson':
-        model = sm.GLM(Y, X_fit, family=sm.families.Poisson())
-        results = model.fit()
-    elif model_type =='gen_poisson':
-        model = statsmodels.discrete.discrete_model.GeneralizedPoisson(Y, X_fit)
-        results = model.fit()        
-    elif model_type == 'poisson_zeros':
-        model = statsmodels.discrete.count_model.ZeroInflatedPoisson(Y,X_fit, p=2)
-        #results = model.fit()
-        results = model.fit(method='bfgs', maxiter=5000, maxfun=5000)    
-    elif model_type == 'nb_zeros':
-        model = statsmodels.discrete.count_model.ZeroInflatedNegativeBinomialP(Y,X_fit,p=2)
-        #results = model.fit()
-        results = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
-    elif model_type == 'nb':
-        #exposure = np.zeros(len(Y))
-        #exposure[:] = np.mean(Y)
-        #model = sm.GLM(Y, X, family=sm.families.NegativeBinomial(), exposure = exposure)
-        if alpha:
-            model = sm.GLM(Y, X_fit, family=sm.families.NegativeBinomial(alpha=alpha))
-        else:
-            model = sm.GLM(Y, X_fit, family=sm.families.NegativeBinomial())
-        results = model.fit()
-    else:
-        print("Invalid option")
-        return
-
-    
-    
-    """
-    ###
-    # plot
-    ###
-    """
-    
-    
-    ###
-    
-    plt.plot(X1, Y1, 'ko', markersize=1, label = test1)
-    plt.plot(X2, Y2, 'ro', markersize=1, label = test2)
-    #plt.plot(X, results.fittedvalues, label = 'fit')
-    
-    if model_type =='gen_poisson':
-        Y_fit = results.predict(X_fit)
-    else:
-        Y_fit = results.fittedvalues
-
-    X1 = X[H_i == 0]
-    Y_fit1 = Y_fit[H_i == 0]
-    L1 = list(zip(X1,Y_fit1))
-    L1.sort()
-    X1,Y_fit1 = list(zip(*L1))  
-    X2 = X[H_i == 1]
-    Y_fit2 = Y_fit[H_i == 1]
-    L2 = list(zip(X2,Y_fit2))
-    L2.sort()
-    X2,Y_fit2 = list(zip(*L2))  
-    plt.plot(X1, Y_fit1, 'k', label = 'fit '+test1)    
-    plt.plot(X2, Y_fit2, 'r', label = 'fit '+test2)    
-    
-    # if generalized poisson last parameter is alpha!!
-    if model_type =='gen_poisson':
-        idx_params = np.array(idx_params) - 1
-    
-    p = min(results.pvalues[idx_params])
-    plt.title(test1 + ' vs. ' + test2 + ', components1=' + str(n_components1) + ', components2=' + str(n_components2) +'\nperiod1=' + str(period1) + ', period2=' + str(period2)+', p-value=' + str(p))
-    plt.xlabel('time [h]')
-    plt.ylabel('measurements')
-    plt.legend()
-    
-    if save_to:
-        plt.savefig(save_to+'.png')
-        plt.savefig(save_to+'.pdf')
-        plt.close()
-    else:
-        plt.show()
-    
-    #fig = plt.gcf()
-    #fig.set_size_inches(11,8)
-    
-    if plot_residuals:
-        
-        resid = results.resid
-        sm.qqplot(resid)
-        plt.title(test1 + ' vs. ' + test2)
-        save_to_resid = save_to.split(".")[0] + '_resid' + save_to.split(".")[1]
-        if save_to:
-            plt.savefig(save_to_resid)
-            plt.close()
-        else:
-            plt.show()
-    
-    
-    """
-    print(test1, 'vs', test2)
-    print('components1=' + str(n_components1) + ', components2=' + str(n_components2))
-    print(results.pvalues[idx_params])
-    print(results.summary())
-    print("######################")
-    """
-    return (results.pvalues[idx_params], results.params[idx_params], results)
-    
 
 
 
@@ -2546,5 +2157,39 @@ def compare_nonlinear(X1, Y1, X2, Y2, test1 = '', test2 = '', min_per = 18, max_
     
     return statistics, p_dict
     
- 
- 
+# when the number of samples is large, the 0.05 significance level should be decreased
+# calculate_significance_level allows you to define a significance level in such cases
+# N: number of samples
+# kwargs should include:
+# n_params: number of params in a model
+# OR
+# n_components: number of components in a cosinor model 
+# optional: lin_comp (bool): additional linear component
+# by default the function returns a significance level for the F-test used in a regression
+# if return_T is True, the function returns a significance level for the T-test
+# for the explanation of background and references see https://davegiles.blogspot.com/2019/10/everythings-significant-when-you-have.html
+def calculate_significance_level(N, **kwargs):
+    F = np.log(N)
+    
+    if 'n_params' in kwargs:
+        n_params = kwargs['n_params']
+    elif 'n_components' in kwargs:
+        n_components = kwargs['n_components']
+        n_params = n_components * 2 + 1
+
+        if 'lin_comp' in kwargs and kwargs['lin_comp']:
+            n_params += 1
+    else:
+        print('At least n_params or n_components need to be specified.')
+        return
+
+
+    dof1 = n_params-1
+
+    if 'return_T' in kwargs and kwargs['return_T']:
+        alpha_T = 1 - stats.t.cdf(np.sqrt(F), dof1)
+        return alpha_T
+    else:
+        dof2 = N - n_params
+        alpha_F = 1 - stats.f.cdf(F, dof1, dof2)
+        return alpha_F
