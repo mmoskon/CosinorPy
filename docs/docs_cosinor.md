@@ -177,6 +177,6 @@ or
 
 Optional arguments:
 
-* `lin_comp`: additional linear component (`bool`) (optional)
+* `lin_comp`: additional linear component (`bool`)
 * `return_T`: By default the function returns a significance level for the F-test used in a regression process. If `return_T` is `True`, the function returns a significance level for the T-test.
 For the explanation of background and references see https://davegiles.blogspot.com/2019/10/everythings-significant-when-you-have.html
