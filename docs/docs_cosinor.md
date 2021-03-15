@@ -161,3 +161,17 @@ Compare two tests from `pair` using `n_components` cosinor with period equal to 
 
 ### `cosinor.compare_nonlinear(X1, Y1, X2, Y2, test1 = '', test2 = '', min_per = 18, max_per=36, compare_phase = False, compare_period = False, compare_amplitude = False, save_to = '', plot_residuals=False)`
 Perform the analysis of differential expression on the basis of non-linear cosinor model.
+
+### `cosinor.calculate_significance_level(N, **kwargs)`
+When the number of samples is large, the 0.05 significance level should be decreased. `calculate_significance_level` allows you to define a significance level in such cases
+
+#### Parameters
+* `N`: the number of samples
+##### Keyword arguments:
+Should include
+* `n_params`: number of params in a model
+or
+* `n_components`: number of components in a cosinor model 
+* `lin_comp`: additional linear component (`bool`) (optional)
+* `return_T`: By default the function returns a significance level for the F-test used in a regression process. If `return_T` is `True`, the function returns a significance level for the T-test.
+For the explanation of background and references see https://davegiles.blogspot.com/2019/10/everythings-significant-when-you-have.html
