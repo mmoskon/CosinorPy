@@ -681,7 +681,19 @@ def generate_permutations_all(pop1, pop2):
     return(permutations)
 
 """
-Permutation test - does not work as well as it should. The problem: both populations in a permutation need to be rhythmic to assess the differences.
+Permutation test - does not work as well as it should. 
+Problem: when you move an individual from the first population to 
+the second one, rhythmicity is collapsed.
+
+Procedure:
+
+- for each permutation...
+-- build permuted population 1 (pop1_perm) and permuted population 2 (pop2_perm)
+-- build a cosinor model for pop1_perm and pop2_perm
+-- evaluate rhythmicity params for pop1_perm and pop2_perm
+-- evalute differences for rhythmicity params between pop1_perm and pop2_perm
+-- add differences to a list
+- calculate percentile score of the difference for rhythmicity params between population 1 and population 2 
 """
 def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_comp = False, model_type = 'lin'):#, N=10=, permutations=[]):
     
@@ -777,9 +789,24 @@ def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_co
 
     return df_results
 
-# only approximative
-# rhythm params should be calculated for each population on the population mean cosinor
-# only approximately equals mean of rhythm params from the population
+"""
+* only approximative
+* rhythm params should be calculated for each population on the population mean cosinor
+* in this case, we evaluate rhythm params as means of rhythm params of each individual 
+(only approximately equals mean of rhythm params from the population)
+
+Procedure:
+
+- for each permutation...
+-- build permuted population 1 (pop1_perm) and permuted population 2 (pop2_perm)
+-- calculate means of rhythmicity params for pop1_perm and pop2_perm
+-- evalute differences for rhythmicity params between pop1_perm and pop2_perm
+-- add differences to a list
+- calculate percentile score of the difference for rhythmicity params between population 1 and population 2
+
+"""
+
+
 def permutation_test_population_approx(df, pairs, period = 24, n_components = 2, lin_comp = False, model_type = 'lin', N = None):#, N=10=, permutations=[]):
     
     
