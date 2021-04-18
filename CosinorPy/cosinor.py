@@ -720,7 +720,7 @@ def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_co
         d_amp = abs(amplitude1 - amplitude2)
         d_acr = abs(acrophase1 - acrophase2)
         d_mesor = abs(mesor1 - mesor2)
-        amps, acrs, mesors = [d_amp], [d_acr], [d_mesor]
+        amps, acrs, mesors = [], [], [] #[d_amp], [d_acr], [d_mesor]
 
         tests1 = list(df_pop1.test.unique())
         tests2 = list(df_pop2.test.unique())
@@ -852,7 +852,7 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
         d_amp = abs(amplitude1 - amplitude2)
         d_acr = abs(acrophase1 - acrophase2)
         d_mesor = abs(mesor1 - mesor2)
-        d_amps, d_acrs, d_mesors = [d_amp], [d_acr], [d_mesor]
+        d_amps, d_acrs, d_mesors = [], [], []#[d_amp], [d_acr], [d_mesor]
 
         n1 = len(list(df_pop1.test.unique()))
         n2 = len(list(df_pop2.test.unique()))
