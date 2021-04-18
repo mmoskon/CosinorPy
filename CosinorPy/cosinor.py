@@ -470,8 +470,13 @@ def generate_independents(X, n_components = 3, period = 24, lin_comp = False):
     
     
 #def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', alpha=0, plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label=''):
-def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label='', **kwargs):
- 
+def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label='', return_individual_params = False, **kwargs):
+
+    if return_individual_params:
+        ind_amps = []
+        ind_acrs = []
+        ind_mesors = []
+
     params = -1
 
     tests = df_pop.test.unique()
@@ -507,13 +512,19 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
             params = results.params
         else:
             params = np.vstack([params, results.params])
-        if plot_on and plot_individuals:
+        if (plot_on and plot_individuals) or return_individual_params:
             Y_eval_params = results.predict(X_fit_eval_params)
             plt.plot(X_test,Y_eval_params,'k', label=test)
             
             min_Y_test = min(min_Y_test, np.min(Y_eval_params))
             max_Y_test = max(max_Y_test, np.max(Y_eval_params))
             
+            if return_individual_params:
+                rhythm_ind_params = evaluate_rhythm_params(X_test, Y_eval_params)    
+                ind_amps.append(rhythm_ind_params['amplitude'])
+                ind_acrs.append(rhythm_ind_params['acrophase'])
+                ind_mesors.append(rhythm_ind_params['mesor'])
+
             #plt.plot(x, results.fittedvalues,'k', label=test)
         if plot_on and plot_measurements:
             plt.plot(x,y,'ko', markersize=1)
@@ -611,9 +622,14 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
                         'p-values': p_values} 
 
 
-    
-    
-    return params, statistics, statistics_params, rhythm_params, results
+    if return_individual_params:
+        ind_params = {'amplitudes': ind_amps,
+                      'acrophases': ind_acrs,
+                      'mesors': ind_mesors}
+        return params, statistics, statistics_params, rhythm_params, results, ind_params
+
+    else:
+        return params, statistics, statistics_params, rhythm_params, results
 
 
 """
@@ -667,7 +683,7 @@ def generate_permutations_all(pop1, pop2):
 """
 Permutation test - does not work as well as it should. The problem: both populations in a permutation need to be rhythmic to assess the differences.
 """
-def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_comp = False):#, N=10=, permutations=[]):
+def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_comp = False, model_type = 'lin'):#, N=10=, permutations=[]):
     
     
     df_results = pd.DataFrame(columns = ['pair', "d_amp", "p_d_amp", "d_acr", "p_d_acr", "d_mesor", "p_d_mesor"], dtype=float)
@@ -679,8 +695,8 @@ def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_co
         df_pop1 = df[df.test.str.startswith(pair[0])] 
         df_pop2 = df[df.test.str.startswith(pair[1])] 
 
-        _, statistics1, _, rhythm_params1, _ = population_fit(df_pop1, n_components = n_components, period = period, lin_comp= lin_comp, model_type = 'lin', plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
-        _, statistics2, _, rhythm_params2, _ = population_fit(df_pop2, n_components = n_components, period = period, lin_comp= lin_comp, model_type = 'lin', plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
+        _, statistics1, _, rhythm_params1, _ = population_fit(df_pop1, n_components = n_components, period = period, lin_comp= lin_comp, model_type = model_type, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
+        _, statistics2, _, rhythm_params2, _ = population_fit(df_pop2, n_components = n_components, period = period, lin_comp= lin_comp, model_type = model_type, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
 
         p1, amplitude1, acrophase1, mesor1 = statistics1['p'], rhythm_params1['amplitude'], rhythm_params1['acrophase'], rhythm_params1['mesor']
         p2, amplitude2, acrophase2, mesor2 = statistics2['p'], rhythm_params2['amplitude'], rhythm_params2['acrophase'], rhythm_params2['mesor']
@@ -716,8 +732,8 @@ def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_co
             df_test1 = df[df.test.isin(perm1)]
             df_test2 = df[df.test.isin(perm2)]
 
-            _, statistics_test1, _, rhythm_params_test1, _ = population_fit(df_test1, n_components = n_components, period = period, lin_comp = lin_comp, model_type = 'lin', plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
-            _, statistics_test2, _, rhythm_params_test2, _ = population_fit(df_test2, n_components = n_components, period = period, lin_comp = lin_comp, model_type = 'lin', plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
+            _, statistics_test1, _, rhythm_params_test1, _ = population_fit(df_test1, n_components = n_components, period = period, lin_comp = lin_comp, model_type = model_type, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
+            _, statistics_test2, _, rhythm_params_test2, _ = population_fit(df_test2, n_components = n_components, period = period, lin_comp = lin_comp, model_type = model_type, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
 
             p_test1, amplitude_test1, acrophase_test1, mesor_test1 = statistics_test1['p'], rhythm_params_test1['amplitude'], rhythm_params_test1['acrophase'], rhythm_params_test1['mesor']
             p_test2, amplitude_test2, acrophase_test2, mesor_test2 = statistics_test2['p'], rhythm_params_test2['amplitude'], rhythm_params_test2['acrophase'], rhythm_params_test2['mesor']
@@ -761,7 +777,129 @@ def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_co
 
     return df_results
 
-                      
+# only approximative
+# rhythm params should be calculated for each population on the population mean cosinor
+# only approximately equals mean of rhythm params from the population
+def permutation_test_population_approx(df, pairs, period = 24, n_components = 2, lin_comp = False, model_type = 'lin', N = None):#, N=10=, permutations=[]):
+    
+    
+    df_results = pd.DataFrame(columns = ['pair', "d_amp", "p_d_amp", "d_acr", "p_d_acr", "d_mesor", "p_d_mesor"], dtype=float)
+
+    for pair in pairs:
+
+        
+
+        df_pop1 = df[df.test.str.startswith(pair[0])] 
+        df_pop2 = df[df.test.str.startswith(pair[1])] 
+
+        _, statistics1, _, rhythm_params1, _, ind_params1= population_fit(df_pop1, n_components = n_components, period = period, lin_comp= lin_comp, model_type = model_type, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False, return_individual_params=True)
+        _, statistics2, _, rhythm_params2, _, ind_params2 = population_fit(df_pop2, n_components = n_components, period = period, lin_comp= lin_comp, model_type = model_type, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False, return_individual_params=True)
+
+        p1, amplitude1, acrophase1, mesor1 = statistics1['p'], rhythm_params1['amplitude'], rhythm_params1['acrophase'], rhythm_params1['mesor']
+        p2, amplitude2, acrophase2, mesor2 = statistics2['p'], rhythm_params2['amplitude'], rhythm_params2['acrophase'], rhythm_params2['mesor']
+
+        amps1 = ind_params1['amplitudes']
+        amps2 = ind_params2['amplitudes']
+        amps = np.append(amps1, amps2)
+
+        acrs1 = ind_params1['acrophases']
+        acrs2 = ind_params2['acrophases']
+        acrs = np.append(acrs1, acrs2)
+
+        mesors1 = ind_params1['mesors']
+        mesors2 = ind_params2['mesors']
+        mesors = np.append(mesors1, mesors2)
+
+        # equations below only present an approximation
+        amplitude1 = np.mean(amps1)
+        amplitude2 = np.mean(amps2)
+        acrophase1 = np.mean(acrs1)
+        acrophase2 = np.mean(acrs2)
+        mesor1 = np.mean(mesors1)
+        mesor2 = np.mean(mesors2)
+
+        if p1 > 0.05 or p2 > 0.05:
+            print(pair, "rhythmicity in one is not significant")
+            continue
+
+        d_amp = abs(amplitude1 - amplitude2)
+        d_acr = abs(acrophase1 - acrophase2)
+        d_mesor = abs(mesor1 - mesor2)
+        d_amps, d_acrs, d_mesors = [d_amp], [d_acr], [d_mesor]
+
+        n1 = len(list(df_pop1.test.unique()))
+        n2 = len(list(df_pop2.test.unique()))
+
+
+        permutations = np.array(list(generate_permutations_all(list(range(n1)), list(range(n1,n1+n2)))))
+
+        if N:
+            if N < len(permutations):
+                idxs = np.random.choice(np.arange(len(permutations)), size=N, replace=False)
+                permutations = permutations[idxs]
+            else:
+                idxs = np.random.choice(np.arange(len(permutations)), size=N, replace=True)  
+                permutations = permutations[idxs]
+            
+        #print(len(permutations))
+
+
+        #print(permutations)
+
+        for perm1, perm2 in permutations:
+            perm1 = np.array(perm1)
+            perm2 = np.array(perm2)
+
+            amplitude_test1 = np.mean(amps[perm1])
+            amplitude_test2 = np.mean(amps[perm2])
+            acrophase_test1 = np.mean(acrs[perm1])
+            acrophase_test2 = np.mean(acrs[perm2])
+            mesor_test1 = np.mean(mesors[perm1])
+            mesor_test2 = np.mean(mesors[perm2])
+
+            d_amp_test = abs(amplitude_test1 - amplitude_test2)
+            d_acr_test = abs(acrophase_test1 - acrophase_test2)
+            d_mesor_test = abs(mesor_test1 - mesor_test2)
+            
+           
+
+            d_amps.append(d_amp_test)
+            d_acrs.append(d_acr_test)
+            d_mesors.append(d_mesor_test)
+        
+
+        #print(amps)
+        #print(acrs)
+        #print(mesors)
+
+       
+        #print(d_amps)
+        #print(d_acrs)
+        #print(d_mesors)
+
+
+        p_d_amp = 1 - percentileofscore(d_amps, d_amp, 'rank')/100
+        p_d_acr = 1 - percentileofscore(d_acrs, d_acr, 'rank')/100
+        p_d_mesor = 1 - percentileofscore(d_mesors, d_mesor, 'rank')/100
+
+        #print(p_d_amp, p_d_acr, p_d_mesor)
+
+        d = {"pair": tuple(pair),
+             "d_amp": d_amp, 
+             "p_d_amp": p_d_amp, 
+             "d_acr": d_acr, 
+             "p_d_acr": p_d_acr, 
+             "d_mesor": d_mesor, 
+             "p_d_mesor": p_d_mesor}
+        
+        df_results = df_results.append(d, ignore_index=True)
+
+
+    return df_results
+
+
+
+
                                            
 
 
