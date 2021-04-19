@@ -695,7 +695,7 @@ Procedure:
 -- add differences to a list
 - calculate percentile score of the difference for rhythmicity params between population 1 and population 2 
 """
-def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_comp = False, model_type = 'lin'):#, N=10=, permutations=[]):
+def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_comp = False, model_type = 'lin', N = None):#, N=10=, permutations=[]):
     
     
     df_results = pd.DataFrame(columns = ['pair', "d_amp", "p_d_amp", "d_acr", "p_d_acr", "d_mesor", "p_d_mesor"], dtype=float)
@@ -737,6 +737,16 @@ def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_co
                 permutations.append((tests[perm1], tests[perm2]))
         """
         permutations = generate_permutations_all(tests1, tests2)
+
+        if N:
+            permutations = np.array(list(permutations))
+            if N < len(permutations):
+                idxs = np.random.choice(np.arange(len(permutations)), size=N, replace=False)
+                permutations = permutations[idxs]
+            else:
+                idxs = np.random.choice(np.arange(len(permutations)), size=N, replace=True)  
+                permutations = permutations[idxs]
+
 
         #print(permutations)
 
