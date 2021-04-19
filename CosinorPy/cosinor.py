@@ -685,6 +685,8 @@ Permutation test - does not work as well as it should.
 Problem: when you move an individual from the first population to 
 the second one, rhythmicity is collapsed.
 
+N ... number of permutations (if omitted, all permutations are used)
+
 Procedure:
 
 - for each permutation...
@@ -804,6 +806,8 @@ def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_co
 * rhythm params should be calculated for each population on the population mean cosinor
 * in this case, we evaluate rhythm params as means of rhythm params of each individual 
 (only approximately equals mean of rhythm params from the population)
+
+N ... number of permutations (if omitted, all permutations are used)
 
 Procedure:
 
