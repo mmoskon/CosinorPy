@@ -190,69 +190,6 @@ def plot_single(data, results, test='', plot_measurements=True, save_to='', plot
     else:
         plt.show()    
    
-"""
-def fit_cosinor_pair(X1, Y1, X2, Y2, period, test1='1', test2='2'):
-   
-    data = prepare_df(X1, Y1, X2, Y2)
-    fit_results, amp, acr = fit_cosinor_pairs_df(data, period)
-    
-    plot_pair(data, fit_results, test1=test1, test2=test2, period=period)
-    
-    return fit_results, amp, acr
-"""
-"""
-def fit_cosinor_pair_df(data, period):
-       
-    rrr = np.cos(2*np.pi*data.x/period)
-    sss = np.sin(2*np.pi*data.x/period)
-        
-    
-    data['rrr'] = rrr
-    data['sss'] = sss
-
-    results = smf.ols('y ~ group + rrr + sss + group:rrr + group:sss', data).fit()
-    
-    beta_s = np.array([results.params['sss'], results.params['group:sss']])
-    beta_r = np.array([results.params['rrr'], results.params['group:rrr']])
-    
-    beta_s[1] += beta_s[0]
-    beta_r[1] += beta_r[0]
-    
-    amp, acr = amp_acr(beta_s, beta_r)
-    
-    
-    #cov = results.cov_params().loc[['rrr', 'group:rrr', 'sss', 'group:sss'],['rrr', 'group:rrr', 'sss', 'group:sss'],]   
-    
-    #jac = np.array((np.concatenate((np.diag(a_r)[0,:], np.diag(a_s)[0,:])),
-    #np.concatenate((np.diag(a_r)[1,:], np.diag(a_s)[1,:])),
-    #np.concatenate((np.diag(b_r)[0,:], np.diag(b_s)[0,:])),
-    #np.concatenate((np.diag(b_r)[1,:], np.diag(b_s)[1,:]))))    
-       
-       
-    return results, amp, acr
-"""
-
-"""
-def fit_cosinor_df(data, period):
-       
-    rrr = np.cos(2*np.pi*data.x/period)
-    sss = np.sin(2*np.pi*data.x/period)
-        
-    data['rrr'] = rrr
-    data['sss'] = sss
-
-    results = smf.ols('y ~ rrr + sss', data).fit()
-    
-    beta_s = results.params['sss']
-    beta_r = results.params['rrr']
-    
-    
-    amp, acr = amp_acr(beta_s, beta_r)
-           
-    return results, amp, acr
-"""
-
-
 
 def generate_test_data(x, beta_s, beta_r, period, plot_on = True):
     y = beta_r * np.cos(2*np.pi*x/period) + beta_s *  np.sin(2*np.pi*x/period)
@@ -766,7 +703,7 @@ def test_cosinor_pairs(df, pairs, period = 24, folder = '', prefix='', plot_meas
 
     return df_results
 
-def test_cosinor_single(data, period = 24):
+def test_cosinor_single(data, period = 24, corrected = True):
     
     rrr = np.cos(2*np.pi*data.x/period)
     sss = np.sin(2*np.pi*data.x/period)
@@ -789,6 +726,11 @@ def test_cosinor_single(data, period = 24):
     b_r = (1 / (1 + (beta_s**2 / beta_r**2))) * (-beta_s / beta_r**2)
     b_s = (1 / (1 + (beta_s**2 / beta_r**2))) * (1 / beta_r)
     
+    if corrected:
+        b_r = -b_r
+        b_s = -b_s
+
+
     jac = np.array([[a_r, a_s], [b_r, b_s]]) 
     
     cov_trans = np.dot(np.dot(jac, indVmat), np.transpose(jac))
@@ -815,7 +757,7 @@ def test_cosinor_single(data, period = 24):
     
 
 
-def test_cosinor_pair(data, period):
+def test_cosinor_pair(data, period, corrected = True):
     
     rrr = np.cos(2*np.pi*data.x/period)
     sss = np.sin(2*np.pi*data.x/period)
@@ -847,6 +789,10 @@ def test_cosinor_pair(data, period):
 
     b_r = (1 / (1 + (groups_s**2 / groups_r**2))) * (-groups_s / groups_r**2)
     b_s = (1 / (1 + (groups_s**2 / groups_r**2))) * (1 / groups_r)
+
+    if corrected:
+        b_r = - b_r
+        b_s = - b_s
 
     jac = np.array((np.concatenate((np.diag(a_r)[0,:], np.diag(a_s)[0,:])),
     np.concatenate((np.diag(a_r)[1,:], np.diag(a_s)[1,:])),
