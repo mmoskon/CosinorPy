@@ -1512,24 +1512,32 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
                     save_to = ''
                 
                 #pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
-                pvalues, params, _ = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to, **kwargs)
+                #p_overall, pvalues, params, _ = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to, **kwargs)
+                p_overall, p_params, p_F, params, _ = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to, **kwargs)
+                
                 
                 d = {}
                 d['test'] = test1 + ' vs. ' + test2
                 d['period'] = per
                 d['n_components'] = n_comps
-                for i, (param, p) in enumerate(zip(params, pvalues)):
-                    d['param' + str(i+1)] = param
-                    d['p' + str(i+1)] = p
+                d['p'] = p_overall
+                #for i, (param, p) in enumerate(zip(params, pvalues)):
+                #    d['param' + str(i+1)] = param
+                #    d['p' + str(i+1)] = p
                 
-                d['p(F test)'] = pvalues[-1]
+                d['p_params'] = p_params
+                
+                #d['p(F test)'] = pvalues[-1]
+                d['p(F test)'] = p_F
                 
                 df_results = df_results.append(d, ignore_index=True)
   
+    df_results['q'] = multi.multipletests(df_results['p'], method = 'fdr_bh')[1]
     
+    df_results['q_params'] = multi.multipletests(df_results['p_params'], method = 'fdr_bh')[1]
     
-    for i, (param, p) in enumerate(zip(params, pvalues)):        
-        df_results['q'+str(i+1)] = multi.multipletests(df_results['p'+str(i+1)], method = 'fdr_bh')[1]
+    #for i, (param, p) in enumerate(zip(params, pvalues)):        
+    #    df_results['q'+str(i+1)] = multi.multipletests(df_results['p'+str(i+1)], method = 'fdr_bh')[1]
     
     df_results['q(F test)'] = multi.multipletests(df_results['p(F test)'], method = 'fdr_bh')[1]
 
@@ -1573,7 +1581,8 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
             save_to = ''
         
         #pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
-        pvalues, params, _ = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, save_to = save_to, **kwargs)
+        #p_overall, pvalues, params, _ = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, save_to = save_to, **kwargs)
+        p_overall, p_params, p_F, params, _ = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, save_to = save_to, **kwargs)
         
         d = {}
         d['test'] = test1 + ' vs. ' + test2
@@ -1581,18 +1590,23 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
         d['n_components1'] = n_components1
         d['period2'] = period2
         d['n_components2'] = n_components2
-        for i, (param, p) in enumerate(zip(params, pvalues)):
-            d['param' + str(i+1)] = param
-            d['p' + str(i+1)] = p
         
-        d['p(F test)'] = pvalues[-1]
+        d['p'] = p_overall
+        d['p_params'] = p_params
+        #for i, (param, p) in enumerate(zip(params, pvalues)):
+        #    d['param' + str(i+1)] = param
+        #    d['p' + str(i+1)] = p
+        
+        d['p(F test)'] = p_F
         
         df_results = df_results.append(d, ignore_index=True)
     
-        
+    df_results['q'] = multi.multipletests(df_results['p'], method = 'fdr_bh')[1]
     
-    for i, (param, p) in enumerate(zip(params, pvalues)):        
-        df_results['q'+str(i+1)] = multi.multipletests(df_results['p'+str(i+1)], method = 'fdr_bh')[1]
+    df_results['q_params'] = multi.multipletests(df_results['p_params'], method = 'fdr_bh')[1]
+    
+    #for i, (param, p) in enumerate(zip(params, pvalues)):        
+    #    df_results['q'+str(i+1)] = multi.multipletests(df_results['p'+str(i+1)], method = 'fdr_bh')[1]
     
     df_results['q(F test)'] = multi.multipletests(df_results['p(F test)'], method = 'fdr_bh')[1]
 
@@ -1733,8 +1747,10 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     
     if model_type =='lin':
         Y_fit = results.fittedvalues        
+        p_overall = results.f_pvalue
     else:
         Y_fit = results.predict(X_fit)
+        p_overall = results.llr_pvalue
         
     
     
@@ -1786,7 +1802,8 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     ### plot with higher density
     
     n_points = 1000
-    X_full = np.linspace(min(min(X1),min(X2)), max(max(X1), max(X2)), n_points)
+    max_P = max(period1, period2)
+    X_full = np.linspace(min(min(X1),min(X2)), max(max_P, max(max(X1), max(X2))), n_points)
     
     X_fit_full = generate_independents_compare(X_full, X_full, n_components1 = n_components1, period1 = period1, n_components2 = n_components2, period2 = period2, lin_comp= lin_comp)
     
@@ -1843,9 +1860,11 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
             plt.show()
     
 
-    p_values = list(results.pvalues[idx_params]) + [p_f]
-    
-    return (p_values, results.params[idx_params], results)
+    #p_values = list(results.pvalues[idx_params]) + [p_f]
+    p_params = min(results.pvalues[idx_params])
+        
+    #return (p_overall, p_values, results.params[idx_params], results)
+    return (p_overall, p_params, p_f, results.params[idx_params], results)
 
 def generate_independents_compare(X1, X2, n_components1 = 3, period1 = 24, n_components2 = 3, period2 = 24, lin_comp = False, non_rhythmic=False):
     H1 = np.zeros(X1.size)
