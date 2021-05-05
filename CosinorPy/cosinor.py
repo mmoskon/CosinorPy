@@ -1482,20 +1482,26 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
     
     
     return {'p':p, 'p_reject':p_reject, 'SNR':SNR, 'RSS': RSS, 'resid_SE': resid_SE, 'ME': ME}
-    
-    
-
-
 
 
 """
 primerjava med rezimi:
 - LymoRhyde (Singer:2019)
 """
-#def compare_pairs(df, pairs, n_components = 3, period = 24, lin_comp = False, model_type = 'lin', alpha=0, folder = '', prefix = '', plot_measurements=True):
+# compare pairs with the presumption that the same model is used in both cases 
+# the same model: the same period and the same number of cosinor components
 def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix = "", **kwargs):
     
-    df_results = pd.DataFrame()
+    df_results = pd.DataFrame(columns = ['test',
+                                         'period', 
+                                         'n_components', 
+                                         'p',
+                                         'q',
+                                         'p params',
+                                         'q params',
+                                         'p(F test)',
+                                         'q(F test)'])
+
 
     if type(period) == int:
         period = [period]
@@ -1525,7 +1531,7 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
                 #    d['param' + str(i+1)] = param
                 #    d['p' + str(i+1)] = p
                 
-                d['p_params'] = p_params
+                d['p params'] = p_params
                 
                 #d['p(F test)'] = pvalues[-1]
                 d['p(F test)'] = p_F
@@ -1534,7 +1540,7 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
   
     df_results['q'] = multi.multipletests(df_results['p'], method = 'fdr_bh')[1]
     
-    df_results['q_params'] = multi.multipletests(df_results['p_params'], method = 'fdr_bh')[1]
+    df_results['q params'] = multi.multipletests(df_results['p params'], method = 'fdr_bh')[1]
     
     #for i, (param, p) in enumerate(zip(params, pvalues)):        
     #    df_results['q'+str(i+1)] = multi.multipletests(df_results['p'+str(i+1)], method = 'fdr_bh')[1]
@@ -1542,21 +1548,29 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
     df_results['q(F test)'] = multi.multipletests(df_results['p(F test)'], method = 'fdr_bh')[1]
 
 
-    columns = df_results.columns
-    columns = columns.sort_values()
-    columns = np.delete(columns, np.where(columns == 'period'))
-    columns = np.append(['period'], columns)
-    columns = np.append([columns[-1]], columns[:-1])
+    #columns = df_results.columns
+    #columns = columns.sort_values()
+    #columns = np.delete(columns, np.where(columns == 'period'))
+    #columns = np.append(['period'], columns)
+    #columns = np.append([columns[-1]], columns[:-1])
     
-    df_results = df_results.reindex(columns, axis=1)
+    #df_results = df_results.reindex(columns, axis=1)
     
     return df_results
 
-    #return multi.multipletests(P, method = 'fdr_bh')[1]
-
-#def compare_pairs_best_models(df, df_best_models, pairs, lin_comp = False, model_type = 'lin', alpha = 0, folder = '', prefix = '', plot_measurements=True):
+# compare pairs using the best models as stored if df_best_models
 def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "", **kwargs):
-    df_results = pd.DataFrame()
+    df_results = pd.DataFrame(columns = ['test',
+                                         'period1', 
+                                         'n_components1', 
+                                         'period2',
+                                         'n_components2',
+                                         'p',
+                                         'q',
+                                         'p params',
+                                         'q params',
+                                         'p(F test)',
+                                         'q(F test)'])
 
     
     for test1, test2 in pairs:
@@ -1570,6 +1584,8 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
         period2 = model2.period
 
 
+        # if models have different number of components always start with the simpler model    
+        # model is simpler if number of components is smaller
         if n_components1 > n_components2:
             test1, test2 = test2, test1
             n_components1, n_components2 = n_components2, n_components1
@@ -1592,7 +1608,7 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
         d['n_components2'] = n_components2
         
         d['p'] = p_overall
-        d['p_params'] = p_params
+        d['p params'] = p_params
         #for i, (param, p) in enumerate(zip(params, pvalues)):
         #    d['param' + str(i+1)] = param
         #    d['p' + str(i+1)] = p
@@ -1603,21 +1619,17 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
     
     df_results['q'] = multi.multipletests(df_results['p'], method = 'fdr_bh')[1]
     
-    df_results['q_params'] = multi.multipletests(df_results['p_params'], method = 'fdr_bh')[1]
+    df_results['q params'] = multi.multipletests(df_results['p params'], method = 'fdr_bh')[1]
     
     #for i, (param, p) in enumerate(zip(params, pvalues)):        
     #    df_results['q'+str(i+1)] = multi.multipletests(df_results['p'+str(i+1)], method = 'fdr_bh')[1]
     
     df_results['q(F test)'] = multi.multipletests(df_results['p(F test)'], method = 'fdr_bh')[1]
 
-
-    columns = df_results.columns
-    columns = columns.sort_values()
-    #columns = np.delete(columns, np.where(columns == 'period'))
-    #columns = np.append(['period'], columns)
-    #columns = np.append([columns[-1]], columns[:-1])
+    #columns = df_results.columns
+    #columns = columns.sort_values()
     
-    df_results = df_results.reindex(columns, axis=1)
+    #df_results = df_results.reindex(columns, axis=1)
     
     return df_results
 
