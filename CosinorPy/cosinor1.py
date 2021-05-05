@@ -838,7 +838,7 @@ def test_cosinor_pair(data, period, corrected = True):
     diff_var_amp = np.dot(np.dot(idx, cov_trans), np.transpose(idx[np.newaxis]))
     glob_chi_amp = diff_est_amp * (1/diff_var_amp) * diff_est_amp
     ind_Z_amp = diff_est_amp/np.sqrt(np.diag(diff_var_amp))
-    interval_amp = np.array((diff_est_amp, diff_est_amp - 1.96 * np.sqrt(np.diag(diff_var_amp)), diff_est_amp + 1.96 * np.sqrt(np.diag(diff_var_amp))))
+    interval_amp = np.array((diff_est_amp - 1.96 * np.sqrt(np.diag(diff_var_amp)), diff_est_amp + 1.96 * np.sqrt(np.diag(diff_var_amp))))
     df_amp = 1
     global_p_value_amp = 1-stats.chi2.cdf(glob_chi_amp, df_amp)
     ind_p_value_amp = 2*norm.cdf(-abs(ind_Z_amp))
@@ -848,33 +848,33 @@ def test_cosinor_pair(data, period, corrected = True):
     diff_var_acr = np.dot(np.dot(idx, cov_trans), np.transpose(idx[np.newaxis]))
     glob_chi_acr = diff_est_acr * (1/diff_var_acr) * diff_est_acr
     ind_Z_acr = diff_est_acr/np.sqrt(np.diag(diff_var_acr))
-    interval_acr = np.array((diff_est_acr, diff_est_acr - 1.96 * np.sqrt(np.diag(diff_var_acr)), diff_est_acr + 1.96 * np.sqrt(np.diag(diff_var_acr))))
+    interval_acr = np.array((diff_est_acr - 1.96 * np.sqrt(np.diag(diff_var_acr)), diff_est_acr + 1.96 * np.sqrt(np.diag(diff_var_acr))))
     df_acr = 1
     global_p_value_acr = 1-stats.chi2.cdf(glob_chi_acr, df_acr)
     ind_p_value_acr = 2*norm.cdf(-abs(ind_Z_acr))
     
     
     global_test_amp = {'name': 'global test of amplitude change',
-                       'statistics': glob_chi_amp,
+                       'statistics': glob_chi_amp.flatten(),
                        'df': df_amp,
-                       'p_value': global_p_value_amp}
+                       'p_value': global_p_value_amp.flatten()}
     ind_test_amp = {'name': 'individual test of amplitude change',
-                    'statistics': ind_Z_amp,
+                    'statistics': ind_Z_amp.flatten(),
                     'df': np.nan,
-                    'value': interval_amp[0],
-                    'conf_int': interval_amp[1:],
-                    'p_value': ind_p_value_amp}
+                    'value': diff_est_amp,
+                    'conf_int': interval_amp.flatten(),
+                    'p_value': ind_p_value_amp.flatten()}
 
     global_test_acr = {'name': 'global test of acrophase shift',
-                       'statistics': glob_chi_acr, 
+                       'statistics': glob_chi_acr.flatten(), 
                        'df': df_acr,
-                       'p_value': global_p_value_acr}
+                       'p_value': global_p_value_acr.flatten()}
     ind_test_acr = {'name': 'individual test of acrophase shift',
-                    'statistics': ind_Z_acr,
+                    'statistics': ind_Z_acr.flatten(),
                     'df': np.nan,
-                    'value': interval_acr[0],
-                    'conf_int': interval_acr[1:],
-                    'p_value': ind_p_value_acr}
+                    'value': diff_est_acr,
+                    'conf_int': interval_acr.flatten(),
+                    'p_value': ind_p_value_acr.flatten()}
     
     return results, statistics_raw, statistics_trans, global_test_amp, ind_test_amp, global_test_acr, ind_test_acr
                     
