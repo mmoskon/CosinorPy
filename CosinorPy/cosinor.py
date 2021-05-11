@@ -9,7 +9,7 @@ import statsmodels.stats.multitest as multi
 import statsmodels.formula.api as smf
 import statsmodels.stats.multitest as multi
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
-from scipy.stats import t
+from scipy.stats import t, norm, sem
 from scipy.optimize import curve_fit
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from scipy.stats import percentileofscore
@@ -939,13 +939,7 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
     return df_results
 
 
-
-
-                                           
-
-
-
-def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = ""):
+def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = "", bootstrap=False):
     """
     ###
     # prepare the independent variables
@@ -1058,14 +1052,37 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
         if plot_margins:
             if model_type == 'lin':
                 _, lower, upper = wls_prediction_std(results, exog=X_fit_test, alpha=0.05)
-                if color:
-                    plt.fill_between(X_test, lower, upper, color=color, alpha=0.1)
-                else:
-                    plt.fill_between(X_test, lower, upper, color='#888888', alpha=0.1)
-            else:
+                rhythm_params_lower = evaluate_rhythm_params(X_test, lower)
+            
+                
+                mean_amp = rhythm_params['amplitude']
+                se_amp = abs(mean_amp - rhythm_params_lower['amplitude'])
+                rhythm_params['amplitude_CI'] = [mean_amp - 1.96*se_amp, mean_amp + 1.96*se_amp]
+                rhythm_params['amplitude_CI_p'] = 2 * norm.cdf(-np.abs(mean_amp/se_amp))
+
+                mean_mes = rhythm_params['mesor']
+                se_mes = abs(mean_mes - rhythm_params_lower['mesor'])
+                rhythm_params['mesor_CI'] = [mean_mes - 1.96*se_mes, mean_mes + 1.96*se_mes]
+                rhythm_params['mesor_CI_p'] = 2 * norm.cdf(-np.abs(mean_mes/se_mes))
+
+                mean_acr = rhythm_params['acrophase']
+                se_acr = abs(mean_acr - rhythm_params_lower['acrophase'])
+                rhythm_params['acrophase_CI'] = [mean_acr - 1.96*se_acr, mean_acr + 1.96*se_acr]
+                rhythm_params['acrophase_CI_p'] = 2 * norm.cdf(-np.abs(mean_acr/se_acr))
+
+                if plot and plot_margins:
+                    if color:
+                        plt.fill_between(X_test, lower, upper, color=color, alpha=0.1)
+                    else:
+                        plt.fill_between(X_test, lower, upper, color='#888888', alpha=0.1)
+            else: 
+                # calculate and draw plots from the combinations of parameters from the  95 % confidence intervals of assessed parameters
+
                 res2 = copy.deepcopy(results)
                 params = res2.params
                 CIs = results.conf_int()
+                if type(CIs) != np.ndarray:
+                    CIs = CIs.values
                 
                 #N = 512
                 N = 1024
@@ -1082,8 +1099,8 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
               
                 
                 P = np.zeros((len(params), N2))
-                
-                for i, CI in enumerate(CIs):
+                                
+                for i, CI in enumerate(CIs):                    
                     P[i,:] = np.linspace(CI[0], CI[1], N2)
                     
                 amplitude_CI = [rhythm_params['amplitude']]
@@ -1111,10 +1128,11 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                         Y_min = np.min(np.vstack([Y,Y_min]), axis=0)
                         Y_max = np.max(np.vstack([Y,Y_max]), axis=0)
                     """
-                    if color and color != '#000000':
-                        plt.plot(X_test, Y_test_CI, color=color, alpha=0.05)
-                    else:
-                        plt.plot(X_test, Y_test_CI, color='#888888', alpha=0.05)
+                    if plot and plot_margins:
+                        if color and color != '#000000':
+                            plt.plot(X_test, Y_test_CI, color=color, alpha=0.05)
+                        else:
+                            plt.plot(X_test, Y_test_CI, color='#888888', alpha=0.05)
                 
                     
                 #plt.fill_between(X_test, Y_min, Y_max, color='#888888', alpha=0.1)
@@ -1122,12 +1140,102 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                 #amplitude_CI = (min(amplitude_CI), max(amplitude_CI))
                 #mesor_CI = (min(mesor_CI), max(mesor_CI))
                 #acrophase_CI = (min(acrophase_CI), max(acrophase_CI))
+                         
+
+                #########################################################
+                # calculate confidence intervals and bootstrap p-values #
+                #########################################################
+
+                # SE or STD?
+                # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1255808/
+                # https://ocw.mit.edu/courses/mathematics/18-05-introduction-to-probability-and-statistics-spring-2014/readings/MIT18_05S14_Reading24.pdf
+                
+
+                mean_amp = np.mean(amplitude_CI) 
+                se_amp = sem(amplitude_CI)
+                #rhythm_params['amplitude_bootstrap'] = np.mean(amplitude_CI)               
+                rhythm_params['amplitude_CI'] = [mean_amp - 1.96*se_amp, mean_amp + 1.96*se_amp]
+                rhythm_params['amplitude_CI_p'] = 2 * norm.cdf(-np.abs(mean_amp/se_amp))
+
+                
+                mean_mes = np.mean(mesor_CI)
+                se_mes = sem(mesor_CI)
+                #rhythm_params['mesor_bootstrap'] = np.mean(mesor_CI)    
+                rhythm_params['mesor_CI'] = [mean_mes - 1.96*se_mes, mean_mes + 1.96*se_mes]
+                rhythm_params['mesor_CI_p'] = 2 * norm.cdf(-np.abs(mean_mes/se_mes))
+
+                mean_acr = np.mean(acrophase_CI)
+                se_acr = sem(acrophase_CI)
+                #rhythm_params['acrophase_bootstrap'] = np.mean(acrophase_CI)
+                rhythm_params['acrophase_CI'] = [mean_acr - 1.96*se_acr, mean_acr + 1.96*se_acr]
+                rhythm_params['acrophase_CI_p'] = 2 * norm.cdf(-np.abs(mean_acr/se_acr))
+
+  
+    if bootstrap:
+
+        amplitude_bs = np.zeros(bootstrap)
+        mesor_bs = np.zeros(bootstrap)
+        acrophase_bs = np.zeros(bootstrap)
+
+        idxs = np.arange(len(X))
+
+        for i in range(bootstrap):
+            
+            idxs_bs = np.random.choice(idxs, len(idxs), replace=True)
+            Y_bs, X_fit_bs = Y[idxs_bs], X_fit[idxs_bs]
+
+            if model_type == 'lin':
+                model_bs = sm.OLS(Y_bs, X_fit_bs)
+                results_bs = model_bs.fit()
+            elif model_type == 'poisson':
+                model_bs = sm.GLM(Y_bs, X_fit_bs, family=sm.families.Poisson())
+                results_bs = model_bs.fit()
+            elif model_type =='gen_poisson':
+                model_bs = statsmodels.discrete.discrete_model.GeneralizedPoisson(Y_bs, X_fit_bs)
+                results_bs = model_bs.fit()
+            elif model_type == 'nb':
+                model_bs = sm.GLM(Y_bs, X_fit_bs, family=sm.families.NegativeBinomial(alpha=alpha))
+                results_bs = model_bs.fit()
+
+            Y_test_bs = results_bs.predict(X_fit_test)
+            Y_eval_params_bs = results_bs.predict(X_fit_eval_params)
+            rhythm_params_bs = evaluate_rhythm_params(X_test, Y_eval_params_bs)
         
-                rhythm_params['amplitude_CI'] = amplitude_CI
-                rhythm_params['mesor_CI'] = mesor_CI
-                rhythm_params['acrophase_CI'] = acrophase_CI
+            amplitude_bs[i] = rhythm_params_bs['amplitude']
+            mesor_bs[i] = rhythm_params_bs['mesor']
+            acrophase_bs[i] = rhythm_params_bs['acrophase']                    
+
+        #########################################################
+        # calculate confidence intervals and bootstrap p-values #
+        #########################################################
+
+        # SE or STD?
+        # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1255808/
+        # https://ocw.mit.edu/courses/mathematics/18-05-introduction-to-probability-and-statistics-spring-2014/readings/MIT18_05S14_Reading24.pdf
+                
+
+        mean_amp = np.mean(amplitude_bs) 
+        se_amp = sem(amplitude_bs)
+        rhythm_params['amplitude_bootstrap'] = np.mean(amplitude_bs)               
+        rhythm_params['amplitude_CI'] = [mean_amp - 1.96*se_amp, mean_amp + 1.96*se_amp]
+        rhythm_params['amplitude_CI_p'] = 2 * norm.cdf(-np.abs(mean_amp/se_amp))
+
+                
+        mean_mes = np.mean(mesor_bs)
+        se_mes = sem(mesor_bs)
+        rhythm_params['mesor_bootstrap'] = np.mean(mesor_bs)    
+        rhythm_params['mesor_CI'] = [mean_mes - 1.96*se_mes, mean_mes + 1.96*se_mes]
+        rhythm_params['mesor_CI_p'] = 2 * norm.cdf(-np.abs(mean_mes/se_mes))
+
+        mean_acr = np.mean(acrophase_bs)
+        se_acr = sem(acrophase_bs)
+        rhythm_params['acrophase_bootstrap'] = np.mean(acrophase_bs)
+        rhythm_params['acrophase_CI'] = [mean_acr - 1.96*se_acr, mean_acr + 1.96*se_acr]
+        rhythm_params['acrophase_CI_p'] = 2 * norm.cdf(-np.abs(mean_acr/se_acr))
         
-        
+
+
+    if plot:
         ###
         if not color:
             color = 'black'
