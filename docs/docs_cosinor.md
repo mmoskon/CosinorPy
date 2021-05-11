@@ -47,7 +47,7 @@ Plots the phases in a polar coordinate system.
 * `labels`: labels assigned to each plot
 
 
-### `cosinor.fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = ""))`
+### `cosinor.fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = "", bootstrap=False))`
 Perform the basic Cosinor regression
 #### Parameters
 * `X`: iterable of timepoints 
@@ -69,6 +69,7 @@ Perform the basic Cosinor regression
 * `plot_phase`: if True phase plot will be made
 * `hold`: allows to plot multiple graphs in the same figure
 * `x_label`, `y_label`: if specified, these labels are used in the figure
+* `bootstrap`: if set to `int` it defines the number of bootstrap samples used to assess the confidence intervals of amplitude, acrophase and mesor as well as their p-values
 #### Returns
 * tuple which includes
   * `model`: if `return_model` was set to True
