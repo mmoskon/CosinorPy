@@ -157,7 +157,7 @@ See arguments of `cosinor.fit_me`.
 ### `cosinor.compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "", **kwargs)`
 Compares pairs from `pairs` using the data from `df` and an optimal number of components from `df_best_models`.
 
-### `cosinor.compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = '')`
+### `cosinor.compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = '', bootstrap = False)`
 Compare two tests from `pair` using `n_components` cosinor with period equal to `period`. If `n_components2` or `period2` are specified, using a different number of components and/or period for the second model. 
 
 ### `cosinor.compare_nonlinear(X1, Y1, X2, Y2, test1 = '', test2 = '', min_per = 18, max_per=36, compare_phase = False, compare_period = False, compare_amplitude = False, save_to = '', plot_residuals=False)`
