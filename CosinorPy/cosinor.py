@@ -939,7 +939,7 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
     return df_results
 
 
-def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = "", bootstrap=False):
+def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = "", bootstrap=False, bootstrap_type="std"):
     """
     ###
     # prepare the independent variables
@@ -1273,20 +1273,38 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                 
 
         mean_amp = np.nanmean(amplitude_bs) 
-        se_amp = sem(amplitude_bs, nan_policy='omit')#np.nanstd(amplitude_bs)
+        if bootstrap_type == "se":
+            se_amp = sem(amplitude_bs, nan_policy='omit')
+        elif bootstrap_type == "std":
+            se_amp = np.nanstd(amplitude_bs)    
+        else:
+            print("Invalid bootstrap type")
+            return        
         rhythm_params['amplitude_bootstrap'] = np.nanmean(amplitude_bs)               
         rhythm_params['amplitude_CI'] = [mean_amp - 1.96*se_amp, mean_amp + 1.96*se_amp]
         rhythm_params['amplitude_CI_p'] = 2 * norm.cdf(-np.abs(mean_amp/se_amp))
 
          
         mean_mes = np.nanmean(mesor_bs)
-        se_mes = sem(mesor_bs, nan_policy='omit')#np.nanstd(mesor_bs)
+        if bootstrap_type == "se":
+            se_mes = sem(mesor_bs, nan_policy='omit')
+        elif bootstrap_type == "std":
+            se_mes = np.nanstd(mesor_bs)
+        else:
+            print("Invalid bootstrap type")
+            return 
         rhythm_params['mesor_bootstrap'] = np.nanmean(mesor_bs)    
         rhythm_params['mesor_CI'] = [mean_mes - 1.96*se_mes, mean_mes + 1.96*se_mes]
         rhythm_params['mesor_CI_p'] = 2 * norm.cdf(-np.abs(mean_mes/se_mes))
 
         mean_acr = np.nanmean(acrophase_bs)
-        se_acr = sem(acrophase_bs, nan_policy='omit')#np.nanstd(acrophase_bs)
+        if bootstrap_type == "se":
+            se_acr = sem(acrophase_bs, nan_policy='omit')
+        elif bootstrap_type == "std":
+            se_acr = np.nanstd(acrophase_bs)
+        else:
+            print("Invalid bootstrap type")
+            return 
         rhythm_params['acrophase_bootstrap'] = np.nanmean(acrophase_bs)
         rhythm_params['acrophase_CI'] = [mean_acr - 1.96*se_acr, mean_acr + 1.96*se_acr]
         rhythm_params['acrophase_CI_p'] = 2 * norm.cdf(-np.abs(mean_acr/se_acr))
@@ -1714,7 +1732,7 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
 
     #return multi.multipletests(P, method = 'fdr_bh')[1]
 
-def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = '', bootstrap = False):
+def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = '', bootstrap = False, bootstrap_type="std"):
        
     n_components1 = n_components
     period1 = period
@@ -2021,20 +2039,38 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
         # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1255808/
         # https://ocw.mit.edu/courses/mathematics/18-05-introduction-to-probability-and-statistics-spring-2014/readings/MIT18_05S14_Reading24.pdf
         mean_d_amp = np.nanmean(d_amplitude_bs) 
-        se_d_amp = sem(d_amplitude_bs, nan_policy='omit')#np.nanstd(d_amplitude_bs)
+        if bootstrap_type == "se":
+            se_d_amp = sem(d_amplitude_bs, nan_policy='omit')
+        elif bootstrap_type == "std":
+            se_d_amp = np.nanstd(d_amplitude_bs)
+        else:
+            print("Invalid bootstrap type")
+            return
         rhythm_params['d_amplitude_bootstrap'] = np.nanmean(d_amplitude_bs)               
         rhythm_params['d_amplitude_CI'] = [mean_d_amp - 1.96*se_d_amp, mean_d_amp + 1.96*se_d_amp]
         rhythm_params['d_amplitude_CI_p'] = 2 * norm.cdf(-np.abs(mean_d_amp/se_d_amp))
 
                 
         mean_d_mes = np.nanmean(d_mesor_bs)
-        se_d_mes = sem(d_mesor_bs, nan_policy='omit')#np.nanstd(d_mesor_bs)
+        if bootstrap_type == "se":
+            se_d_mes = sem(d_mesor_bs, nan_policy='omit')
+        elif bootstrap_type == "std":
+            se_d_mes = np.nanstd(d_mesor_bs)
+        else:
+            print("Invalid bootstrap type")
+            return
         rhythm_params['d_mesor_bootstrap'] = np.nanmean(d_mesor_bs)    
         rhythm_params['d_mesor_CI'] = [mean_d_mes - 1.96*se_d_mes, mean_d_mes + 1.96*se_d_mes]
         rhythm_params['d_mesor_CI_p'] = 2 * norm.cdf(-np.abs(mean_d_mes/se_d_mes))
 
         mean_d_acr = np.nanmean(d_acrophase_bs)
-        se_d_acr = sem(d_acrophase_bs, nan_policy='omit')#np.nanstd(d_acrophase_bs)
+        if bootstrap_type == "se":
+            se_d_acr = sem(d_acrophase_bs, nan_policy='omit')
+        elif bootstrap_type == "std":
+            se_d_acr = np.nanstd(d_acrophase_bs)
+        else:
+            print("Invalid bootstrap type")
+            return
         rhythm_params['d_acrophase_bootstrap'] = np.nanmean(d_acrophase_bs)
         rhythm_params['d_acrophase_CI'] = [mean_d_acr - 1.96*se_d_acr, mean_d_acr + 1.96*se_d_acr]
         rhythm_params['d_acrophase_CI_p'] = 2 * norm.cdf(-np.abs(mean_d_acr/se_d_acr))
