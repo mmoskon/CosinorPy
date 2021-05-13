@@ -612,10 +612,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         else:
             plt.show()
     
-
-   
-
-    statistics = calculate_statistics(x, y, Y_fit, n_components, period, lin_comp) 
+    statistics = calculate_statistics(x, y, Y_fit, n_components, period, lin_comp)   
     statistics_params = {'values': means,
                         'SE': se,
                         'CI': (lower_CI, upper_CI),
@@ -756,6 +753,7 @@ def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_co
             df_test1 = df[df.test.isin(perm1)]
             df_test2 = df[df.test.isin(perm2)]
 
+            # could as well only permute the parameters of the models
             _, statistics_test1, _, rhythm_params_test1, _ = population_fit(df_test1, n_components = n_components, period = period, lin_comp = lin_comp, model_type = model_type, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
             _, statistics_test2, _, rhythm_params_test2, _ = population_fit(df_test2, n_components = n_components, period = period, lin_comp = lin_comp, model_type = model_type, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
 

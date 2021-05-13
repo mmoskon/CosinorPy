@@ -257,8 +257,8 @@ def amp_acr(beta_s, beta_r, corrected = True):
 def evaluate_cosinor(x, MESOR, amp, acr, period):
     return MESOR + amp*np.cos((2*np.pi*x/period) + acr)
 
-def population_fit_group(df, period = 24, save_folder='', plot_on=True):
-    df_cosinor1_fits = pd.DataFrame(columns = ['test', 'p', 'q', 'amplitude', 'LB(amplitude)', 'UB(amplitude)', 'acrophase', 'LB(acrophase)','UB(acrophase)'], dtype=float)
+def population_fit_group(df, period = 24, save_folder='', **kwargs):    
+    df_cosinor1_fits = pd.DataFrame(columns = ['test', 'p', 'q', 'amplitude', 'p(amplitude)', 'q(amplitude)', 'LB(amplitude)', 'UB(amplitude)', 'mesor', 'p(mesor)', 'q(mesor)', 'LB(mesor)', 'UB(mesor)', 'acrophase', 'LB(acrophase)','UB(acrophase)'], dtype=float)
     
     names = df.test.unique()
     names = list(set(map(lambda x:x.split('_rep')[0], names)))
@@ -273,15 +273,18 @@ def population_fit_group(df, period = 24, save_folder='', plot_on=True):
         else:
             save_to = ""
 
-        res = population_fit_cosinor(df_pop, period = period, save_to = save_to, plot_on = plot_on)
-
-
+        res = population_fit_cosinor(df_pop, period = period, save_to = save_to, **kwargs)
         
         d = {'test': name, 
          'p':res['p_value'], 
          'amplitude': res['means'][-2],
+         'p(amplitude)':res['p_amp'],
          'LB(amplitude)': res['confint']['amp'][0],  
          'UB(amplitude)': res['confint']['amp'][1],
+         'p(mesor)':res['p_mesor'],
+         'mesor': res['means'][0],
+         'LB(mesor)': res['confint']['MESOR'][0],  
+         'UB(mesor)': res['confint']['MESOR'][1],
          'acrophase':res['means'][-1],
          'LB(acrophase)': res['confint']['acr'][0],  
          'UB(acrophase)': res['confint']['acr'][1],
@@ -290,6 +293,9 @@ def population_fit_group(df, period = 24, save_folder='', plot_on=True):
         df_cosinor1_fits = df_cosinor1_fits.append(d, ignore_index=True)
     
     df_cosinor1_fits['q'] = multi.multipletests(df_cosinor1_fits['p'], method = 'fdr_bh')[1]
+    df_cosinor1_fits['q(amplitude)'] = multi.multipletests(df_cosinor1_fits['p(amplitude)'], method = 'fdr_bh')[1]
+    df_cosinor1_fits['q(mesor)'] = multi.multipletests(df_cosinor1_fits['p(mesor)'], method = 'fdr_bh')[1]
+
 
     return df_cosinor1_fits    
 
@@ -308,7 +314,7 @@ def population_test_cosinor_pairs(df, pairs, period = 24):
         df_pop1 = df[df.test.str.startswith(pair[0])] 
         df_pop2 = df[df.test.str.startswith(pair[1])] 
 
-        res1 = population_fit_cosinor(df_pop1, period = period, plot_on = False)
+        res1 = population_fit_cosinor(df_pop1, period = period, plot_on = False)      
         res2 = population_fit_cosinor(df_pop2, period = period, plot_on = False)
 
         res = population_test_cosinor(res1, res2)
@@ -393,9 +399,15 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
     
         mesoru=MESOR+((t*sdm)/(k**0.5))
         mesorl=MESOR-((t*sdm)/(k**0.5))
-  
+        
+        sem = sdm/(k**0.5)        
+        p_mesor = 2 * norm.cdf(-np.abs(MESOR/sem))
+
+
         ampu=amp+(t*(c22**0.5))
         ampl=amp-(t*(c22**0.5))
+        se_amp = c22**0.5
+        p_amp = 2 * norm.cdf(-np.abs(amp/se_amp))
         if (ampu > 0 and ampl < 0):
             fiu=np.nan
             fil=np.nan
@@ -419,9 +431,9 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
 
         if plot_margins:
 
-            me = np.linspace(mesoru, mesorl, 25)
-            am = np.linspace(ampu, ampl, 25)
-            fi = np.linspace(fiu, fil, 25)
+            me = np.linspace(mesoru, mesorl, 5)
+            am = np.linspace(ampu, ampl, 5)
+            fi = np.linspace(fiu, fil, 5)
 
             Y = y
 
@@ -473,7 +485,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
     else:
         p_value = np.nan
      
-    return {'test': test_name, 'names':param_names, 'values':params, 'means':means, 'confint':confint, 'p_value':p_value}
+    return {'test': test_name, 'names':param_names, 'values':params, 'means':means, 'confint':confint, 'p_value':p_value, 'p_mesor':p_mesor, 'p_amp':p_amp}
 
 
 
