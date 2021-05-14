@@ -38,7 +38,7 @@ If you are using CosinorPy for your scientific work, please cite:
 
 Moškon, M. "CosinorPy: A Python Package for cosinor-based Rhythmometry." BMC Bioinformatics 21.485 (2020).
 
-The full paper is available at [https://www.doi.org/10.1186/s12859-020-03830-w].
+The full paper is available at <https://www.doi.org/10.1186/s12859-020-03830-w>.
 
 ## Contact
 Please direct your questions and comments to [miha.moskon@fri.uni-lj.si](mailto:miha.moskon@fri.uni-lj.si)
