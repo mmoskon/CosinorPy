@@ -40,6 +40,9 @@ Moškon, M. "CosinorPy: A Python Package for cosinor-based Rhythmometry." BMC Bi
 
 The full paper is available at [https://www.doi.org/10.1186/s12859-020-03830-w].
 
+## Contact
+Please direct your questions and comments to [`mailto:miha.moskon@fri.uni-lj.si`](miha.moskon@fri.uni-lj.si)
+
 ## References
 
 [1] Hughes, Michael E., et al. "Guidelines for genome-scale analysis of biological rhythms." Journal of biological rhythms 32.5 (2017): 380-393.
