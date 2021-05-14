@@ -41,7 +41,7 @@ Moškon, M. "CosinorPy: A Python Package for cosinor-based Rhythmometry." BMC Bi
 The full paper is available at [https://www.doi.org/10.1186/s12859-020-03830-w].
 
 ## Contact
-Please direct your questions and comments to [`mailto:miha.moskon@fri.uni-lj.si`](miha.moskon@fri.uni-lj.si)
+Please direct your questions and comments to [miha.moskon@fri.uni-lj.si](`mailto:miha.moskon@fri.uni-lj.si`)
 
 ## References
 
