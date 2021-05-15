@@ -937,7 +937,7 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
     return df_results
 
 
-def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = "", bootstrap=False, bootstrap_type="std"):
+def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = "", rescale_to_period=False, bootstrap=False, bootstrap_type="std"):
     """
     ###
     # prepare the independent variables
@@ -1049,6 +1049,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                 """
                 rhythm_params_lower = evaluate_rhythm_params(X_test, lower)
                 
+                # could take out at least amplitude!
                 mean_amp = rhythm_params['amplitude']
                 se_amp = abs(mean_amp - rhythm_params_lower['amplitude'])
                 rhythm_params['amplitude_CI'] = [mean_amp - 1.96*se_amp, mean_amp + 1.96*se_amp]
@@ -1104,7 +1105,8 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                 for i,p in enumerate(sample(param_samples, N)):
                     res2.initialize(results.model, p)            
                     Y_test_CI = res2.predict(X_fit_test)
-                    """
+
+                    """ 
                     rhythm_params_CI = evaluate_rhythm_params(X_test, Y_test_CI)
                     amplitude_CI.append(rhythm_params_CI['amplitude'])
                     mesor_CI.append(rhythm_params_CI['mesor'])
@@ -1117,6 +1119,19 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                         else:
                             plt.plot(X_test, Y_test_CI, color='#888888', alpha=0.05)
                 
+                """
+                # if report_CI!!!
+                # added
+                report_CI = True
+                if report_CI:
+                    mean_amp = rhythm_params['amplitude']
+                    amp_l = mean_amp-np.nanmin(amplitude_CI)
+                    amp_u = np.nanmax(amplitude_CI) - mean_amp
+                    se_amp = max(amp_l, amp_u)/1.96
+                    rhythm_params['amplitude_CI'] = [mean_amp - 1.96*se_amp, mean_amp + 1.96*se_amp]
+                    rhythm_params['amplitude_CI_p'] = 2 * norm.cdf(-np.abs(mean_amp/se_amp))
+                """
+
                 """
                 mean_amp = np.mean(amplitude_CI) 
                 se_amp = sem(amplitude_CI)
@@ -1159,7 +1174,8 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
         #    plt.plot(X_test, Y_test, 'k', label = 'fit')
         
         if plot_measurements:
-            X = X % period
+            if rescale_to_period:
+                X = X % period
 
             if model_type == 'lin':               
                 #plt.axis([min(min(X),0), 1.1*max(max(X),period), 0.9*min(min(Y), min(Y_test)), 1.1*max(max(Y), max(Y_test))])
@@ -1193,9 +1209,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
             plt.ylabel('Count')
         #fig = plt.gcf()
         #fig.set_size_inches(11,8)               
-        
 
-        
         if not hold:
             if save_to:
                 plt.savefig(save_to+'.png')
@@ -1225,98 +1239,24 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                     plot_phases([phase], [amp], [name], period=per)
 
     if bootstrap:
-
-        amplitude_bs = np.zeros(bootstrap)
-        mesor_bs = np.zeros(bootstrap)
-        acrophase_bs = np.zeros(bootstrap)
-
-        idxs = np.arange(len(X))
-
-        for i in range(bootstrap):
-            
-            idxs_bs = np.random.choice(idxs, len(idxs), replace=True)
-            Y_bs, X_fit_bs = Y[idxs_bs], X_fit[idxs_bs]
-
-            if model_type == 'lin':
-                model_bs = sm.OLS(Y_bs, X_fit_bs)
-                results_bs = model_bs.fit()
-            elif model_type == 'poisson':
-                #model_bs = sm.GLM(Y_bs, X_fit_bs, family=sm.families.Poisson())
-                model_bs = statsmodels.discrete.discrete_model.Poisson(Y_bs, X_fit_bs)
-                results_bs = model_bs.fit(disp=0)
-            elif model_type =='gen_poisson':
-                #model_bs = statsmodels.discrete.discrete_model.GeneralizedPoisson(Y_bs, X_fit_bs)
-                model_bs = statsmodels.discrete.discrete_model.GeneralizedPoisson(Y_bs, X_fit_bs, p=1)
-                results_bs = model_bs.fit(disp=0)
-            elif model_type == 'nb':
-                #model_bs = sm.GLM(Y_bs, X_fit_bs, family=sm.families.NegativeBinomial(alpha=alpha))
-                model_bs = statsmodels.discrete.discrete_model.NegativeBinomialP(Y_bs, X_fit_bs, p=1)
-                results_bs = model_bs.fit(disp=0)
-
-            #Y_test_bs = results_bs.predict(X_fit_test)
-            Y_eval_params_bs = results_bs.predict(X_fit_eval_params)
-            rhythm_params_bs = evaluate_rhythm_params(X_test, Y_eval_params_bs)
-        
-            amplitude_bs[i] = rhythm_params_bs['amplitude']
-            mesor_bs[i] = rhythm_params_bs['mesor']
-            acrophase_bs[i] = rhythm_params_bs['acrophase']                    
-
-        #########################################################
-        # calculate confidence intervals and bootstrap p-values #
-        #########################################################
-
-        # SE or STD?
-        # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1255808/
-        # https://ocw.mit.edu/courses/mathematics/18-05-introduction-to-probability-and-statistics-spring-2014/readings/MIT18_05S14_Reading24.pdf
-                
-
-        mean_amp = np.nanmean(amplitude_bs) 
-        if bootstrap_type == "se":
-            se_amp = sem(amplitude_bs, nan_policy='omit')
-        elif bootstrap_type == "std":
-            se_amp = np.nanstd(amplitude_bs)    
-        else:
-            print("Invalid bootstrap type")
-            return        
-        rhythm_params['amplitude_bootstrap'] = np.nanmean(amplitude_bs)               
-        rhythm_params['amplitude_CI'] = [mean_amp - 1.96*se_amp, mean_amp + 1.96*se_amp]
-        rhythm_params['amplitude_CI_p'] = 2 * norm.cdf(-np.abs(mean_amp/se_amp))
-
-         
-        mean_mes = np.nanmean(mesor_bs)
-        if bootstrap_type == "se":
-            se_mes = sem(mesor_bs, nan_policy='omit')
-        elif bootstrap_type == "std":
-            se_mes = np.nanstd(mesor_bs)
-        else:
-            print("Invalid bootstrap type")
-            return 
-        rhythm_params['mesor_bootstrap'] = np.nanmean(mesor_bs)    
-        rhythm_params['mesor_CI'] = [mean_mes - 1.96*se_mes, mean_mes + 1.96*se_mes]
-        rhythm_params['mesor_CI_p'] = 2 * norm.cdf(-np.abs(mean_mes/se_mes))
-
-        mean_acr = np.nanmean(acrophase_bs)
-        if bootstrap_type == "se":
-            se_acr = sem(acrophase_bs, nan_policy='omit')
-        elif bootstrap_type == "std":
-            se_acr = np.nanstd(acrophase_bs)
-        else:
-            print("Invalid bootstrap type")
-            return 
-        rhythm_params['acrophase_bootstrap'] = np.nanmean(acrophase_bs)
-        rhythm_params['acrophase_CI'] = [mean_acr - 1.96*se_acr, mean_acr + 1.96*se_acr]
-        rhythm_params['acrophase_CI_p'] = 2 * norm.cdf(-np.abs(mean_acr/se_acr))
-        
-
-
+        rhythm_params_bootstrap = eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, bootstrap, bootstrap_type)
+        for param_name, param_value in rhythm_params_bootstrap.items():
+            rhythm_params[param_name] = param_value
+    
+    
     if return_model: 
         return results, statistics, rhythm_params, X_test, Y_test, model
     else:    
         return results, statistics, rhythm_params, X_test, Y_test
 
 
+
+
 def phase_to_radians(phase, period=24):
-    return -(phase/period)*2*np.pi
+    phase_rads = -(phase/period)*2*np.pi % 2*np.pi 
+    if phase_rads > 0:
+        phase_rads = phase_rads - 2*np.pi
+    return phase_rads
 
 def acrophase_to_hours(acrophase, period=24):
     return -period * acrophase/(2*np.pi)
@@ -1991,90 +1931,15 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
 
     
     if bootstrap:
-
-        d_amplitude_bs = np.zeros(bootstrap)
-        d_mesor_bs = np.zeros(bootstrap)
-        d_acrophase_bs = np.zeros(bootstrap)
-
-        idxs = np.arange(len(X.values))
-
-        for i in range(bootstrap):
-            
-            idxs_bs = np.random.choice(idxs, len(idxs), replace=True)
-            Y_bs, X_fit_bs  = Y.values[idxs_bs], X_fit[idxs_bs]            
-
-            if model_type == 'lin':                    
-                model_bs = sm.OLS(Y_bs, X_fit_bs)
-                results_bs = model_bs.fit()
-            elif model_type == 'poisson':
-                #model_bs = sm.GLM(Y_bs, X_fit_bs, family=sm.families.Poisson())
-                model_bs = statsmodels.discrete.discrete_model.Poisson(Y_bs, X_fit_bs)
-                results_bs = model_bs.fit(disp=0)
-            elif model_type =='gen_poisson':
-                #model_bs = statsmodels.discrete.discrete_model.GeneralizedPoisson(Y_bs, X_fit_bs)
-                model_bs = statsmodels.discrete.discrete_model.GeneralizedPoisson(Y_bs, X_fit_bs, p=1)
-                results_bs = model_bs.fit(disp=0)
-            elif model_type == 'nb':
-                #model_bs = sm.GLM(Y_bs, X_fit_bs, family=sm.families.NegativeBinomial(alpha=alpha))
-                model_bs = statsmodels.discrete.discrete_model.NegativeBinomialP(Y_bs, X_fit_bs, p=1)
-                results_bs = model_bs.fit(disp=0)
-
-            Y_fit_full1_bs = results_bs.predict(X_fit_full[locs])
-            Y_fit_full2_bs = results_bs.predict(X_fit_full[~locs])
-
-            rhythm_params1_bs = evaluate_rhythm_params(X_full, Y_fit_full1_bs)
-            rhythm_params2_bs = evaluate_rhythm_params(X_full, Y_fit_full2_bs)
+        rhythm_params_bootstrap = eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, bootstrap, bootstrap_type)    
+        for param_name, param_value in rhythm_params_bootstrap.items():
+            rhythm_params[param_name] = param_value
         
-            d_amplitude_bs[i] = rhythm_params2_bs['amplitude'] - rhythm_params1_bs['amplitude']
-            d_mesor_bs[i] = rhythm_params2_bs['mesor'] - rhythm_params1_bs['mesor']
-            d_acrophase_bs[i] = rhythm_params2_bs['acrophase'] - rhythm_params1_bs['acrophase']                    
-
-        #########################################################
-        # calculate confidence intervals and bootstrap p-values #
-        #########################################################
-
-        # SE or STD?
-        # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1255808/
-        # https://ocw.mit.edu/courses/mathematics/18-05-introduction-to-probability-and-statistics-spring-2014/readings/MIT18_05S14_Reading24.pdf
-        mean_d_amp = np.nanmean(d_amplitude_bs) 
-        if bootstrap_type == "se":
-            se_d_amp = sem(d_amplitude_bs, nan_policy='omit')
-        elif bootstrap_type == "std":
-            se_d_amp = np.nanstd(d_amplitude_bs)
-        else:
-            print("Invalid bootstrap type")
-            return
-        rhythm_params['d_amplitude_bootstrap'] = np.nanmean(d_amplitude_bs)               
-        rhythm_params['d_amplitude_CI'] = [mean_d_amp - 1.96*se_d_amp, mean_d_amp + 1.96*se_d_amp]
-        rhythm_params['d_amplitude_CI_p'] = 2 * norm.cdf(-np.abs(mean_d_amp/se_d_amp))
-
-                
-        mean_d_mes = np.nanmean(d_mesor_bs)
-        if bootstrap_type == "se":
-            se_d_mes = sem(d_mesor_bs, nan_policy='omit')
-        elif bootstrap_type == "std":
-            se_d_mes = np.nanstd(d_mesor_bs)
-        else:
-            print("Invalid bootstrap type")
-            return
-        rhythm_params['d_mesor_bootstrap'] = np.nanmean(d_mesor_bs)    
-        rhythm_params['d_mesor_CI'] = [mean_d_mes - 1.96*se_d_mes, mean_d_mes + 1.96*se_d_mes]
-        rhythm_params['d_mesor_CI_p'] = 2 * norm.cdf(-np.abs(mean_d_mes/se_d_mes))
-
-        mean_d_acr = np.nanmean(d_acrophase_bs)
-        if bootstrap_type == "se":
-            se_d_acr = sem(d_acrophase_bs, nan_policy='omit')
-        elif bootstrap_type == "std":
-            se_d_acr = np.nanstd(d_acrophase_bs)
-        else:
-            print("Invalid bootstrap type")
-            return
-        rhythm_params['d_acrophase_bootstrap'] = np.nanmean(d_acrophase_bs)
-        rhythm_params['d_acrophase_CI'] = [mean_d_acr - 1.96*se_d_acr, mean_d_acr + 1.96*se_d_acr]
-        rhythm_params['d_acrophase_CI_p'] = 2 * norm.cdf(-np.abs(mean_d_acr/se_d_acr))
         
     #return (p_overall, p_values, results.params[idx_params], results)
     return (p_overall, p_params, p_f, results.params[idx_params], results, rhythm_params)
+
+
 
 def generate_independents_compare(X1, X2, n_components1 = 3, period1 = 24, n_components2 = 3, period2 = 24, lin_comp = False, non_rhythmic=False):
     H1 = np.zeros(X1.size)
@@ -2189,7 +2054,8 @@ def plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'
             X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)  
 
             min_x = min(min(X), min_x)
-            max_x = max(max(X % period), max_x)
+            if 'plot_measurements' in kwargs and kwargs['plot_measurements'] == False:
+                max_x = max(max(X % period), max_x)
             min_y = min(min(Y), min_y)
             max_y = max(max(Y), max_y)
 
@@ -2601,3 +2467,183 @@ def calculate_significance_level(N, **kwargs):
         dof2 = N - n_params
         alpha_F = 1 - stats.f.cdf(F, dof1, dof2)
         return alpha_F
+
+
+def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, bootstrap_size, bootstrap_type):
+    amplitude_bs = np.zeros(bootstrap_size)
+    mesor_bs = np.zeros(bootstrap_size)
+    acrophase_bs = np.zeros(bootstrap_size)
+
+    idxs = np.arange(len(X))
+
+    for i in range(bootstrap_size):
+        
+        idxs_bs = np.random.choice(idxs, len(idxs), replace=True)
+        Y_bs, X_fit_bs = Y[idxs_bs], X_fit[idxs_bs]
+
+        if model_type == 'lin':
+            model_bs = sm.OLS(Y_bs, X_fit_bs)
+            results_bs = model_bs.fit()
+        elif model_type == 'poisson':
+            #model_bs = sm.GLM(Y_bs, X_fit_bs, family=sm.families.Poisson())
+            model_bs = statsmodels.discrete.discrete_model.Poisson(Y_bs, X_fit_bs)
+            results_bs = model_bs.fit(disp=0)
+        elif model_type =='gen_poisson':
+            #model_bs = statsmodels.discrete.discrete_model.GeneralizedPoisson(Y_bs, X_fit_bs)
+            model_bs = statsmodels.discrete.discrete_model.GeneralizedPoisson(Y_bs, X_fit_bs, p=1)
+            results_bs = model_bs.fit(disp=0)
+        elif model_type == 'nb':
+            #model_bs = sm.GLM(Y_bs, X_fit_bs, family=sm.families.NegativeBinomial(alpha=alpha))
+            model_bs = statsmodels.discrete.discrete_model.NegativeBinomialP(Y_bs, X_fit_bs, p=1)
+            results_bs = model_bs.fit(disp=0)
+
+        #Y_test_bs = results_bs.predict(X_fit_test)
+        Y_eval_params_bs = results_bs.predict(X_fit_eval_params)
+        rhythm_params_bs = evaluate_rhythm_params(X_test, Y_eval_params_bs)
+    
+        amplitude_bs[i] = rhythm_params_bs['amplitude']
+        mesor_bs[i] = rhythm_params_bs['mesor']
+        acrophase_bs[i] = rhythm_params_bs['acrophase']                    
+
+    #########################################################
+    # calculate confidence intervals and bootstrap p-values #
+    #########################################################
+
+    # SE or STD?
+    # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1255808/
+    # https://ocw.mit.edu/courses/mathematics/18-05-introduction-to-probability-and-statistics-spring-2014/readings/MIT18_05S14_Reading24.pdf
+            
+    rhythm_params = {}
+
+
+    mean_amp = np.nanmean(amplitude_bs) 
+    if bootstrap_type == "se":
+        se_amp = sem(amplitude_bs, nan_policy='omit')
+    elif bootstrap_type == "std":
+        se_amp = np.nanstd(amplitude_bs)    
+    else:
+        print("Invalid bootstrap type")
+        return        
+    rhythm_params['amplitude_bootstrap'] = np.nanmean(amplitude_bs)               
+    rhythm_params['amplitude_bootstrap_CI'] = [mean_amp - 1.96*se_amp, mean_amp + 1.96*se_amp]
+    rhythm_params['amplitude_bootstrap_CI_p'] = 2 * norm.cdf(-np.abs(mean_amp/se_amp))
+
+        
+    mean_mes = np.nanmean(mesor_bs)
+    if bootstrap_type == "se":
+        se_mes = sem(mesor_bs, nan_policy='omit')
+    elif bootstrap_type == "std":
+        se_mes = np.nanstd(mesor_bs)
+    else:
+        print("Invalid bootstrap type")
+        return 
+    rhythm_params['mesor_bootstrap'] = np.nanmean(mesor_bs)    
+    rhythm_params['mesor_bootstrap_CI'] = [mean_mes - 1.96*se_mes, mean_mes + 1.96*se_mes]
+    rhythm_params['mesor_bootstrap_CI_p'] = 2 * norm.cdf(-np.abs(mean_mes/se_mes))
+
+    mean_acr = np.nanmean(acrophase_bs)
+    if bootstrap_type == "se":
+        se_acr = sem(acrophase_bs, nan_policy='omit')
+    elif bootstrap_type == "std":
+        se_acr = np.nanstd(acrophase_bs)
+    else:
+        print("Invalid bootstrap type")
+        return 
+    rhythm_params['acrophase_bootstrap'] = np.nanmean(acrophase_bs)
+    acr_l = (mean_acr - 1.96*se_acr)# % 2 * np.pi
+    acr_u = (mean_acr + 1.96*se_acr)# % 2 * np.pi
+    rhythm_params['acrophase_bootstrap_CI'] = [acr_l, acr_u]
+    #rhythm_params['acrophase_bootstrap_CI_p'] = 2 * norm.cdf(-np.abs(mean_acr/se_acr)) # wrong: how to calculate this p-value?
+    
+    return rhythm_params
+
+  
+
+
+def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, bootstrap_size, bootstrap_type):
+
+    d_amplitude_bs = np.zeros(bootstrap_size)
+    d_mesor_bs = np.zeros(bootstrap_size)
+    d_acrophase_bs = np.zeros(bootstrap_size)
+
+    idxs = np.arange(len(X.values))
+
+    for i in range(bootstrap_size):
+        
+        idxs_bs = np.random.choice(idxs, len(idxs), replace=True)
+        Y_bs, X_fit_bs  = Y.values[idxs_bs], X_fit[idxs_bs]            
+
+        if model_type == 'lin':                    
+            model_bs = sm.OLS(Y_bs, X_fit_bs)
+            results_bs = model_bs.fit()
+        elif model_type == 'poisson':
+            #model_bs = sm.GLM(Y_bs, X_fit_bs, family=sm.families.Poisson())
+            model_bs = statsmodels.discrete.discrete_model.Poisson(Y_bs, X_fit_bs)
+            results_bs = model_bs.fit(disp=0)
+        elif model_type =='gen_poisson':
+            #model_bs = statsmodels.discrete.discrete_model.GeneralizedPoisson(Y_bs, X_fit_bs)
+            model_bs = statsmodels.discrete.discrete_model.GeneralizedPoisson(Y_bs, X_fit_bs, p=1)
+            results_bs = model_bs.fit(disp=0)
+        elif model_type == 'nb':
+            #model_bs = sm.GLM(Y_bs, X_fit_bs, family=sm.families.NegativeBinomial(alpha=alpha))
+            model_bs = statsmodels.discrete.discrete_model.NegativeBinomialP(Y_bs, X_fit_bs, p=1)
+            results_bs = model_bs.fit(disp=0)
+
+        Y_fit_full1_bs = results_bs.predict(X_fit_full[locs])
+        Y_fit_full2_bs = results_bs.predict(X_fit_full[~locs])
+
+        rhythm_params1_bs = evaluate_rhythm_params(X_full, Y_fit_full1_bs)
+        rhythm_params2_bs = evaluate_rhythm_params(X_full, Y_fit_full2_bs)
+    
+        d_amplitude_bs[i] = rhythm_params2_bs['amplitude'] - rhythm_params1_bs['amplitude']
+        d_mesor_bs[i] = rhythm_params2_bs['mesor'] - rhythm_params1_bs['mesor']
+        d_acrophase_bs[i] = rhythm_params2_bs['acrophase'] - rhythm_params1_bs['acrophase']                    
+
+    #########################################################
+    # calculate confidence intervals and bootstrap p-values #
+    #########################################################
+
+    # SE or STD?
+    # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1255808/
+    # https://ocw.mit.edu/courses/mathematics/18-05-introduction-to-probability-and-statistics-spring-2014/readings/MIT18_05S14_Reading24.pdf
+
+    rhythm_params = {}
+
+    mean_d_amp = np.nanmean(d_amplitude_bs) 
+    if bootstrap_type == "se":
+        se_d_amp = sem(d_amplitude_bs, nan_policy='omit')
+    elif bootstrap_type == "std":
+        se_d_amp = np.nanstd(d_amplitude_bs)
+    else:
+        print("Invalid bootstrap type")
+        return
+    rhythm_params['d_amplitude_bootstrap'] = np.nanmean(d_amplitude_bs)               
+    rhythm_params['d_amplitude_CI'] = [mean_d_amp - 1.96*se_d_amp, mean_d_amp + 1.96*se_d_amp]
+    rhythm_params['d_amplitude_CI_p'] = 2 * norm.cdf(-np.abs(mean_d_amp/se_d_amp))
+
+            
+    mean_d_mes = np.nanmean(d_mesor_bs)
+    if bootstrap_type == "se":
+        se_d_mes = sem(d_mesor_bs, nan_policy='omit')
+    elif bootstrap_type == "std":
+        se_d_mes = np.nanstd(d_mesor_bs)
+    else:
+        print("Invalid bootstrap type")
+        return
+    rhythm_params['d_mesor_bootstrap'] = np.nanmean(d_mesor_bs)    
+    rhythm_params['d_mesor_CI'] = [mean_d_mes - 1.96*se_d_mes, mean_d_mes + 1.96*se_d_mes]
+    rhythm_params['d_mesor_CI_p'] = 2 * norm.cdf(-np.abs(mean_d_mes/se_d_mes))
+
+    mean_d_acr = np.nanmean(d_acrophase_bs)
+    if bootstrap_type == "se":
+        se_d_acr = sem(d_acrophase_bs, nan_policy='omit')
+    elif bootstrap_type == "std":
+        se_d_acr = np.nanstd(d_acrophase_bs)
+    else:
+        print("Invalid bootstrap type")
+        return
+    rhythm_params['d_acrophase_bootstrap'] = np.nanmean(d_acrophase_bs)
+    rhythm_params['d_acrophase_CI'] = [mean_d_acr - 1.96*se_d_acr, mean_d_acr + 1.96*se_d_acr]
+    # rhythm_params['d_acrophase_CI_p'] = 2 * norm.cdf(-np.abs(mean_d_acr/se_d_acr)) # wrong: how to calculate this p-value?
+        
+    return rhythm_params

@@ -179,7 +179,7 @@ def plot_single(data, results, test='', plot_measurements=True, save_to='', plot
     if plot_measurements:
         plt.axis([min(min(X),0), 1.1*max(max(X),period), 0.9*min(min(Y), min(Y_fit)), 1.1*max(max(Y), max(Y_fit))])
     else:
-        plt.axis([min(X_fit), 50, min(Y_fit)*0.9, max(Y_fit)*1.1])
+        plt.axis([min(X_fit), 1.1*max(X), min(Y_fit)*0.9, max(Y_fit)*1.1])
         
     plt.title(test + ', p-value=' + "{0:.5f}".format(results.f_pvalue))
     
@@ -755,7 +755,7 @@ def test_cosinor_single(data, period = 24, corrected = True):
 
     lower_CI_trans = coef_trans - zt * se_trans           
     upper_CI_trans = coef_trans + zt * se_trans
-    p_value_trans = 2 * norm.cdf(-np.abs(coef_trans/se_trans))
+    p_value_trans = 2 * norm.cdf(-np.abs(coef_trans/se_trans)) # not sure if this is valid for acrophase calculation??
 
     statistics= {'parameters': trans_names,
                     'values': coef_trans,
