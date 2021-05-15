@@ -13,6 +13,8 @@ from scipy.stats import t, norm, sem
 from scipy.optimize import curve_fit
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from scipy.stats import percentileofscore
+from scipy.stats import circstd, circmean
+
 
 import copy
 import itertools
@@ -937,7 +939,7 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
     return df_results
 
 
-def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = "", rescale_to_period=False, bootstrap=False, bootstrap_type="std"):
+def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = "", rescale_to_period=False, bootstrap=False, bootstrap_type="std", params_CI = False, samples_per_param_CI=10, max_samples_CI = 1000):
     """
     ###
     # prepare the independent variables
@@ -1101,8 +1103,10 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
 
                 param_samples = list(itertools.product(*P))
                 N = min(N, len(param_samples))
-                
-                for i,p in enumerate(sample(param_samples, N)):
+                                
+                #for i,p in enumerate(sample(param_samples, N)):
+                for i,idxs in enumerate(np.random.choice(range(len(param_samples)), size=N, replace=False)):                
+                    p = param_samples[idxs]
                     res2.initialize(results.model, p)            
                     Y_test_CI = res2.predict(X_fit_test)
 
@@ -1239,11 +1243,13 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                     plot_phases([phase], [amp], [name], period=per)
 
     if bootstrap:
-        rhythm_params_bootstrap = eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, bootstrap, bootstrap_type)
-        for param_name, param_value in rhythm_params_bootstrap.items():
-            rhythm_params[param_name] = param_value
+        eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rhythm_params, bootstrap, bootstrap_type)
+        #for param_name, param_value in rhythm_params_bootstrap.items():
+        #    rhythm_params[param_name] = param_value
     
-    
+    if params_CI:
+        eval_params_CI(X_test, X_fit_test, model_type, results, rhythm_params, samples_per_param_CI, max_samples_CI)
+
     if return_model: 
         return results, statistics, rhythm_params, X_test, Y_test, model
     else:    
@@ -1253,9 +1259,9 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
 
 
 def phase_to_radians(phase, period=24):
-    phase_rads = -(phase/period)*2*np.pi % 2*np.pi 
+    phase_rads = (-(phase/period)*2*np.pi) % (2*np.pi)
     if phase_rads > 0:
-        phase_rads = phase_rads - 2*np.pi
+        phase_rads -= 2*np.pi
     return phase_rads
 
 def acrophase_to_hours(acrophase, period=24):
@@ -1931,9 +1937,9 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
 
     
     if bootstrap:
-        rhythm_params_bootstrap = eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, bootstrap, bootstrap_type)    
-        for param_name, param_value in rhythm_params_bootstrap.items():
-            rhythm_params[param_name] = param_value
+        eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, rhythm_params, bootstrap, bootstrap_type)    
+        #for param_name, param_value in rhythm_params_bootstrap.items():
+        #    rhythm_params[param_name] = param_value
         
         
     #return (p_overall, p_values, results.params[idx_params], results)
@@ -2469,7 +2475,7 @@ def calculate_significance_level(N, **kwargs):
         return alpha_F
 
 
-def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, bootstrap_size, bootstrap_type):
+def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rhythm_params, bootstrap_size, bootstrap_type):    
     amplitude_bs = np.zeros(bootstrap_size)
     mesor_bs = np.zeros(bootstrap_size)
     acrophase_bs = np.zeros(bootstrap_size)
@@ -2513,7 +2519,6 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, bo
     # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1255808/
     # https://ocw.mit.edu/courses/mathematics/18-05-introduction-to-probability-and-statistics-spring-2014/readings/MIT18_05S14_Reading24.pdf
             
-    rhythm_params = {}
 
 
     mean_amp = np.nanmean(amplitude_bs) 
@@ -2541,26 +2546,29 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, bo
     rhythm_params['mesor_bootstrap_CI'] = [mean_mes - 1.96*se_mes, mean_mes + 1.96*se_mes]
     rhythm_params['mesor_bootstrap_CI_p'] = 2 * norm.cdf(-np.abs(mean_mes/se_mes))
 
-    mean_acr = np.nanmean(acrophase_bs)
+    acrophase_bs = acrophase_bs[~np.isnan(acrophase_bs)]    
+    mean_acr = circmean(acrophase_bs, high = 0, low = -2*np.pi)
+    std_acr = circstd(acrophase_bs, high = 0, low = -2*np.pi)
+    # project mean acr to the interval [-pi, pi]
+    if mean_acr > np.pi:
+        mean_acr -= 2*np.pi
+    elif mean_acr < -np.pi:
+        mean_acr += 2*np.pi
     if bootstrap_type == "se":
-        se_acr = sem(acrophase_bs, nan_policy='omit')
+        se_acr = std_acr/(len(acrophase_bs)-1)**0.5#sem(acrophase_bs, nan_policy='omit')
     elif bootstrap_type == "std":
-        se_acr = np.nanstd(acrophase_bs)
+        se_acr = std_acr#np.nanstd(acrophase_bs)
     else:
         print("Invalid bootstrap type")
         return 
-    rhythm_params['acrophase_bootstrap'] = np.nanmean(acrophase_bs)
-    acr_l = (mean_acr - 1.96*se_acr)# % 2 * np.pi
-    acr_u = (mean_acr + 1.96*se_acr)# % 2 * np.pi
+    rhythm_params['acrophase_bootstrap'] = mean_acr
+    acr_l = (mean_acr - 1.96*se_acr)
+    acr_u = (mean_acr + 1.96*se_acr)
     rhythm_params['acrophase_bootstrap_CI'] = [acr_l, acr_u]
-    #rhythm_params['acrophase_bootstrap_CI_p'] = 2 * norm.cdf(-np.abs(mean_acr/se_acr)) # wrong: how to calculate this p-value?
+    rhythm_params['acrophase_bootstrap_CI_p'] = 2 * norm.cdf(-np.abs(mean_acr/se_acr)) 
     
-    return rhythm_params
-
   
-
-
-def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, bootstrap_size, bootstrap_type):
+def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, rhythm_params, bootstrap_size, bootstrap_type):    
 
     d_amplitude_bs = np.zeros(bootstrap_size)
     d_mesor_bs = np.zeros(bootstrap_size)
@@ -2607,8 +2615,6 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
     # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1255808/
     # https://ocw.mit.edu/courses/mathematics/18-05-introduction-to-probability-and-statistics-spring-2014/readings/MIT18_05S14_Reading24.pdf
 
-    rhythm_params = {}
-
     mean_d_amp = np.nanmean(d_amplitude_bs) 
     if bootstrap_type == "se":
         se_d_amp = sem(d_amplitude_bs, nan_policy='omit')
@@ -2634,16 +2640,90 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
     rhythm_params['d_mesor_CI'] = [mean_d_mes - 1.96*se_d_mes, mean_d_mes + 1.96*se_d_mes]
     rhythm_params['d_mesor_CI_p'] = 2 * norm.cdf(-np.abs(mean_d_mes/se_d_mes))
 
-    mean_d_acr = np.nanmean(d_acrophase_bs)
+
+    d_acrophase_bs = d_acrophase_bs[~np.isnan(d_acrophase_bs)]
+    mean_d_acr = circmean(d_acrophase_bs, high = 0, low = -2*np.pi)    
+    std_d_acr = circstd(d_acrophase_bs, high = 0, low = -2*np.pi)
+    # project mean acr to the interval [-pi, pi]
+    if mean_d_acr > np.pi:
+        mean_d_acr -= 2*np.pi
+    elif mean_d_acr < -np.pi:
+        mean_d_acr += 2*np.pi    
     if bootstrap_type == "se":
-        se_d_acr = sem(d_acrophase_bs, nan_policy='omit')
+        se_d_acr = std_d_acr/(len(d_acrophase_bs)-1)**0.5        
     elif bootstrap_type == "std":
-        se_d_acr = np.nanstd(d_acrophase_bs)
+        se_d_acr = std_d_acr
     else:
         print("Invalid bootstrap type")
         return
-    rhythm_params['d_acrophase_bootstrap'] = np.nanmean(d_acrophase_bs)
+    # project mean_d_acr to the interval [-pi, pi]
+    if mean_d_acr > np.pi:
+        mean_d_acr -= 2*np.pi
+    elif mean_d_acr < -np.pi:
+        mean_d_acr += 2*np.pi
+    rhythm_params['d_acrophase_bootstrap'] = mean_d_acr
     rhythm_params['d_acrophase_CI'] = [mean_d_acr - 1.96*se_d_acr, mean_d_acr + 1.96*se_d_acr]
-    # rhythm_params['d_acrophase_CI_p'] = 2 * norm.cdf(-np.abs(mean_d_acr/se_d_acr)) # wrong: how to calculate this p-value?
-        
-    return rhythm_params
+    rhythm_params['d_acrophase_CI_p'] = 2 * norm.cdf(-np.abs(mean_d_acr/se_d_acr)) # wrong: how to calculate this p-value?
+
+
+# sample the parameters from the confidence interval, builds a set of models and assesses the rhythmicity parameters confidence intervals   
+def eval_params_CI(X_test, X_fit_test, model_type, results, rhythm_params, samples_per_param=10, max_samples = 1000):
+    res2 = copy.deepcopy(results)
+    params = res2.params
+    CIs = results.conf_int()
+    if type(CIs) != np.ndarray:
+        CIs = CIs.values
+                   
+    P = np.zeros((len(params), samples_per_param))
+    for i, CI in enumerate(CIs):                    
+        P[i,:] = np.linspace(CI[0], CI[1], samples_per_param)
+
+    amplitude = rhythm_params['amplitude']
+    mesor = rhythm_params['mesor']
+    acrophase = rhythm_params['acrophase']
+
+    # project acrophase to the interval [-pi, pi]
+    acrophase %= (2*np.pi)
+    if acrophase > np.pi:
+        acrophase -= 2*np.pi
+    elif acrophase < -np.pi:
+        acrophase += 2*np.pi
+
+    d_amp = 0.0
+    d_mes = 0.0
+    d_acr = 0.0
+
+
+    param_samples = list(itertools.product(*P))
+    N = min(max_samples, len(param_samples))
+    for i,idxs in enumerate(np.random.choice(range(len(param_samples)), size=N, replace=False)):                
+        p = param_samples[idxs]
+        res2.initialize(results.model, p)            
+        Y_test_CI = res2.predict(X_fit_test)
+       
+        rhythm_params_CI = evaluate_rhythm_params(X_test, Y_test_CI)
+
+        d_amp = np.nanmax([d_amp, np.abs(amplitude-rhythm_params_CI['amplitude'])])
+        d_mes = np.nanmax([d_mes, np.abs(mesor-rhythm_params_CI['mesor'])])
+
+        d_acr_tmp = (rhythm_params_CI['acrophase'] - acrophase) % (2*np.pi)      
+        if ~np.isnan(d_acr_tmp):
+            if d_acr_tmp > np.pi:
+                d_acr_tmp -= 2*np.pi
+            elif d_acr_tmp < -np.pi:
+                d_acr_tmp += 2*np.pi
+            d_acr = np.nanmax([d_acr, np.abs(d_acr_tmp)])
+
+    
+    se_amp = d_amp/1.96
+    rhythm_params['amplitude_CI'] = [amplitude - 1.96*se_amp, amplitude + 1.96*se_amp]
+    rhythm_params['amplitude_CI_p'] = 2 * norm.cdf(-np.abs(amplitude/se_amp))
+
+    se_mes = d_mes/1.96
+    rhythm_params['mesor_CI'] = [mesor - 1.96*se_mes, mesor + 1.96*se_mes]
+    rhythm_params['mesor_CI_p'] = 2 * norm.cdf(-np.abs(mesor/se_mes))
+
+    se_acr = d_acr/1.96
+
+    rhythm_params['acrophase_CI'] = [acrophase - 1.96*se_acr, acrophase + 1.96*se_acr]
+    rhythm_params['acrophase_CI_p'] = 2 * norm.cdf(-np.abs(acrophase/se_acr))

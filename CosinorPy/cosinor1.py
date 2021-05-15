@@ -755,7 +755,7 @@ def test_cosinor_single(data, period = 24, corrected = True):
 
     lower_CI_trans = coef_trans - zt * se_trans           
     upper_CI_trans = coef_trans + zt * se_trans
-    p_value_trans = 2 * norm.cdf(-np.abs(coef_trans/se_trans)) # not sure if this is valid for acrophase calculation??
+    p_value_trans = 2 * norm.cdf(-np.abs(coef_trans/se_trans)) 
 
     statistics= {'parameters': trans_names,
                     'values': coef_trans,
