@@ -1244,7 +1244,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                     folder = os.path.join(*os.path.split(save_to)[:-1])                                        
                     plot_phases([phase], [amp], [name], period=per, folder=folder)
                 else:
-                    plot_phases([phase], [amp], [name], period=per)
+                    plot_phases([phase], [amp], [name], period=per)#, plot_measurements=True, measurements=[X,Y])
 
     if bootstrap:
         eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rhythm_params, bootstrap, bootstrap_type)
@@ -1275,7 +1275,9 @@ def acrophase_to_hours(acrophase, period=24):
 #r = np.linspace(0,2*np.pi,1000)
 #X = np.sin(r)
 
-def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green", "blue"), folder = "", prefix="", legend=True, CI_acrs = [], CI_amps = [], linestyles = [], title = "", labels = []):
+def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green", "blue"), folder = "", prefix="", legend=True, CI_acrs = [], CI_amps = [], linestyles = [], title = "", labels = []):#, plot_measurements = False, measurements=None):
+
+
 
     acrs = np.array(acrs, dtype = float)
     amps = np.array(amps, dtype = float)
@@ -1297,8 +1299,8 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
     ax.set_theta_direction(-1) 
     lines = []
 
-    for i, (acr, amp, _, color) in enumerate(zip(acrs, amps, tests, colors)):
-        
+    for i, (acr, amp, test, color) in enumerate(zip(acrs, amps, tests, colors)):
+  
         """
         if "LDL" in test:
             color = "#FF0000"
@@ -1337,7 +1339,7 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
                 acr_l, acr_u = acr_u, acr_l
                 plt.fill_between(np.linspace(acr_l, acr_u, 1000), amp_l, amp_u, color=color, alpha=0.1)
 
-
+       
 
     ax.set_rmax(1)
     ax.set_rticks([0.5])  # Less radial ticks
@@ -1347,7 +1349,18 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
     ax.grid(True)
     ax.set_facecolor('#f0f0f0')
        
-      
+    """
+    for i, (acr, amp, test, color) in enumerate(zip(acrs, amps, tests, colors)):
+        if plot_measurements:
+            try:
+                x,y = measurements
+            except:
+                df = measurements
+                x,y=df[df.test == test].x, df[df.test == test].y
+            plt.plot(x,y,'o',markersize=1, alpha = 0.75, color=color)
+    """
+
+
     name = "_".join(tests)
     #ax.set_title(name, va='bottom')
     if title:
