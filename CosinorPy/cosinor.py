@@ -622,7 +622,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
 
 
     if params_CI:
-        population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=samples_per_param_CI, max_samples = max_samples_CI)
+        population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=samples_per_param_CI, max_samples = max_samples_CI, k=k)
         
 
     if return_individual_params:
@@ -1252,7 +1252,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
         #    rhythm_params[param_name] = param_value
     
     if params_CI:
-        eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param_CI, max_samples_CI)
+        eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param_CI, max_samples_CI, k=len(X))
 
     if return_model: 
         return results, statistics, rhythm_params, X_test, Y_test, model
@@ -1959,7 +1959,7 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
         #    rhythm_params[param_name] = param_value
         
     if params_CI:    
-        eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, samples_per_param_CI, max_samples_CI)
+        eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, samples_per_param_CI, max_samples_CI, k = len(X))
         
     #return (p_overall, p_values, results.params[idx_params], results)
     return (p_overall, p_params, p_f, results.params[idx_params], results, rhythm_params)
@@ -2678,11 +2678,11 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
   
     rhythm_params['d_acrophase_bootstrap'] = mean_d_acr
     rhythm_params['d_acrophase_bootstrap_CI'] = [mean_d_acr - 1.96*se_d_acr, mean_d_acr + 1.96*se_d_acr]
-    rhythm_params['d_acrophase_bootstrap_p'] = 2 * norm.cdf(-np.abs(mean_d_acr/se_d_acr)) # wrong: how to calculate this p-value?
+    rhythm_params['d_acrophase_bootstrap_p'] = 2 * norm.cdf(-np.abs(mean_d_acr/se_d_acr)) 
 
 
 # sample the parameters from the confidence interval, builds a set of models and assesses the rhythmicity parameters confidence intervals   
-def eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param=10, max_samples = 1000):
+def eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param=10, max_samples = 1000, norm_p=False, k=0):
     res2 = copy.deepcopy(results)
     params = res2.params
     CIs = results.conf_int()
@@ -2731,26 +2731,53 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param
             if np.abs(dev_acr_tmp) > np.abs(dev_acr):     
                 dev_acr = dev_acr_tmp
 
+    # !!!
+    # t = abs(stats.t.ppf(0.05/2,df=k-1))
+    # T0 = amp/se
+    # p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+    if norm_p:
+        t = 1.96
+    else:
+        t = abs(stats.t.ppf(0.05/2,df=k-1))
+
+
+    se_amp = dev_amp/t
+    rhythm_params['amplitude_CI'] = [amplitude - t*se_amp, amplitude + t*se_amp]
+    if norm_p:
+        rhythm_params['amplitude_CI_p'] = 2 * norm.cdf(-np.abs(amplitude/se_amp)) 
+    else:
+        T0 = amplitude/se_amp
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        rhythm_params['amplitude_CI_p'] = p_val
     
-    se_amp = dev_amp/1.96
-    rhythm_params['amplitude_CI'] = [amplitude - 1.96*se_amp, amplitude + 1.96*se_amp]
-    rhythm_params['amplitude_CI_p'] = 2 * norm.cdf(-np.abs(amplitude/se_amp))
+    
 
-    se_mes = dev_mes/1.96
-    rhythm_params['mesor_CI'] = [mesor - 1.96*se_mes, mesor + 1.96*se_mes]
-    rhythm_params['mesor_CI_p'] = 2 * norm.cdf(-np.abs(mesor/se_mes))
+    se_mes = dev_mes/t
+    rhythm_params['mesor_CI'] = [mesor - t*se_mes, mesor + t*se_mes]
+    if norm_p:
+        rhythm_params['mesor_CI_p'] = 2 * norm.cdf(-np.abs(mesor/se_mes)) 
+    else:
+        T0 = mesor/se_mes
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        rhythm_params['mesor_CI_p'] = p_val
 
-    se_acr = dev_acr/1.96
-    al, au = acrophase - 1.96*se_acr, acrophase + 1.96*se_acr
+    se_acr = dev_acr/t
+    al, au = acrophase - t*se_acr, acrophase + t*se_acr
     if al < au:
         rhythm_params['acrophase_CI'] = [al, au]
     else:
         rhythm_params['acrophase_CI'] = [au, al]
     
-    rhythm_params['acrophase_CI_p'] = 2 * norm.cdf(-np.abs(acrophase/se_acr))
+    if norm_p:
+        rhythm_params['acrophase_CI_p'] = 2 * norm.cdf(-np.abs(acrophase/se_acr)) 
+    else:
+        T0 = acrophase/se_acr
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        rhythm_params['acrophase_CI_p'] = p_val
+
 
 # eval rhythmicity parameter differences using parameter confidence intervals
-def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, samples_per_param=10, max_samples=1000):
+def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, samples_per_param=5, max_samples=1000, norm_p=False, k=0):
 
     res2 = copy.deepcopy(results)
     params = res2.params
@@ -2809,28 +2836,51 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, sample
             if np.abs(dev_acr_tmp) > np.abs(dev_acr):     
                 dev_acr = dev_acr_tmp
 
-            
-        
+    # !!!        
+    # t = abs(stats.t.ppf(0.05/2,df=k1+k2-1))
+    # T0 = amp/se
+    # p_val = 2 * (1 - stats.t.cdf(abs(T0), k1+k2-1))
+    if norm_p:
+        t = 1.96
+    else:
+        t = abs(stats.t.ppf(0.05/2,df=k-1))     
     
-    se_amp = dev_amp/1.96
-    rhythm_params['d_amplitude_CI'] = [d_amplitude - 1.96*se_amp, d_amplitude + 1.96*se_amp]
-    rhythm_params['d_amplitude_CI_p'] = 2 * norm.cdf(-np.abs(d_amplitude/se_amp))
+    se_amp = dev_amp/t
+    rhythm_params['d_amplitude_CI'] = [d_amplitude - t*se_amp, d_amplitude + t*se_amp]
+    
+    if norm_p:
+        rhythm_params['d_amplitude_CI_p'] = 2 * norm.cdf(-np.abs(d_amplitude/se_amp)) 
+    else:
+        T0 = d_amplitude/se_amp
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        rhythm_params['d_amplitude_CI_p'] = p_val
 
-    se_mes = dev_mes/1.96
-    rhythm_params['d_mesor_CI'] = [d_mesor - 1.96*se_mes, d_mesor + 1.96*se_mes]
-    rhythm_params['d_mesor_CI_p'] = 2 * norm.cdf(-np.abs(d_mesor/se_mes))
 
-    se_acr = dev_acr/1.96
-    al, au = d_acrophase - 1.96*se_acr, d_acrophase + 1.96*se_acr
+    se_mes = dev_mes/t
+    rhythm_params['d_mesor_CI'] = [d_mesor - t*se_mes, d_mesor + t*se_mes]
+    if norm_p:
+        rhythm_params['d_mesor_CI_p'] = 2 * norm.cdf(-np.abs(d_mesor/se_mes)) 
+    else:
+        T0 = d_mesor/se_mes
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        rhythm_params['d_mesor_CI_p'] = p_val
+
+    se_acr = dev_acr/t
+    al, au = d_acrophase - t*se_acr, d_acrophase + t*se_acr
     if al < au:
         rhythm_params['d_acrophase_CI'] = [al, au]
     else:
         rhythm_params['d_acrophase_CI'] = [au, al]
-    rhythm_params['d_acrophase_CI_p'] = 2 * norm.cdf(-np.abs(d_acrophase/se_acr))
+    if norm_p:
+        rhythm_params['d_acrophase_CI_p'] = 2 * norm.cdf(-np.abs(d_acrophase/se_acr))
+    else:
+        T0 = d_acrophase/se_acr
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        rhythm_params['d_acrophase_CI_p'] = p_val
 
 
 # sample the parameters from the confidence interval, builds a set of models and assesses the rhythmicity parameters confidence intervals   
-def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=10, max_samples = 1000):  
+def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=10, max_samples = 1000, norm_p = False, k=0): 
 
     res2 = copy.deepcopy(results)
     params = res2.params
@@ -2879,26 +2929,53 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
             if np.abs(dev_acr_tmp) > np.abs(dev_acr):     
                 dev_acr = dev_acr_tmp
 
+    # !!!
+    # t = abs(stats.t.ppf(0.05/2,df=k-1))
+    # T0 = amp/se
+    # p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+    if norm_p:
+        t = 1.96
+    else:
+        t = abs(stats.t.ppf(0.05/2,df=k-1))  
+
+    se_amp = dev_amp/t
+    rhythm_params['amplitude_CI'] = [amplitude - t*se_amp, amplitude + t*se_amp]
+    if norm_p:
+        rhythm_params['amplitude_CI_p'] = 2 * norm.cdf(-np.abs(amplitude/se_amp)) 
+    else:
+        T0 = amplitude/se_amp
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        rhythm_params['amplitude_CI_p'] = p_val
     
-    se_amp = dev_amp/1.96
-    rhythm_params['amplitude_CI'] = [amplitude - 1.96*se_amp, amplitude + 1.96*se_amp]
-    rhythm_params['amplitude_CI_p'] = 2 * norm.cdf(-np.abs(amplitude/se_amp))
+    
 
-    se_mes = dev_mes/1.96
-    rhythm_params['mesor_CI'] = [mesor - 1.96*se_mes, mesor + 1.96*se_mes]
-    rhythm_params['mesor_CI_p'] = 2 * norm.cdf(-np.abs(mesor/se_mes))
+    se_mes = dev_mes/t
+    rhythm_params['mesor_CI'] = [mesor - t*se_mes, mesor + t*se_mes]
+    if norm_p:
+        rhythm_params['mesor_CI_p'] = 2 * norm.cdf(-np.abs(mesor/se_mes))
+    else:
+        T0 = mesor/se_mes
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        rhythm_params['mesor_CI_p'] = p_val
+    
 
-    se_acr = dev_acr/1.96
-    al, au = acrophase - 1.96*se_acr, acrophase + 1.96*se_acr
+    se_acr = dev_acr/t
+    al, au = acrophase - t*se_acr, acrophase + t*se_acr
     if al < au:
         rhythm_params['acrophase_CI'] = [al, au]
     else:
         rhythm_params['acrophase_CI'] = [au, al]
     
-    rhythm_params['acrophase_CI_p'] = 2 * norm.cdf(-np.abs(acrophase/se_acr))
+    if norm_p:
+        rhythm_params['acrophase_CI_p'] = 2 * norm.cdf(-np.abs(acrophase/se_acr)) 
+    else:
+        T0 = acrophase/se_acr
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        rhythm_params['acrophase_CI_p'] = p_val
+
 
 # compare two population fit pairs independently
-def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, samples_per_param_CI=10, max_samples_CI = 1000, **kwargs):
+def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, samples_per_param_CI=10, max_samples_CI = 1000, norm_p = False, **kwargs):
       
     rhythm_params = {}
 
@@ -2932,24 +3009,35 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
     acrophase_CI1 = rhythm_params1['acrophase_CI']
     acrophase_CI2 = rhythm_params2['acrophase_CI']
 
+    # !!!
+    # t = abs(stats.t.ppf(0.05/2,df=k1+k2-1))
+    # T0 = amp/se
+    # p_val = 2 * (1 - stats.t.cdf(abs(T0), k1+k2-1))   
+    
+    k = len(df_pop1.test.unique()) + len(df_pop2.test.unique()) 
+    if norm_p:
+        t = 1.96
+    else:
+        t = abs(stats.t.ppf(0.05/2,df=k-1))  
+
 
     d_amplitude = amplitude2 - amplitude1
     #d_amp_l = amplitude_CI2[0] - amplitude_CI1[1]
     #d_amp_u = amplitude_CI2[1] - amplitude_CI1[0]
     #d_amplitude_CI = [d_amp_l, d_amp_u]
-    se_amp = (abs(amplitude_CI1[0] - amplitude_CI1[1])/2 + abs(amplitude_CI2[0] - amplitude_CI2[1])/2)/1.96
+    se_amp = (abs(amplitude_CI1[0] - amplitude_CI1[1])/2 + abs(amplitude_CI2[0] - amplitude_CI2[1])/2)/t
 
     d_mesor = mesor2 - mesor1
     #d_mes_l = mesor_CI2[0] - mesor_CI1[1]
     #d_mes_u = mesor_CI2[1] - mesor_CI1[0]
     #d_mesor_CI = [d_mes_l, d_mes_u]
-    se_mes = (abs(mesor_CI1[0] - mesor_CI1[1])/2 + abs(mesor_CI2[0] - mesor_CI2[1])/2)/1.96
+    se_mes = (abs(mesor_CI1[0] - mesor_CI1[1])/2 + abs(mesor_CI2[0] - mesor_CI2[1])/2)/t
 
     d_acrophase = acrophase2 - acrophase1
     #d_acr_l = acrophase_CI2[0] - acrophase_CI1[1]
     #d_acr_u = acrophase_CI2[1] - acrophase_CI1[0]
     #d_acrophase_CI = [d_acr_l, d_acr_u]
-    se_acr = (abs(acrophase_CI1[0] - acrophase_CI1[1])/2 + abs(acrophase_CI2[0] - acrophase_CI2[1])/2)/1.96
+    se_acr = (abs(acrophase_CI1[0] - acrophase_CI1[1])/2 + abs(acrophase_CI2[0] - acrophase_CI2[1])/2)/t
 
     # project d_acrophase to the interval [-pi, pi]
     d_acrophase %= (2*np.pi)
@@ -2959,27 +3047,47 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
         d_acrophase += 2*np.pi
     
     rhythm_params['d_amplitude'] = d_amplitude
-    rhythm_params['d_amplitude_CI'] = [d_amplitude - 1.96*se_amp, d_amplitude + 1.96*se_amp]
-    rhythm_params['d_amplitude_CI_p'] = 2 * norm.cdf(-np.abs(d_amplitude/se_amp))
+    rhythm_params['d_amplitude_CI'] = [d_amplitude - t*se_amp, d_amplitude + t*se_amp]
+    if norm_p:
+        rhythm_params['d_amplitude_CI_p'] = 2 * norm.cdf(-np.abs(d_amplitude/se_amp))
+    else:
+        T0 = d_amplitude/se_amp
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        rhythm_params['d_amplitude_CI_p'] = p_val
+
+    
 
     rhythm_params['d_mesor'] = d_mesor
-    rhythm_params['d_mesor_CI'] = [d_mesor - 1.96*se_mes, d_mesor + 1.96*se_mes]
-    rhythm_params['d_mesor_CI_p'] = 2 * norm.cdf(-np.abs(d_mesor/se_mes))
+    rhythm_params['d_mesor_CI'] = [d_mesor - t*se_mes, d_mesor + t*se_mes]
+    if norm_p:
+        rhythm_params['d_mesor_CI_p'] = 2 * norm.cdf(-np.abs(d_mesor/se_mes))
+    else:
+        T0 = d_mesor/se_mes
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        rhythm_params['d_mesor_CI_p'] = p_val
+
+    
 
     rhythm_params['d_acrophase'] = d_acrophase
-    al, au = d_acrophase - 1.96*se_acr, d_acrophase + 1.96*se_acr
+    al, au = d_acrophase - t*se_acr, d_acrophase + t*se_acr
     rhythm_params['d_acrophase_CI'] = [al, au]
     #if al < au:
     #    rhythm_params['d_acrophase_CI'] = [al, au]
     #else:
     #    rhythm_params['d_acrophase_CI'] = [au, al]
-    rhythm_params['d_acrophase_CI_p'] = 2 * norm.cdf(-np.abs(d_acrophase/se_acr))
+    if norm_p:
+        rhythm_params['d_acrophase_CI_p'] = 2 * norm.cdf(-np.abs(d_acrophase/se_acr)) 
+    else:
+        T0 = d_acrophase/se_acr
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        rhythm_params['d_acrophase_CI_p'] = p_val
+    
 
     return rhythm_params
 
 
 # compare two pairs independently
-def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, samples_per_param_CI=10, max_samples_CI = 1000, **kwargs):
+def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, samples_per_param_CI=10, max_samples_CI = 1000, norm_p = False, **kwargs):
       
     rhythm_params = {}
 
@@ -3017,24 +3125,33 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
     acrophase_CI1 = rhythm_params1['acrophase_CI']
     acrophase_CI2 = rhythm_params2['acrophase_CI']
 
+    # !!!
+    # t = abs(stats.t.ppf(0.05/2,df=k1+k2-1))
+    # T0 = amp/se
+    # p_val = 2 * (1 - stats.t.cdf(abs(T0), k1+k2-1))
+    k = len(X1) + len(X2)
+    if norm_p:
+        t = 1.96
+    else:
+        t = abs(stats.t.ppf(0.05/2,df=k-1))  
 
     d_amplitude = amplitude2 - amplitude1
     #d_amp_l = amplitude_CI2[0] - amplitude_CI1[1]
     #d_amp_u = amplitude_CI2[1] - amplitude_CI1[0]
     #d_amplitude_CI = [d_amp_l, d_amp_u]
-    se_amp = (abs(amplitude_CI1[0] - amplitude_CI1[1])/2 + abs(amplitude_CI2[0] - amplitude_CI2[1])/2)/1.96
+    se_amp = (abs(amplitude_CI1[0] - amplitude_CI1[1])/2 + abs(amplitude_CI2[0] - amplitude_CI2[1])/2)/t
 
     d_mesor = mesor2 - mesor1
     #d_mes_l = mesor_CI2[0] - mesor_CI1[1]
     #d_mes_u = mesor_CI2[1] - mesor_CI1[0]
     #d_mesor_CI = [d_mes_l, d_mes_u]
-    se_mes = (abs(mesor_CI1[0] - mesor_CI1[1])/2 + abs(mesor_CI2[0] - mesor_CI2[1])/2)/1.96
+    se_mes = (abs(mesor_CI1[0] - mesor_CI1[1])/2 + abs(mesor_CI2[0] - mesor_CI2[1])/2)/t
 
     d_acrophase = acrophase2 - acrophase1
     #d_acr_l = acrophase_CI2[0] - acrophase_CI1[1]
     #d_acr_u = acrophase_CI2[1] - acrophase_CI1[0]
     #d_acrophase_CI = [d_acr_l, d_acr_u]
-    se_acr = (abs(acrophase_CI1[0] - acrophase_CI1[1])/2 + abs(acrophase_CI2[0] - acrophase_CI2[1])/2)/1.96
+    se_acr = (abs(acrophase_CI1[0] - acrophase_CI1[1])/2 + abs(acrophase_CI2[0] - acrophase_CI2[1])/2)/t
 
     # project d_acrophase to the interval [-pi, pi]
     d_acrophase %= (2*np.pi)
@@ -3044,20 +3161,39 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
         d_acrophase += 2*np.pi
     
     rhythm_params['d_amplitude'] = d_amplitude
-    rhythm_params['d_amplitude_CI'] = [d_amplitude - 1.96*se_amp, d_amplitude + 1.96*se_amp]
-    rhythm_params['d_amplitude_CI_p'] = 2 * norm.cdf(-np.abs(d_amplitude/se_amp))
+    rhythm_params['d_amplitude_CI'] = [d_amplitude - t*se_amp, d_amplitude + t*se_amp]
+    if norm_p:
+        rhythm_params['d_amplitude_CI_p'] = 2 * norm.cdf(-np.abs(d_amplitude/se_amp))
+    else:
+        T0 = d_amplitude/se_amp
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        rhythm_params['d_amplitude_CI_p'] = p_val
+
+    
 
     rhythm_params['d_mesor'] = d_mesor
-    rhythm_params['d_mesor_CI'] = [d_mesor - 1.96*se_mes, d_mesor + 1.96*se_mes]
-    rhythm_params['d_mesor_CI_p'] = 2 * norm.cdf(-np.abs(d_mesor/se_mes))
+    rhythm_params['d_mesor_CI'] = [d_mesor - t*se_mes, d_mesor + t*se_mes]
+    if norm_p:
+        rhythm_params['d_mesor_CI_p'] = 2 * norm.cdf(-np.abs(d_mesor/se_mes))
+    else:
+        T0 = d_mesor/se_mes
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        rhythm_params['d_mesor_CI_p'] = p_val
+    
 
     rhythm_params['d_acrophase'] = d_acrophase
-    al, au = d_acrophase - 1.96*se_acr, d_acrophase + 1.96*se_acr
+    al, au = d_acrophase - t*se_acr, d_acrophase + t*se_acr
     rhythm_params['d_acrophase_CI'] = [al, au]
     #if al < au:
     #    rhythm_params['d_acrophase_CI'] = [al, au]
     #else:
     #    rhythm_params['d_acrophase_CI'] = [au, al]
-    rhythm_params['d_acrophase_CI_p'] = 2 * norm.cdf(-np.abs(d_acrophase/se_acr))
+    if norm_p:
+        rhythm_params['d_acrophase_CI_p'] = 2 * norm.cdf(-np.abs(d_acrophase/se_acr))
+    else:
+        T0 = d_acrophase/se_acr
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        rhythm_params['d_acrophase_CI_p'] = p_val
+    
 
     return rhythm_params
