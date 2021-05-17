@@ -400,14 +400,20 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
         mesoru=MESOR+((t*sdm)/(k**0.5))
         mesorl=MESOR-((t*sdm)/(k**0.5))
         
-        sem = sdm/(k**0.5)        
-        p_mesor = 2 * norm.cdf(-np.abs(MESOR/sem))
+        sem = sdm/(k**0.5)    
+        T0 = MESOR/sem
+        p_mesor = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        #p_mesor = 2 * norm.cdf(-np.abs(MESOR/sem))
 
 
         ampu=amp+(t*(c22**0.5))
         ampl=amp-(t*(c22**0.5))
         se_amp = c22**0.5
-        p_amp = 2 * norm.cdf(-np.abs(amp/se_amp))
+
+        T0 = amp/se_amp
+        p_amp = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        #p_amp = 2 * norm.cdf(-np.abs(amp/se_amp))
+        
         if (ampu > 0 and ampl < 0):
             fiu=np.nan
             fil=np.nan
@@ -415,6 +421,10 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
         else:
             fiu=acr+np.arctan(((c23*(t**2))+((t*np.sqrt(c33))*np.sqrt((amp**2)-(((c22*c33)-(c23**2))*((t**2)/c33)))))/((amp**2)-(c22*(t**2))))
             fil=acr+np.arctan(((c23*(t**2))-((t*np.sqrt(c33))*np.sqrt((amp**2)-(((c22*c33)-(c23**2))*((t**2)/c33)))))/((amp**2)-(c22*(t**2))))
+
+            se_acr = (fiu - acr)/t
+            T0 = acr/se_acr
+            p_acr = 2 * (1 - stats.t.cdf(abs(T0), k-1))
     else:
         mesoru=MESOR
         mesorl=MESOR  
@@ -466,7 +476,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
                'acr':(fil, fiu),
                'MESOR':(mesorl, mesoru)}
   
-    # calculate the p-value
+    # calculate the overall p-value
     if k > 1:
         betas= params[:,1]
         gammas= params[:,2]
@@ -485,7 +495,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
     else:
         p_value = np.nan
      
-    return {'test': test_name, 'names':param_names, 'values':params, 'means':means, 'confint':confint, 'p_value':p_value, 'p_mesor':p_mesor, 'p_amp':p_amp}
+    return {'test': test_name, 'names':param_names, 'values':params, 'means':means, 'confint':confint, 'p_value':p_value, 'p_mesor':p_mesor, 'p_amp':p_amp, 'p_acr':p_acr}
 
 
 
