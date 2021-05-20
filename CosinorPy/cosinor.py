@@ -1305,7 +1305,9 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
     
     acrs = -acrs
     
-    ax = plt.subplot(111, projection='polar')        
+    #ax = plt.subplot(111, projection='polar')        
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='polar')
     ax.set_theta_offset(0.5*np.pi)
     ax.set_theta_direction(-1) 
     lines = []
