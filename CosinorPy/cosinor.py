@@ -267,8 +267,6 @@ def plot_data_pairs(df, names, folder = '', prefix =''):
         else:
             plt.show()
 
-
-#def fit_group(df, n_components = 2, period = 24, folder = '', prefix='', lin_comp = False, names = [], plot_measurements = True, plot = True, x_label = "", y_label = ""):
 def fit_group(df, n_components = 2, period = 24, names = "", folder = '', prefix='', **kwargs):
     df_results = pd.DataFrame(columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'RSS', 'R2', 'R2_adj', 'log-likelihood', 'period(est)', 'amplitude', 'acrophase', 'mesor', 'peaks', 'heights', 'troughs', 'heights2'], dtype=float)
 
@@ -292,8 +290,7 @@ def fit_group(df, n_components = 2, period = 24, names = "", folder = '', prefix
                     save_to = os.path.join(folder,prefix+test+'_compnts='+str(n_comps) +'_per=' + str(per))
                 else:
                     save_to = ''
-                
-                #results, statistics, rhythm_param, X_full, Y_full = fit_me(X, Y, n_components = n_comps, period = per, lin_comp = lin_comp, model_type = 'lin', name = test, save_to = save_to, plot_measurements = plot_measurements, plot=plot, x_label = x_label, y_label = y_label)
+                                
                 results, statistics, rhythm_param, _, _ = fit_me(X, Y, n_components = n_comps, period = per, name = test, save_to = save_to, **kwargs)
             
                 try:
@@ -331,7 +328,6 @@ def fit_group(df, n_components = 2, period = 24, names = "", folder = '', prefix
     
     return df_results
 
-#def population_fit_group(df, n_components = 2, period = 24, lin_comp = False, model_type="lin", alpha = 0, names = [], folder = '', prefix='', plot_measurements = True):
 def population_fit_group(df, n_components = 2, period = 24, folder = '', prefix='', names = [], **kwargs):
 
     df_results = pd.DataFrame(columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'RSS', 'period(est)', 'amplitude', 'acrophase', 'mesor'], dtype=float)
@@ -358,11 +354,9 @@ def population_fit_group(df, n_components = 2, period = 24, folder = '', prefix=
                 df_pop = df[df.test.str.startswith(name)]   
 
                 if folder:                    
-                    save_to=os.path.join(folder,prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per))
-                    #_, statistics, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, save_to = save_to, lin_comp= lin_comp, model_type = model_type, alpha = alpha)
+                    save_to=os.path.join(folder,prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per))                    
                     _, statistics, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, save_to = save_to, **kwargs)
-                else:
-                    #_, statistics, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, lin_comp= lin_comp, model_type = model_type, alpha = alpha, plot_on = True)
+                else:                    
                     _, statistics, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, **kwargs)
                     
                             
@@ -423,15 +417,12 @@ def remove_lin_comp(X, Y, n_components = 1, period = 24):
     model = sm.OLS(Y, X_fit)
     results = model.fit()
     
-    #plt.plot(X,Y, '.')
-    
+        
     X_lin = np.zeros(X_fit.shape)
     X_lin[:,1] = X_fit[:,1]
     Y_lin = results.predict(X_lin)
     Y = Y-Y_lin
     
-    #plt.plot(X, results.fittedvalues, X, Y_lin)
-    #plt.plot(X,Y, 'x')
     
     """
     X_fit = generate_independents(X, n_components = n_components, period = period, lin_comp = False)
@@ -439,8 +430,6 @@ def remove_lin_comp(X, Y, n_components = 1, period = 24):
     results = model.fit()
     plt.plot(X, results.fittedvalues, color="black")
     """
-    
-    #plt.show()
     
     return X, Y
     
@@ -474,7 +463,6 @@ def generate_independents(X, n_components = 3, period = 24, lin_comp = False):
     return X_fit
     
     
-#def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', alpha=0, plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label=''):
 def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label='', return_individual_params = False, params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type = "", **kwargs):
 
     if return_individual_params:
@@ -509,9 +497,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         
         min_Y = min(min_Y, np.min(y))
         max_Y = max(max_Y, np.max(y))
-        
-        
-        #results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, lin_comp=lin_comp, model_type = model_type, alpha=alpha, plot = False, return_model = True)
+                        
         results, statistics, rhythm_params, X_test, _, model = fit_me(x, y, n_components = n_components, period = period, plot = False, return_model = True, **kwargs)
         if type(params) == int:
             params = results.params
@@ -529,8 +515,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
                 ind_amps.append(rhythm_ind_params['amplitude'])
                 ind_acrs.append(rhythm_ind_params['acrophase'])
                 ind_mesors.append(rhythm_ind_params['mesor'])
-
-            #plt.plot(x, results.fittedvalues,'k', label=test)
+            
         if plot_on and plot_measurements:
             plt.plot(x,y,'ko', markersize=1)
     
@@ -547,8 +532,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         p_values = 2 * (1 - stats.t.cdf(abs(T0), k-1))
         t = abs(stats.t.ppf(0.05/2,df=k-1))
         lower_CI = means - ((t*sd)/(k**0.5))
-        upper_CI = means + ((t*sd)/(k**0.5))
-        #results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, model_type = model_type, lin_comp=lin_comp, plot = False, return_model = True)
+        upper_CI = means + ((t*sd)/(k**0.5))        
         results.initialize(model, means)
     else:
         means = params
@@ -573,8 +557,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
     Y_eval_params = results.predict(X_fit_eval_params)    
     rhythm_params = evaluate_rhythm_params(X_test, Y_eval_params)
         
-    if plot_on:
-        #plt.plot(x,Y_fit,'r', label="population fit")
+    if plot_on:        
         plt.plot(X_test,Y_eval_params,'r', label="population fit")
         plt.legend()
         if x_label:
@@ -782,19 +765,10 @@ def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_co
             acrs.append(d_acr_test)
             mesors.append(d_mesor_test)
         
-
-        #print(amps)
-        #print(acrs)
-        #print(mesors)
-
-       
-        
         p_d_amp = 1 - percentileofscore(amps, d_amp, 'rank')/100
         p_d_acr = 1 - percentileofscore(acrs, d_acr, 'rank')/100
         p_d_mesor = 1 - percentileofscore(mesors, d_mesor, 'rank')/100
-
-        #print(p_d_amp, p_d_acr, p_d_mesor)
-
+        
         d = {"pair": tuple(pair),
              "d_amp": d_amp, 
              "p_d_amp": p_d_amp, 
@@ -873,7 +847,7 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
         d_amp = abs(amplitude1 - amplitude2)
         d_acr = abs(acrophase1 - acrophase2)
         d_mesor = abs(mesor1 - mesor2)
-        d_amps, d_acrs, d_mesors = [], [], []#[d_amp], [d_acr], [d_mesor]
+        d_amps, d_acrs, d_mesors = [], [], []
 
         n1 = len(list(df_pop1.test.unique()))
         n2 = len(list(df_pop2.test.unique()))
@@ -888,12 +862,7 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
             else:
                 idxs = np.random.choice(np.arange(len(permutations)), size=N, replace=True)  
                 permutations = permutations[idxs]
-            
-        #print(len(permutations))
-
-
-        #print(permutations)
-
+        
         for perm1, perm2 in permutations:
             perm1 = np.array(perm1)
             perm2 = np.array(perm2)
@@ -916,21 +885,9 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
             d_mesors.append(d_mesor_test)
         
 
-        #print(amps)
-        #print(acrs)
-        #print(mesors)
-
-       
-        #print(d_amps)
-        #print(d_acrs)
-        #print(d_mesors)
-
-
         p_d_amp = 1 - percentileofscore(d_amps, d_amp, 'rank')/100
         p_d_acr = 1 - percentileofscore(d_acrs, d_acr, 'rank')/100
         p_d_mesor = 1 - percentileofscore(d_mesors, d_mesor, 'rank')/100
-
-        #print(p_d_amp, p_d_acr, p_d_mesor)
 
         d = {"pair": tuple(pair),
              "d_amp": d_amp, 
@@ -1110,21 +1067,16 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
 
                 n_param_samples = P.shape[1]**P.shape[0] 
                 N = n_param_samples #min(max_samples_CI, n_param_samples)
-                
-                #param_samples = list(itertools.product(*P))
-                #N = min(max_samples_CI, len(param_samples))
-
+            
                 if n_param_samples < 10**6:
                     params_samples = np.random.choice(n_param_samples, size=N, replace=False)
                 else:
                     params_samples = my_random_choice(max_val=n_param_samples, size=N)
 
                 for i,idx in enumerate(params_samples): 
-                
-                #for i,idx in enumerate(np.random.choice(range(len(param_samples)), size=N, replace=False)):                
+            
                     p = lazy_prod(idx, P)
-                    #p = param_samples[idx]
-
+            
                     res2.initialize(results.model, p)            
                     Y_test_CI = res2.predict(X_fit_test)
 
@@ -1184,8 +1136,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                 plt.plot(X,Y, 'ko', markersize=1, label = 'data', color=color)
             else:
                 plt.plot(X,Y, 'ko', markersize=1, color=color)
-        #plt.plot(X, results.fittedvalues, label = 'fit')
-        
+                
         if not hold:
             plt.plot(X_test, Y_test, 'k', label = 'fit', color=color)
         else:
@@ -1200,14 +1151,11 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                 X = X % period
 
             if model_type == 'lin':               
-                #plt.axis([min(min(X),0), 1.1*max(max(X),period), 0.9*min(min(Y), min(Y_test)), 1.1*max(max(Y), max(Y_test))])
                 plt.axis([min(min(X),0), max(X), 0.9*min(min(Y), min(Y_test)), 1.1*max(max(Y), max(Y_test))])
             else:
                 plt.axis([min(min(X),0), max(X), 0.9*min(min(Y), min(Y_test)), 1.1*max(max(Y), max(Y_test))])
         else:
             plt.axis([min(X_test), period, min(Y_test)*0.9, max(Y_test)*1.1])
-        #plt.title(name + ', components=' + str(n_components) +' , period=' + str(period) + '\np-value=' + str(statistics['p']) + ', p-value(gof)=' + str(statistics['p_reject']))
-        #plt.title(name + ', components=' + str(n_components) +' , period=' + str(period) + '\np-value=' + str(statistics['p']))
         if model_type == 'lin':
             if name: 
                 plt.title(name + ', p-value=' + "{0:.5f}".format(statistics['p']))
@@ -1229,9 +1177,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
             plt.ylabel('Measurements')
         else:
             plt.ylabel('Count')
-        #fig = plt.gcf()
-        #fig.set_size_inches(11,8)               
-
+        
         if not hold:
             if save_to:
                 plt.savefig(save_to+'.png')
@@ -1262,9 +1208,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
 
     if bootstrap:
         eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rhythm_params, bootstrap, bootstrap_type)
-        #for param_name, param_value in rhythm_params_bootstrap.items():
-        #    rhythm_params[param_name] = param_value
-    
+        
     if params_CI:
         eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param_CI, max_samples_CI, k=len(X), sampling_type=sampling_type)
 
@@ -1285,14 +1229,7 @@ def phase_to_radians(phase, period=24):
 def acrophase_to_hours(acrophase, period=24):
     return -period * acrophase/(2*np.pi)
 
-
-#r = np.linspace(0,2*np.pi,1000)
-#X = np.sin(r)
-
 def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green", "blue"), folder = "", prefix="", legend=True, CI_acrs = [], CI_amps = [], linestyles = [], title = "", labels = []):#, plot_measurements = False, measurements=None):
-
-
-
     acrs = np.array(acrs, dtype = float)
     amps = np.array(amps, dtype = float)
     
@@ -1308,7 +1245,6 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
     
     acrs = -acrs
     
-    #ax = plt.subplot(111, projection='polar')        
     fig = plt.figure()
     ax = fig.add_subplot(projection='polar')
     ax.set_theta_offset(0.5*np.pi)
@@ -1615,20 +1551,7 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
     df_results['q'] = multi.multipletests(df_results['p'], method = 'fdr_bh')[1]
     
     df_results['q params'] = multi.multipletests(df_results['p params'], method = 'fdr_bh')[1]
-    
-    #for i, (param, p) in enumerate(zip(params, pvalues)):        
-    #    df_results['q'+str(i+1)] = multi.multipletests(df_results['p'+str(i+1)], method = 'fdr_bh')[1]
-    
     df_results['q(F test)'] = multi.multipletests(df_results['p(F test)'], method = 'fdr_bh')[1]
-
-
-    #columns = df_results.columns
-    #columns = columns.sort_values()
-    #columns = np.delete(columns, np.where(columns == 'period'))
-    #columns = np.append(['period'], columns)
-    #columns = np.append([columns[-1]], columns[:-1])
-    
-    #df_results = df_results.reindex(columns, axis=1)
     
     return df_results
 
@@ -1669,9 +1592,6 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
             save_to = os.path.join(folder, prefix + test1 + '-' + test2 + '_per1=' + str(period1) + '_comps1=' + str(n_components1) + '_per1=' + str(period2) + '_comps1=' + str(n_components2))
         else:
             save_to = ''
-        
-        #pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
-        #p_overall, pvalues, params, _ = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, save_to = save_to, **kwargs)
         p_overall, p_params, p_F, params, _, rhythm_params = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, save_to = save_to, **kwargs)
         
         d = {}
@@ -1682,32 +1602,18 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
         d['n_components2'] = n_components2
         
         d['p'] = p_overall
-        d['p params'] = p_params
-        #for i, (param, p) in enumerate(zip(params, pvalues)):
-        #    d['param' + str(i+1)] = param
-        #    d['p' + str(i+1)] = p
-        
+        d['p params'] = p_params                
         d['p(F test)'] = p_F
         
         df_results = df_results.append(d, ignore_index=True)
     
     df_results['q'] = multi.multipletests(df_results['p'], method = 'fdr_bh')[1]
-    
-    df_results['q params'] = multi.multipletests(df_results['p params'], method = 'fdr_bh')[1]
-    
-    #for i, (param, p) in enumerate(zip(params, pvalues)):        
-    #    df_results['q'+str(i+1)] = multi.multipletests(df_results['p'+str(i+1)], method = 'fdr_bh')[1]
-    
+    df_results['q params'] = multi.multipletests(df_results['p params'], method = 'fdr_bh')[1]     
     df_results['q(F test)'] = multi.multipletests(df_results['p(F test)'], method = 'fdr_bh')[1]
 
-    #columns = df_results.columns
-    #columns = columns.sort_values()
-    
-    #df_results = df_results.reindex(columns, axis=1)
     
     return df_results
-
-    #return multi.multipletests(P, method = 'fdr_bh')[1]
+  
 
 def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = '', bootstrap = False, bootstrap_type="std", params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type=""):
        
@@ -1977,7 +1883,6 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     if params_CI:    
         eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, samples_per_param_CI, max_samples_CI, k = len(X), sampling_type=sampling_type)
         
-    #return (p_overall, p_values, results.params[idx_params], results)
     return (p_overall, p_params, p_f, results.params[idx_params], results, rhythm_params)
 
 
@@ -2758,7 +2663,6 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
         d_acr_l = project_acr(mean_acr - acr_l)
         d_acr_u = project_acr(mean_acr - acr_h)
         dev_acr = np.nanmax([d_acr_l, d_acr_u])
-        #dev_acr = np.nanmax([np.abs(mean_acr-acr_l), np.abs(mean_acr-acr_h)])
         se_acr = dev_acr/1.96
         rhythm_params['d_acrophase_bootstrap'] = mean_acr
         rhythm_params['d_acrophase_bootstrap_CI'] = [acr_l, acr_h]
@@ -2931,16 +2835,10 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, sample
 
         if ~np.isnan(d_acr):
             dev_acr_tmp = (d_acrophase - d_acr)
-            dev_acr_tmp = project_acr(dev_acr_tmp)
-            
-            #dev_acr = np.nanmax([dev_acr, np.abs(dev_acr_tmp)])
+            dev_acr_tmp = project_acr(dev_acr_tmp)            
             if np.abs(dev_acr_tmp) > np.abs(dev_acr):     
                 dev_acr = dev_acr_tmp
 
-    # !!!        
-    # t = abs(stats.t.ppf(0.05/2,df=k1+k2-1))
-    # T0 = amp/se
-    # p_val = 2 * (1 - stats.t.cdf(abs(T0), k1+k2-1))
     if norm_p:
         t = 1.96
     else:
@@ -2984,8 +2882,7 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, sample
 def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=5, max_samples = 1000, norm_p = False, k=0, sampling_type=""): 
 
     res2 = copy.deepcopy(results)
-    params = res2.params
-    n_params = len(params)
+    params = res2.params    
     CIs = statistics_params['CI']
     CIs = list(zip(*CIs))
                 
@@ -3039,10 +2936,6 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
             if np.abs(dev_acr_tmp) > np.abs(dev_acr):     
                 dev_acr = dev_acr_tmp
 
-    # !!!
-    # t = abs(stats.t.ppf(0.05/2,df=k-1))
-    # T0 = amp/se
-    # p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
     if norm_p:
         t = 1.96
     else:
@@ -3119,11 +3012,6 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
     acrophase_CI1 = rhythm_params1['acrophase_CI']
     acrophase_CI2 = rhythm_params2['acrophase_CI']
 
-    # !!!
-    # t = abs(stats.t.ppf(0.05/2,df=k1+k2-1))
-    # T0 = amp/se
-    # p_val = 2 * (1 - stats.t.cdf(abs(T0), k1+k2-1))   
-    
     k = len(df_pop1.test.unique()) + len(df_pop2.test.unique()) 
     if norm_p:
         t = 1.96
@@ -3333,6 +3221,11 @@ def project_acr(acr):
         acr += 2*np.pi       
     return acr
 
+# generate samples from the intervals using lating hypercube sampling and its variants
+# intervals define the dimensionality of the space (number of intervals) and lower and upper bounds
+# size defines the number of samples to generate
+# uses scikit-optimize library
+# https://scikit-optimize.github.io/stable/auto_examples/sampler/initial-sampling-method.html
 def generate_samples(sampling_type, intervals, size):
     space = Space(intervals)
 
