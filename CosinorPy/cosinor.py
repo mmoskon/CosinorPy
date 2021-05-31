@@ -15,13 +15,16 @@ from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from scipy.stats import percentileofscore
 from scipy.stats import circstd, circmean
 
-
 import copy
 import itertools
 from matplotlib.lines import Line2D
 from random import sample
 
 import os
+
+from skopt.space import Space
+from skopt.sampler import Lhs
+
 
 def plot_components(X, Y, n_components = 3, period = 24, name = '', save_to = ''):
     
@@ -472,7 +475,7 @@ def generate_independents(X, n_components = 3, period = 24, lin_comp = False):
     
     
 #def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', alpha=0, plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label=''):
-def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label='', return_individual_params = False, params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000, **kwargs):
+def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label='', return_individual_params = False, params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type = "", **kwargs):
 
     if return_individual_params:
         ind_amps = []
@@ -622,7 +625,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
 
 
     if params_CI:
-        population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=samples_per_param_CI, max_samples = max_samples_CI, k=k)
+        population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=samples_per_param_CI, max_samples = max_samples_CI, k=k, sampling_type=sampling_type)
         
 
     if return_individual_params:
@@ -943,7 +946,7 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
     return df_results
 
 
-def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = "", rescale_to_period=False, bootstrap=False, bootstrap_type="std", params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000):
+def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = "", rescale_to_period=False, bootstrap=False, bootstrap_type="std", params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type=""):
     """
     ###
     # prepare the independent variables
@@ -1263,7 +1266,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
         #    rhythm_params[param_name] = param_value
     
     if params_CI:
-        eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param_CI, max_samples_CI, k=len(X))
+        eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param_CI, max_samples_CI, k=len(X), sampling_type=sampling_type)
 
     if return_model: 
         return results, statistics, rhythm_params, X_test, Y_test, model
@@ -1706,7 +1709,7 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
 
     #return multi.multipletests(P, method = 'fdr_bh')[1]
 
-def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = '', bootstrap = False, bootstrap_type="std", params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000):
+def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = '', bootstrap = False, bootstrap_type="std", params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type=""):
        
     n_components1 = n_components
     period1 = period
@@ -1972,7 +1975,7 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
         #    rhythm_params[param_name] = param_value
         
     if params_CI:    
-        eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, samples_per_param_CI, max_samples_CI, k = len(X))
+        eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, samples_per_param_CI, max_samples_CI, k = len(X), sampling_type=sampling_type)
         
     #return (p_overall, p_values, results.params[idx_params], results)
     return (p_overall, p_params, p_f, results.params[idx_params], results, rhythm_params)
@@ -2763,7 +2766,7 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
         
 
 # sample the parameters from the confidence interval, builds a set of models and assesses the rhythmicity parameters confidence intervals   
-def eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param=5, max_samples = 1000, norm_p=False, k=0):
+def eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param=5, max_samples = 1000, norm_p=False, k=0, sampling_type=""):
     res2 = copy.deepcopy(results)
     params = res2.params
     n_params=len(params)
@@ -2786,20 +2789,28 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param
     dev_mes = 0.0
     dev_acr = 0.0
 
-    n_param_samples = P.shape[1]**P.shape[0] 
-    N = min(max_samples, n_param_samples)
-
-    #param_samples = list(itertools.product(*P))
-    #N = min(max_samples, len(param_samples))
-    if n_param_samples < 10**6:
-        params_samples = np.random.choice(n_param_samples, size=N, replace=False)
+   
+    
+    if not sampling_type:
+        n_param_samples = P.shape[1]**P.shape[0] 
+        N = min(max_samples, n_param_samples)
+        if n_param_samples < 10**6:
+            params_samples = np.random.choice(n_param_samples, size=N, replace=False)
+        else:
+            params_samples = my_random_choice(max_val=n_param_samples, size=N)
     else:
-        params_samples = my_random_choice(max_val=n_param_samples, size=N)
+        params_samples = generate_samples(sampling_type, CIs, max_samples)
+        if not params_samples:
+            print("Invalid sampling type")
+            return 
 
-    for i,idx in enumerate(params_samples): 
-    #for i,idx in enumerate(np.random.choice(range(len(param_samples)), size=N, replace=False)):                
-        p = lazy_prod(idx, P)
-        #p = param_samples[idx]
+    for i,idx in enumerate(params_samples):     
+        if not sampling_type:
+            p = lazy_prod(idx, P)
+        else: # if lhs
+            p = params_samples[i]
+        
+        
 
         res2.initialize(results.model, p)            
         Y_test_CI = res2.predict(X_fit_test)
@@ -2859,7 +2870,7 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param
 
 
 # eval rhythmicity parameter differences using parameter confidence intervals
-def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, samples_per_param=5, max_samples=1000, norm_p=False, k=0):
+def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, samples_per_param=5, max_samples=1000, norm_p=False, k=0, sampling_type=""):
 
     res2 = copy.deepcopy(results)
     params = res2.params
@@ -2884,21 +2895,24 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, sample
     dev_acr = 0.0
 
 
-    n_param_samples = P.shape[1]**P.shape[0] 
-    N = min(max_samples, n_param_samples)
-    
-    #param_samples = list(itertools.product(*P))
-    #N = min(max_samples, len(param_samples))
-
-    if n_param_samples < 10**6:
-        params_samples = np.random.choice(n_param_samples, size=N, replace=False)
+    if not sampling_type:
+        n_param_samples = P.shape[1]**P.shape[0] 
+        N = min(max_samples, n_param_samples)
+        if n_param_samples < 10**6:
+            params_samples = np.random.choice(n_param_samples, size=N, replace=False)
+        else:
+            params_samples = my_random_choice(max_val=n_param_samples, size=N)
     else:
-        params_samples = my_random_choice(max_val=n_param_samples, size=N)
-        
-    for i,idx in enumerate(params_samples):                
-    #for i,idx in enumerate(np.random.choice(range(len(param_samples)), size=N, replace=False)):                
-        p = lazy_prod(idx, P)
-        #p = param_samples[idx]
+        params_samples = generate_samples(sampling_type, CIs, max_samples)
+        if not params_samples:
+            print("Invalid sampling type")
+            return 
+
+    for i,idx in enumerate(params_samples):     
+        if not sampling_type:
+            p = lazy_prod(idx, P)
+        else: # if lhs
+            p = params_samples[i]
     
         res2.initialize(results.model, p)        
 
@@ -2967,13 +2981,13 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, sample
 
 
 # sample the parameters from the confidence interval, builds a set of models and assesses the rhythmicity parameters confidence intervals   
-def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=5, max_samples = 1000, norm_p = False, k=0): 
+def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=5, max_samples = 1000, norm_p = False, k=0, sampling_type=""): 
 
     res2 = copy.deepcopy(results)
     params = res2.params
     n_params = len(params)
     CIs = statistics_params['CI']
-    CIs = zip(*CIs)
+    CIs = list(zip(*CIs))
                 
     P = np.zeros((len(params), samples_per_param))
     for i, CI in enumerate(CIs):                    
@@ -2990,21 +3004,25 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
     dev_mes = 0.0
     dev_acr = 0.0
 
-    n_param_samples = P.shape[1]**P.shape[0] 
-    N = min(max_samples, n_param_samples)
-    
-    #param_samples = list(itertools.product(*P))
-    #N = min(max_samples, len(param_samples))
 
-    if n_param_samples < 10**6:
-        params_samples = np.random.choice(n_param_samples, size=N, replace=False)
-    else:
-        params_samples = my_random_choice(max_val=n_param_samples, size=N)
-    
-    for i,idx in enumerate(params_samples): 
-    #for i,idx in enumerate(np.random.choice(range(len(param_samples)), size=N, replace=False)):                
-        p = lazy_prod(idx, P)
-        #p = param_samples[idx]
+    if not sampling_type:
+        n_param_samples = P.shape[1]**P.shape[0] 
+        N = min(max_samples, n_param_samples)        
+        if n_param_samples < 10**6:
+            params_samples = np.random.choice(n_param_samples, size=N, replace=False)
+        else:
+            params_samples = my_random_choice(max_val=n_param_samples, size=N)
+    else:         
+        params_samples = generate_samples(sampling_type, CIs, max_samples)
+        if not params_samples:
+            print("Invalid sampling type")
+            return 
+
+    for i,idx in enumerate(params_samples):     
+        if not sampling_type:
+            p = lazy_prod(idx, P)
+        else: # if lhs
+            p = params_samples[i]  
 
         res2.initialize(results.model, p)            
         Y_test_CI = res2.predict(X_fit_eval_params)
@@ -3028,7 +3046,7 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
     if norm_p:
         t = 1.96
     else:
-        t = abs(stats.t.ppf(0.05/2,df=k-n_params))  
+        t = abs(stats.t.ppf(0.05/2,df=k-1))  
 
     se_amp = dev_amp/t
     rhythm_params['amplitude_CI'] = [amplitude - t*se_amp, amplitude + t*se_amp]
@@ -3036,7 +3054,7 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
         rhythm_params['amplitude_CI_p'] = 2 * norm.cdf(-np.abs(amplitude/se_amp)) 
     else:
         T0 = amplitude/se_amp
-        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-n_params))
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
         rhythm_params['amplitude_CI_p'] = p_val
     
     
@@ -3047,7 +3065,7 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
         rhythm_params['mesor_CI_p'] = 2 * norm.cdf(-np.abs(mesor/se_mes))
     else:
         T0 = mesor/se_mes
-        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-n_params))
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
         rhythm_params['mesor_CI_p'] = p_val
     
 
@@ -3062,12 +3080,12 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
         rhythm_params['acrophase_CI_p'] = 2 * norm.cdf(-np.abs(acrophase/se_acr)) 
     else:
         T0 = acrophase/se_acr
-        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-n_params))
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-1))
         rhythm_params['acrophase_CI_p'] = p_val
 
 
 # compare two population fit pairs independently
-def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, samples_per_param_CI=5, max_samples_CI = 1000, norm_p = False, **kwargs):
+def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, samples_per_param_CI=5, max_samples_CI = 1000, norm_p = False, sampling_type = "", **kwargs):
       
     rhythm_params = {}
 
@@ -3081,8 +3099,8 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
     df_pop1 = df[df.test.str.startswith(test1)] 
     df_pop2 = df[df.test.str.startswith(test2)] 
 
-    _, statistics1, _, rhythm_params1, _ = population_fit(df_pop1, n_components = n_components1, period = period1, plot_on = False,plot_measurements=False, plot_individuals=False, plot_margins=False, params_CI = True, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, **kwargs)
-    _, statistics2, _, rhythm_params2, _ = population_fit(df_pop2, n_components = n_components2, period = period2, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False, params_CI = True, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, **kwargs)
+    _, statistics1, _, rhythm_params1, _ = population_fit(df_pop1, n_components = n_components1, period = period1, plot_on = False,plot_measurements=False, plot_individuals=False, plot_margins=False, params_CI = True, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, sampling_type = sampling_type, **kwargs)
+    _, statistics2, _, rhythm_params2, _ = population_fit(df_pop2, n_components = n_components2, period = period2, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False, params_CI = True, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, sampling_type = sampling_type, **kwargs)
 
     rhythm_params['rhythm_params1'] = rhythm_params1
     rhythm_params['rhythm_params2'] = rhythm_params2
@@ -3174,7 +3192,7 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
 
 
 # compare two pairs independently
-def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, samples_per_param_CI=5, max_samples_CI = 1000, norm_p = False, **kwargs):
+def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, samples_per_param_CI=5, max_samples_CI = 1000, norm_p = False, sampling_type="", **kwargs):
 
     rhythm_params = {}
 
@@ -3190,8 +3208,8 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
     X2 = df[(df.test == test2)].x
     Y2 = df[(df.test == test2)].y
     
-    res1, statistics1, rhythm_params1, _, _ = fit_me(X1, Y1, n_components = n_components1, period = period1, plot = False, params_CI = True, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, **kwargs)
-    res2, statistics2, rhythm_params2, _, _ = fit_me(X2, Y2, n_components = n_components2, period = period2, plot = False, params_CI = True, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, **kwargs)
+    res1, statistics1, rhythm_params1, _, _ = fit_me(X1, Y1, n_components = n_components1, period = period1, plot = False, params_CI = True, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, sampling_type=sampling_type, **kwargs)
+    res2, statistics2, rhythm_params2, _, _ = fit_me(X2, Y2, n_components = n_components2, period = period2, plot = False, params_CI = True, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, sampling_type=sampling_type, **kwargs)
 
     rhythm_params['rhythm_params1'] = rhythm_params1
     rhythm_params['rhythm_params2'] = rhythm_params2
@@ -3314,3 +3332,20 @@ def project_acr(acr):
     elif acr < -np.pi:
         acr += 2*np.pi       
     return acr
+
+def generate_samples(sampling_type, intervals, size):
+    space = Space(intervals)
+
+    if sampling_type == "LHS":
+        lhs = Lhs(lhs_type="classic", criterion=None)
+    elif sampling_type == "centered":
+        lhs = Lhs(lhs_type="centered", criterion=None)
+    elif sampling_type == "maximin":
+        lhs = Lhs(criterion="maximin", iterations=10000)
+    elif sampling_type == "ratio":
+        lhs = Lhs(criterion="ratio", iterations=10000)
+    else:
+        return None
+
+    return lhs.generate(space.dimensions, size)
+    
