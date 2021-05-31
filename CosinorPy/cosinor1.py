@@ -763,6 +763,9 @@ def test_cosinor_single(data, period = 24, corrected = True):
     coef_trans = np.array([results.params.iloc[0], amp, acr])
     se_trans = np.concatenate((np.sqrt(np.diag(results.cov_params().loc[['Intercept'], ['Intercept']])),se_trans_only))  
 
+    # correct acropahse
+    coef_trans[-1] = cosinor.project_acr(coef_trans[-1])
+ 
     lower_CI_trans = coef_trans - zt * se_trans           
     upper_CI_trans = coef_trans + zt * se_trans
     p_value_trans = 2 * norm.cdf(-np.abs(coef_trans/se_trans)) 
@@ -843,6 +846,10 @@ def test_cosinor_pair(data, period, corrected = True):
     
     trans_names = list(results.params.index.values[:2]) + ['amp', 'group:amp', 'acr', 'group:acr']
     coef_trans = np.concatenate((np.array(results.params.iloc[0:2]), amp, acr))
+    # correct acropahse
+    coef_trans[-1] = cosinor.project_acr(coef_trans[-1])
+    coef_trans[-2] = cosinor.project_acr(coef_trans[-2])
+
     se_trans = np.concatenate((np.sqrt(np.diag(results.cov_params().loc[['Intercept', 'group'], ['Intercept', 'group']])),se_trans_only))             
     lower_CI_trans = coef_trans - zt * se_trans
     upper_CI_trans = coef_trans + zt * se_trans
@@ -866,6 +873,7 @@ def test_cosinor_pair(data, period, corrected = True):
     ind_p_value_amp = 2*norm.cdf(-abs(ind_Z_amp))
 
     diff_est_acr = coef_trans[5] - coef_trans[4]
+    diff_est_acr = cosinor.project_acr(diff_est_acr)
     idx = np.array([0,0,-1,1])
     diff_var_acr = np.dot(np.dot(idx, cov_trans), np.transpose(idx[np.newaxis]))
     glob_chi_acr = diff_est_acr * (1/diff_var_acr) * diff_est_acr
