@@ -1493,24 +1493,64 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
     return {'p':p, 'p_reject':p_reject, 'SNR':SNR, 'RSS': RSS, 'resid_SE': resid_SE, 'ME': ME}
 
 
-"""
-primerjava med rezimi:
-- LymoRhyde (Singer:2019)
-"""
+
+# Basic analysis: fist analysis according to LymoRhyde (Singer:2019). Extended with the extra sum-of-squares F test that compares two nested models
 # compare pairs with the presumption that the same model is used in both cases 
 # the same model: the same period and the same number of cosinor components
-def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix = "", **kwargs):
+#
+# additional_analysis - options:
+# - CI1: independent analysis of confidence intervals of two models
+# - bootstrap
+# - CI2: analysis of confidence intervals of a merged model
+def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix = "", additional_analysis = "", **kwargs):
     
-    df_results = pd.DataFrame(columns = ['test',
-                                         'period', 
-                                         'n_components', 
-                                         'p',
-                                         'q',
-                                         'p params',
-                                         'q params',
-                                         'p(F test)',
-                                         'q(F test)'])
+    params_CI_independent = False
+    bootstrap = False
+    params_CI = False
+    
 
+    if additional_analysis == "CI1":
+        params_CI_independent = True
+    elif additional_analysis == "CI2":
+        params_CI_independent = True
+    elif additional_analysis == "bootstrap":
+        bootstrap = True
+    elif additional_analysis:
+        print("Invalid option")
+        return
+
+    if additional_analysis:
+        df_results = pd.DataFrame(columns = ['test',
+                                            'period', 
+                                            'n_components', 
+                                            'd_amplitude',
+                                            'd_acrophase',
+                                            'p',
+                                            'q',
+                                            'p params',
+                                            'q params',
+                                            'p(F test)',
+                                            'q(F test)',
+                                            'CI(d_amplitude)',
+                                            'p(d_amplitude)',
+                                            'q(d_amplitude)',
+                                            'CI(d_acrophase)',
+                                            'p(d_acrophase)',
+                                            'q(d_acrophase)'
+                                            ])
+
+    else:
+        df_results = pd.DataFrame(columns = ['test',
+                                            'period', 
+                                            'n_components', 
+                                            'd_amplitude',
+                                            'd_acrophase',
+                                            'p',
+                                            'q',
+                                            'p params',
+                                            'q params',
+                                            'p(F test)',
+                                            'q(F test)'])
 
     if type(period) == int:
         period = [period]
@@ -1528,13 +1568,17 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
                 
                 #pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
                 #p_overall, pvalues, params, _ = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to, **kwargs)
-                p_overall, p_params, p_F, params, _, rhythm_params = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to, **kwargs)
+                p_overall, p_params, p_F, params, _, rhythm_params = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to,  bootstrap = bootstrap, params_CI = params_CI, params_CI_independent=params_CI_independent, **kwargs)
                 
                 
                 d = {}
                 d['test'] = test1 + ' vs. ' + test2
                 d['period'] = per
                 d['n_components'] = n_comps
+
+                d['d_amplitude'] = rhythm_params['d_amplitude']
+                d['d_acrophase'] = rhythm_params['d_acrophase']
+
                 d['p'] = p_overall
                 #for i, (param, p) in enumerate(zip(params, pvalues)):
                 #    d['param' + str(i+1)] = param
@@ -1544,14 +1588,49 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
                 
                 #d['p(F test)'] = pvalues[-1]
                 d['p(F test)'] = p_F
-                
+
+                if params_CI_independent:
+                    #d['d_amplitude_indep'] = rhythm_params['d_amplitude_indep']
+                    d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI_indep']
+                    d['p(d_amplitude)'] = rhythm_params['d_amplitude_CI_p_indep']
+                    d['q(d_amplitude)'] = np.nan
+
+                    #d['d_acrophase_indep'] = rhythm_params['d_acrophase_indep']
+                    d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI_indep']
+                    d['p(d_acrophase)'] = rhythm_params['d_acrophase_CI_p_indep']
+                    d['q(d_acrophase)'] = np.nan
+                elif bootstrap:
+                    d['CI(d_amplitude)'] = rhythm_params['d_amplitude_bootstrap_CI']
+                    d['p(d_amplitude)'] = rhythm_params['d_amplitude_bootstrap_p']
+                    d['q(d_amplitude)'] = np.nan
+                    #d['d_amplitude_bootstrap'] = rhythm_params['d_amplitude_bootstrap']
+                   
+                    d['CI(d_acrophase)'] = rhythm_params['d_acrophase_bootstrap_CI']
+                    d['p(d_acrophase)'] = rhythm_params['d_acrophase_bootstrap_p']
+                    d['q(d_acrophase)'] = np.nan
+                    #d['d_acrophase_bootstrap'] = rhythm_params['d_acrophase_bootstrap']
+                elif params_CI:
+                    d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI']
+                    d['p(d_amplitude)'] = rhythm_params['d_amplitude_CI_p']
+                    d['q(d_amplitude)'] = np.nan
+                    
+                    d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI']
+                    d['p(d_acrophase)'] = rhythm_params['d_acrophase_CI_p']
+                    d['q(d_acrophase)'] = np.nan
+                    
+                    
                 df_results = df_results.append(d, ignore_index=True)
   
     df_results['q'] = multi.multipletests(df_results['p'], method = 'fdr_bh')[1]
     
     df_results['q params'] = multi.multipletests(df_results['p params'], method = 'fdr_bh')[1]
     df_results['q(F test)'] = multi.multipletests(df_results['p(F test)'], method = 'fdr_bh')[1]
+
     
+    if additional_analysis:
+        df_results['q(d_amplitude)'] = multi.multipletests(df_results['p(d_amplitude)'], method = 'fdr_bh')[1]     
+        df_results['q(d_acrophase)'] = multi.multipletests(df_results['p(d_acrophase)'], method = 'fdr_bh')[1]     
+        
     return df_results
 
 # compare pairs using the best models as stored if df_best_models
