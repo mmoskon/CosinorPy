@@ -1359,13 +1359,17 @@ def evaluate_rhythm_params(X,Y):
 
 
     # peaks and heights
-    Y = Y[X < 24]
-    X = X[X < 24]
+    #Y = Y[X < 24]
+    #X = X[X < 24]
     locs, heights = signal.find_peaks(Y, height = MESOR)
     heights = heights['peak_heights'] 
 
     peaks = X[locs]
     heights = Y[locs]
+    
+    idxs1 = peaks <= PERIOD
+    peaks = peaks[idxs1]
+    heights = heights[idxs1]
 
     Y2 = M - Y    
     locs2, heights2 = signal.find_peaks(Y2, height = MESOR-m)
@@ -1374,6 +1378,9 @@ def evaluate_rhythm_params(X,Y):
     troughs = X[locs2]
     heights2 = Y[locs2]
 
+    idxs2 = troughs <= PERIOD
+    troughs = troughs[idxs2]
+    heights2 = heights2[idxs2]
 
     return {'period':PERIOD, 'amplitude':AMPLITUDE, 'acrophase':ACROPHASE, 'mesor':MESOR, 'peaks': peaks, 'heights': heights, 'troughs': troughs, 'heights2': heights2}
     
@@ -1568,7 +1575,7 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
                 
                 #pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
                 #p_overall, pvalues, params, _ = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to, **kwargs)
-                p_overall, p_params, p_F, params, _, rhythm_params = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to,  bootstrap = bootstrap, params_CI = params_CI, params_CI_independent=params_CI_independent, **kwargs)
+                p_overall, p_params, p_F, _, _, rhythm_params = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to,  bootstrap = bootstrap, params_CI = params_CI, params_CI_independent=params_CI_independent, **kwargs)
                 
                 
                 d = {}
@@ -1634,21 +1641,65 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
     return df_results
 
 # compare pairs using the best models as stored if df_best_models
-# if assessment of p-values: best to uses bootstrap or params_CI_independent!
-def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "", bootstrap = False, params_CI = False, params_CI_independent = False, **kwargs):
-    df_results = pd.DataFrame(columns = ['test',
-                                         'period1', 
-                                         'n_components1', 
-                                         'period2',
-                                         'n_components2',
-                                         'd_amplitude',
-                                         'd_acrophase',
-                                         'p',
-                                         'q',
-                                         'p params',
-                                         'q params',
-                                         'p(F test)',
-                                         'q(F test)'])
+# Basic analysis: fist analysis according to LymoRhyde (Singer:2019). Extended with the extra sum-of-squares F test that compares two nested models
+# compare pairs with the presumption that the same model is used in both cases 
+# the same model: the same period and the same number of cosinor components
+#
+# additional_analysis - options:
+# - CI1: independent analysis of confidence intervals of two models
+# - bootstrap
+# - CI2: analysis of confidence intervals of a merged model
+def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "", additional_analysis = "", **kwargs):
+
+    params_CI_independent = False
+    bootstrap = False
+    params_CI = False
+    
+    if additional_analysis == "CI1":
+        params_CI_independent = True
+    elif additional_analysis == "CI2":
+        params_CI_independent = True
+    elif additional_analysis == "bootstrap":
+        bootstrap = True
+    elif additional_analysis:
+        print("Invalid option")
+        return
+     
+    if additional_analysis:
+        df_results = pd.DataFrame(columns = ['test',
+                                            'period1', 
+                                            'n_components1', 
+                                            'period2',
+                                            'n_components2',
+                                            'd_amplitude',
+                                            'd_acrophase',
+                                            'p',
+                                            'q',
+                                            'p params',
+                                            'q params',
+                                            'p(F test)',
+                                            'q(F test)',
+                                            'CI(d_amplitude)',
+                                            'p(d_amplitude)',
+                                            'q(d_amplitude)',
+                                            'CI(d_acrophase)',
+                                            'p(d_acrophase)',
+                                            'q(d_acrophase)'
+                                            ])
+    else:
+        df_results = pd.DataFrame(columns = ['test',
+                                            'period1', 
+                                            'n_components1', 
+                                            'period2',
+                                            'n_components2',
+                                            'd_amplitude',
+                                            'd_acrophase',
+                                            'p',
+                                            'q',
+                                            'p params',
+                                            'q params',
+                                            'p(F test)',
+                                            'q(F test)'])
 
     
     for test1, test2 in pairs:
@@ -1689,37 +1740,34 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
         d['p params'] = p_params                
         d['p(F test)'] = p_F
 
-        if bootstrap:
-            d['d_amplitude_bootstrap_p'] = rhythm_params['d_amplitude_bootstrap_p']
-            d['d_amplitude_bootstrap_q'] = np.nan
-            d['d_amplitude_bootstrap'] = rhythm_params['d_amplitude_bootstrap']
-            d['d_amplitude_bootstrap_CI'] = rhythm_params['d_amplitude_bootstrap_CI']
-
-            d['d_acrophase_bootstrap_p'] = rhythm_params['d_acrophase_bootstrap_p']
-            d['d_acrophase_bootstrap_q'] = np.nan
-            d['d_acrophase_bootstrap'] = rhythm_params['d_acrophase_bootstrap']
-            d['d_acrophase_bootstrap_CI'] = rhythm_params['d_acrophase_bootstrap_CI']
-
-        if params_CI:
-            d['d_amplitude_CI_p'] = rhythm_params['d_amplitude_CI_p']
-            d['d_amplitude_CI_q'] = np.nan
-            d['d_amplitude_CI'] = rhythm_params['d_amplitude_CI']
-            
-            d['d_acrophase_CI_p'] = rhythm_params['d_acrophase_CI_p']
-            d['d_acrophase_CI_q'] = np.nan
-            d['d_acrophase_CI'] = rhythm_params['d_acrophase_CI']
-            
-
         if params_CI_independent:
-            d['d_amplitude_indep'] = rhythm_params['d_amplitude_indep']
-            d['d_amplitude_CI_indep'] = rhythm_params['d_amplitude_CI_indep']
-            d['d_amplitude_CI_p_indep'] = rhythm_params['d_amplitude_CI_p_indep']
-            d['d_amplitude_CI_q_indep'] = np.nan
+            #d['d_amplitude_indep'] = rhythm_params['d_amplitude_indep']
+            d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI_indep']
+            d['p(d_amplitude)'] = rhythm_params['d_amplitude_CI_p_indep']
+            d['q(d_amplitude)'] = np.nan
 
-            d['d_acrophase_indep'] = rhythm_params['d_acrophase_indep']
-            d['d_acrophase_CI_indep'] = rhythm_params['d_acrophase_CI_indep']
-            d['d_acrophase_CI_p_indep'] = rhythm_params['d_acrophase_CI_p_indep']
-            d['d_acrophase_CI_q_indep'] = np.nan
+            #d['d_acrophase_indep'] = rhythm_params['d_acrophase_indep']
+            d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI_indep']
+            d['p(d_acrophase)'] = rhythm_params['d_acrophase_CI_p_indep']
+            d['q(d_acrophase)'] = np.nan
+        elif bootstrap:
+            d['CI(d_amplitude)'] = rhythm_params['d_amplitude_bootstrap_CI']
+            d['p(d_amplitude)'] = rhythm_params['d_amplitude_bootstrap_p']
+            d['q(d_amplitude)'] = np.nan
+            #d['d_amplitude_bootstrap'] = rhythm_params['d_amplitude_bootstrap']
+            
+            d['CI(d_acrophase)'] = rhythm_params['d_acrophase_bootstrap_CI']
+            d['p(d_acrophase)'] = rhythm_params['d_acrophase_bootstrap_p']
+            d['q(d_acrophase)'] = np.nan
+            #d['d_acrophase_bootstrap'] = rhythm_params['d_acrophase_bootstrap']
+        elif params_CI:
+            d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI']
+            d['p(d_amplitude)'] = rhythm_params['d_amplitude_CI_p']
+            d['q(d_amplitude)'] = np.nan
+            
+            d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI']
+            d['p(d_acrophase)'] = rhythm_params['d_acrophase_CI_p']
+            d['q(d_acrophase)'] = np.nan
         
         df_results = df_results.append(d, ignore_index=True)
     
@@ -1727,17 +1775,9 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
     df_results['q params'] = multi.multipletests(df_results['p params'], method = 'fdr_bh')[1]     
     df_results['q(F test)'] = multi.multipletests(df_results['p(F test)'], method = 'fdr_bh')[1]
 
-    if bootstrap:
-        df_results['d_amplitude_bootstrap_q'] = multi.multipletests(df_results['d_amplitude_bootstrap_p'], method = 'fdr_bh')[1]     
-        df_results['d_acrophase_bootstrap_q'] = multi.multipletests(df_results['d_acrophase_bootstrap_p'], method = 'fdr_bh')[1]     
-    
-    if params_CI:
-        df_results['d_amplitude_CI_q'] = multi.multipletests(df_results['d_amplitude_CI_p'], method = 'fdr_bh')[1]     
-        df_results['d_acrophase_CI_q'] = multi.multipletests(df_results['d_acrophase_CI_p'], method = 'fdr_bh')[1]     
-
-    if params_CI_independent:
-        df_results['d_amplitude_CI_q_indep'] = multi.multipletests(df_results['d_amplitude_CI_p_indep'], method = 'fdr_bh')[1]     
-        df_results['d_acrophase_CI_q_indep'] = multi.multipletests(df_results['d_acrophase_CI_p_indep'], method = 'fdr_bh')[1]     
+    if additional_analysis:
+        df_results['q(d_amplitude)'] = multi.multipletests(df_results['p(d_amplitude)'], method = 'fdr_bh')[1]     
+        df_results['q(d_acrophase)'] = multi.multipletests(df_results['p(d_acrophase)'], method = 'fdr_bh')[1]  
 
     return df_results
 
@@ -2122,12 +2162,26 @@ def plot_df_models(df, df_models, folder ="", **kwargs):
 
 
 # perform a more detailed analysis of the models that were identified to be the best, interesting... in previous analyses
-def analyse_df_models(df, df_models, sparse_output = True, plot = False, folder = "", bootstrap = False, params_CI = False, **kwargs):
-    df_results_extended = pd.DataFrame(columns=['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase', 'mesor'], dtype=float)
+# additional_analysis - options:
+# - CI: analysis of confidence intervals of regression coefficients
+# - bootstrap
+def analyse_best_models(df, df_models, sparse_output = True, plot = False, folder = "", additional_analysis = "CI", **kwargs):
+    df_results_extended = pd.DataFrame(columns=['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase', 'CI(amplitude)', 'p(amplitude)', 'q(amplitude)', 'CI(acrophase)', 'p(acrophase)', 'q(acrophase)'], dtype=float)
+    
     if sparse_output:
-        df_models = df_models[['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase', 'mesor']]
+        df_models = df_models[['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase']]
 
     save_to = "" # for figures
+
+    params_CI = False
+    bootstrap = False
+    if additional_analysis == "CI":
+        params_CI = True
+    elif additional_analysis == "bootstrap":
+        bootstrap = True
+    else:
+        print("Invalid option") 
+        return
 
     for row in df_models.iterrows():        
 
@@ -2146,35 +2200,99 @@ def analyse_df_models(df, df_models, sparse_output = True, plot = False, folder 
         #else:
         row = dict(row[1])
         
-        if bootstrap:
-            row['amplitude_bootstrap_p'] = rhythm_params['amplitude_bootstrap_p']
-            row['amplitude_bootstrap_q'] = np.nan
-            row['amplitude_bootstrap'] = rhythm_params['amplitude_bootstrap']
-            row['amplitude_bootstrap_CI'] = rhythm_params['amplitude_bootstrap_CI']
-
-            row['acrophase_bootstrap_p'] = rhythm_params['acrophase_bootstrap_p']
-            row['acrophase_bootstrap_q'] = np.nan
-            row['acrophase_bootstrap'] = rhythm_params['acrophase_bootstrap']
-            row['acrophase_bootstrap_CI'] = rhythm_params['acrophase_bootstrap_CI']  
-
         if params_CI:
-            row['amplitude_CI'] = rhythm_params['amplitude_CI']
-            row['amplitude_CI_p'] = rhythm_params['amplitude_CI_p']
-            row['amplitude_CI_q'] = np.nan
+            row['CI(amplitude)'] = rhythm_params['amplitude_CI']
+            row['p(amplitude)'] = rhythm_params['amplitude_CI_p']
+            row['q(amplitude)'] = np.nan
 
-            row['acrophase_CI'] = rhythm_params['acrophase_CI']
-            row['acrophase_CI_p'] = rhythm_params['acrophase_CI_p']
-            row['acrophase_CI_q'] = np.nan
-
+            row['CI(acrophase)'] = rhythm_params['acrophase_CI']
+            row['p(acrophase)'] = rhythm_params['acrophase_CI_p']
+            row['q(acrophase)'] = np.nan
+        elif bootstrap:
+            row['CI(amplitude)'] = rhythm_params['amplitude_bootstrap_CI']
+            row['p(amplitude)'] = rhythm_params['amplitude_bootstrap_p']
+            row['q(amplitude)'] = np.nan
+            #row['amplitude_bootstrap'] = rhythm_params['amplitude_bootstrap']
+            
+            row['CI(acrophase)'] = rhythm_params['acrophase_bootstrap_CI']  
+            row['p(acrophase)'] = rhythm_params['acrophase_bootstrap_p']
+            row['q(acrophase)'] = np.nan
+            #row['acrophase_bootstrap'] = rhythm_params['acrophase_bootstrap']
+    
         df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
 
-    if bootstrap:
-        df_results_extended['amplitude_bootstrap_q'] = multi.multipletests(df_results_extended['amplitude_bootstrap_p'], method = 'fdr_bh')[1]
-        df_results_extended['acrophase_bootstrap_q'] = multi.multipletests(df_results_extended['acrophase_bootstrap_p'], method = 'fdr_bh')[1]
+    df_results_extended['q(amplitude)'] = multi.multipletests(df_results_extended['p(amplitude)'], method = 'fdr_bh')[1]
+    df_results_extended['q(acrophase)'] = multi.multipletests(df_results_extended['p(acrophase)'], method = 'fdr_bh')[1]
 
-    if params_CI:
-        df_results_extended['amplitude_CI_q'] = multi.multipletests(df_results_extended['amplitude_CI_p'], method = 'fdr_bh')[1]
-        df_results_extended['acrophase_CI_q'] = multi.multipletests(df_results_extended['acrophase_CI_p'], method = 'fdr_bh')[1]
+    return df_results_extended    
+
+
+# perform a more detailed analysis of the models that were identified to be the best, interesting... in previous analyses
+# additional_analysis - options:
+# - CI: analysis of confidence intervals of regression coefficients
+# - bootstrap
+def analyse_models(df, n_components = 3, period = 24, plot = False, folder = "", additional_analysis = "CI", **kwargs):
+    df_results_extended = pd.DataFrame(columns=['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase', 'CI(amplitude)', 'p(amplitude)', 'q(amplitude)', 'CI(acrophase)', 'p(acrophase)', 'q(acrophase)'], dtype=float)
+    
+    save_to = "" # for figures
+
+    params_CI = False
+    bootstrap = False
+    if additional_analysis == "CI":
+        params_CI = True
+    elif additional_analysis == "bootstrap":
+        bootstrap = True
+    else:
+        print("Invalid option") 
+        return
+
+    for test in df.test.unique():
+        
+        X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)   
+        
+        if plot and folder:
+            save_to = os.path.join(folder,test+'_compnts='+str(n_components) +'_per=' + str(period))
+            
+        _, statistics, rhythm_params, _, _ = fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = save_to, plot=plot, bootstrap=bootstrap, params_CI = params_CI, **kwargs)
+        
+        #if sparse_output:
+        #    row = dict(row[1][['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase', 'mesor']])
+        #else:
+        row = {'test': test,
+               'period': period,
+               'n_components': n_components,
+               'p': statistics['p'],
+               'q': np.nan,
+               'p_reject': statistics['p_reject'], 
+               'q_reject': np.nan, 
+               'amplitude': rhythm_params['amplitude'], 
+               'acrophase': rhythm_params['acrophase']}
+        
+        if params_CI:
+            row['CI(amplitude)'] = rhythm_params['amplitude_CI']
+            row['p(amplitude)'] = rhythm_params['amplitude_CI_p']
+            row['q(amplitude)'] = np.nan
+
+            row['CI(acrophase)'] = rhythm_params['acrophase_CI']
+            row['p(acrophase)'] = rhythm_params['acrophase_CI_p']
+            row['q(acrophase)'] = np.nan
+        elif bootstrap:
+            row['CI(amplitude)'] = rhythm_params['amplitude_bootstrap_CI']
+            row['p(amplitude)'] = rhythm_params['amplitude_bootstrap_p']
+            row['q(amplitude)'] = np.nan
+            #row['amplitude_bootstrap'] = rhythm_params['amplitude_bootstrap']
+            
+            row['CI(acrophase)'] = rhythm_params['acrophase_bootstrap_CI']  
+            row['p(acrophase)'] = rhythm_params['acrophase_bootstrap_p']
+            row['q(acrophase)'] = np.nan
+            #row['acrophase_bootstrap'] = rhythm_params['acrophase_bootstrap']
+    
+        df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
+
+    df_results_extended['q'] = multi.multipletests(df_results_extended['p'], method = 'fdr_bh')[1]
+    df_results_extended['q_reject'] = multi.multipletests(df_results_extended['p_reject'], method = 'fdr_bh')[1]    
+    df_results_extended['q(amplitude)'] = multi.multipletests(df_results_extended['p(amplitude)'], method = 'fdr_bh')[1]
+    df_results_extended['q(acrophase)'] = multi.multipletests(df_results_extended['p(acrophase)'], method = 'fdr_bh')[1]
 
     return df_results_extended    
     
