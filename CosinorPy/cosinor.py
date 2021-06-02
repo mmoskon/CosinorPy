@@ -1216,9 +1216,6 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
     else:    
         return results, statistics, rhythm_params, X_test, Y_test
 
-
-
-
 def phase_to_radians(phase, period=24):
     phase_rads = (-(phase/period)*2*np.pi) % (2*np.pi)
     if phase_rads > 0:
@@ -1332,7 +1329,7 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
     else:
         plt.show()
 
-def evaluate_rhythm_params(X,Y):
+def evaluate_rhythm_params(X,Y, project_acrophase=True):
     m = min(Y)
     M = max(Y)
     A = M - m
@@ -1354,8 +1351,11 @@ def evaluate_rhythm_params(X,Y):
     
     if PERIOD:
         ACROPHASE = phase_to_radians(PHASE, PERIOD)
+        if project_acrophase:
+            ACROPHASE = project_acr(ACROPHASE)
     else:
         ACROPHASE = np.nan
+
 
 
     # peaks and heights
@@ -2848,8 +2848,8 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
         mean_acr = np.arccos(np.cos(mean_acr))
         #print(acr_l, acr_h, mean_acr)
         d_acr_l = project_acr(mean_acr - acr_l)
-        d_acr_u = project_acr(mean_acr - acr_h)
-        dev_acr = np.nanmax([d_acr_l, d_acr_u])
+        d_acr_u = project_acr(acr_h - mean_acr)
+        dev_acr = np.nanmax([np.abs(d_acr_l), np.abs(d_acr_u)])
         se_acr = dev_acr/1.96
         rhythm_params['acrophase_bootstrap'] = mean_acr
         rhythm_params['acrophase_bootstrap_CI'] = [acr_l, acr_h]
@@ -2974,8 +2974,8 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
         mean_acr = np.arccos(np.cos(mean_acr))
         
         d_acr_l = project_acr(mean_acr - acr_l)
-        d_acr_u = project_acr(mean_acr - acr_h)
-        dev_acr = np.nanmax([d_acr_l, d_acr_u])
+        d_acr_u = project_acr(acr_h - mean_acr)
+        dev_acr = np.nanmax([np.abs(d_acr_l), np.abs(d_acr_u)])
         se_acr = dev_acr/1.96
         rhythm_params['d_acrophase_bootstrap'] = mean_acr
         rhythm_params['d_acrophase_bootstrap_CI'] = [acr_l, acr_h]
@@ -3073,7 +3073,7 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param
 
     se_acr = dev_acr/t
     al, au = acrophase - t*se_acr, acrophase + t*se_acr
-    if al < au:
+    if acrophase > 0:
         rhythm_params['acrophase_CI'] = [al, au]
     else:
         rhythm_params['acrophase_CI'] = [au, al]
@@ -3179,7 +3179,7 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, sample
 
     se_acr = dev_acr/t
     al, au = d_acrophase - t*se_acr, d_acrophase + t*se_acr    
-    if al < au:
+    if d_acrophase > 0:
         rhythm_params['d_acrophase_CI'] = [al, au]
     else:
         rhythm_params['d_acrophase_CI'] = [au, al]
@@ -3277,7 +3277,7 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
 
     se_acr = dev_acr/t
     al, au = acrophase - t*se_acr, acrophase + t*se_acr
-    if al < au:
+    if acrophase > 0:
         rhythm_params['acrophase_CI'] = [al, au]
     else:
         rhythm_params['acrophase_CI'] = [au, al]
@@ -3378,10 +3378,10 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
     rhythm_params['d_acrophase'] = d_acrophase
     al, au = d_acrophase - t*se_acr, d_acrophase + t*se_acr
     rhythm_params['d_acrophase_CI'] = [al, au]
-    #if al < au:
-    #    rhythm_params['d_acrophase_CI'] = [al, au]
-    #else:
-    #    rhythm_params['d_acrophase_CI'] = [au, al]
+    if d_acrophase > 0:
+        rhythm_params['d_acrophase_CI'] = [al, au]
+    else:
+        rhythm_params['d_acrophase_CI'] = [au, al]
     if norm_p:
         rhythm_params['d_acrophase_CI_p'] = 2 * norm.cdf(-np.abs(d_acrophase/se_acr)) 
     else:
@@ -3482,10 +3482,10 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
     rhythm_params['d_acrophase_indep'] = d_acrophase
     al, au = d_acrophase - t*se_acr, d_acrophase + t*se_acr
     rhythm_params['d_acrophase_CI_indep'] = [al, au]
-    #if al < au:
-    #    rhythm_params['d_acrophase_CI'] = [al, au]
-    #else:
-    #    rhythm_params['d_acrophase_CI'] = [au, al]
+    if d_acrophase > 0:
+        rhythm_params['d_acrophase_CI'] = [al, au]
+    else:
+        rhythm_params['d_acrophase_CI'] = [au, al]
     if norm_p:
         rhythm_params['d_acrophase_CI_p_indep'] = 2 * norm.cdf(-np.abs(d_acrophase/se_acr))
     else:
