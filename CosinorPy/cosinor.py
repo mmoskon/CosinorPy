@@ -341,7 +341,9 @@ def population_fit_group(df, n_components = 2, period = 24, folder = '', prefix=
     if not any(names):
         names = np.unique(df.test) 
 
-    names = list(map(lambda x:x.split('_rep')[0], names))
+    names = list(set(list(map(lambda x:x.split('_rep')[0], names))))
+    names.sort()
+    
     
     for name in set(names):
         for n_comps in n_components:
@@ -462,7 +464,7 @@ def generate_independents(X, n_components = 3, period = 24, lin_comp = False):
     return X_fit
     
     
-def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', plot_on = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label='', return_individual_params = False, params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type = "LHS", **kwargs):
+def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', plot = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label='', return_individual_params = False, params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type = "LHS", **kwargs):
 
     if return_individual_params:
         ind_amps = []
@@ -502,9 +504,10 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
             params = results.params
         else:
             params = np.vstack([params, results.params])
-        if (plot_on and plot_individuals) or return_individual_params:
-            Y_eval_params = results.predict(X_fit_eval_params)
-            plt.plot(X_test,Y_eval_params,'k', label=test)
+        if (plot and plot_individuals) or return_individual_params:
+            Y_eval_params = results.predict(X_fit_eval_params)            
+            if (plot and plot_individuals):
+                plt.plot(X_test,Y_eval_params,'k', label=test)
             
             min_Y_test = min(min_Y_test, np.min(Y_eval_params))
             max_Y_test = max(max_Y_test, np.max(Y_eval_params))
@@ -515,7 +518,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
                 ind_acrs.append(rhythm_ind_params['acrophase'])
                 ind_mesors.append(rhythm_ind_params['mesor'])
             
-        if plot_on and plot_measurements:
+        if plot and plot_measurements:
             plt.plot(x,y,'ko', markersize=1)
     
 
@@ -552,11 +555,10 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
     X_fit = generate_independents(x, n_components = n_components, period = period, lin_comp = lin_comp)
     Y_fit = results.predict(X_fit)
     
-    
     Y_eval_params = results.predict(X_fit_eval_params)    
     rhythm_params = evaluate_rhythm_params(X_test, Y_eval_params)
         
-    if plot_on:        
+    if plot:        
         plt.plot(X_test,Y_eval_params,'r', label="population fit")
         plt.legend()
         if x_label:
@@ -574,21 +576,22 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
     
         
 
-    if plot_on and plot_margins and model_type=='lin':
+    if plot and plot_margins and model_type=='lin':
         _, lower, upper = wls_prediction_std(results, exog=X_fit_eval_params, alpha=0.05)
         plt.fill_between(X_test, lower, upper, color='#888888', alpha=0.1)                   
     
-    if plot_measurements:
-        if model_type == 'lin':
-            plt.axis([min(min_X,0), 1.1*max(max_X,period), 0.9*min(min_Y, min_Y_test), 1.1*max(max_Y, max_Y_test)])
+    if plot: 
+        if plot_measurements:
+            if model_type == 'lin':
+                plt.axis([min(min_X,0), 1.1*max(max_X,period), 0.9*min(min_Y, min_Y_test), 1.1*max(max_Y, max_Y_test)])
+            else:
+                plt.axis([min(min_X,0), max_X, 0.9*min(min_Y, min_Y_test), 1.1*max(max_Y, max_Y_test)])
+            
         else:
-            plt.axis([min(min_X,0), max_X, 0.9*min(min_Y, min_Y_test), 1.1*max(max_Y, max_Y_test)])
+            plt.axis([min_X_test, 50, min_Y_test*0.9, max_Y_test*1.1])
         
-    else:
-        plt.axis([min_X_test, 50, min_Y_test*0.9, max_Y_test*1.1])
     
-    
-    if plot_on:
+    if plot:
         pop_name = "_".join(test.split("_")[:-1])
         plt.title(pop_name + ', p-value=' + "{0:.5f}".format(statistics['p']))
 
@@ -697,8 +700,8 @@ def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_co
         df_pop1 = df[df.test.str.startswith(pair[0])] 
         df_pop2 = df[df.test.str.startswith(pair[1])] 
 
-        _, statistics1, _, rhythm_params1, _ = population_fit(df_pop1, n_components = n_components, period = period, lin_comp= lin_comp, model_type = model_type, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
-        _, statistics2, _, rhythm_params2, _ = population_fit(df_pop2, n_components = n_components, period = period, lin_comp= lin_comp, model_type = model_type, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
+        _, statistics1, _, rhythm_params1, _ = population_fit(df_pop1, n_components = n_components, period = period, lin_comp= lin_comp, model_type = model_type, plot = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
+        _, statistics2, _, rhythm_params2, _ = population_fit(df_pop2, n_components = n_components, period = period, lin_comp= lin_comp, model_type = model_type, plot = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
 
         p1, amplitude1, acrophase1, mesor1 = statistics1['p'], rhythm_params1['amplitude'], rhythm_params1['acrophase'], rhythm_params1['mesor']
         p2, amplitude2, acrophase2, mesor2 = statistics2['p'], rhythm_params2['amplitude'], rhythm_params2['acrophase'], rhythm_params2['mesor']
@@ -745,8 +748,8 @@ def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_co
             df_test2 = df[df.test.isin(perm2)]
 
             # could as well only permute the parameters of the models
-            _, statistics_test1, _, rhythm_params_test1, _ = population_fit(df_test1, n_components = n_components, period = period, lin_comp = lin_comp, model_type = model_type, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
-            _, statistics_test2, _, rhythm_params_test2, _ = population_fit(df_test2, n_components = n_components, period = period, lin_comp = lin_comp, model_type = model_type, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
+            _, statistics_test1, _, rhythm_params_test1, _ = population_fit(df_test1, n_components = n_components, period = period, lin_comp = lin_comp, model_type = model_type, plot = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
+            _, statistics_test2, _, rhythm_params_test2, _ = population_fit(df_test2, n_components = n_components, period = period, lin_comp = lin_comp, model_type = model_type, plot = False, plot_measurements=False, plot_individuals=False, plot_margins=False)
 
             p_test1, amplitude_test1, acrophase_test1, mesor_test1 = statistics_test1['p'], rhythm_params_test1['amplitude'], rhythm_params_test1['acrophase'], rhythm_params_test1['mesor']
             p_test2, amplitude_test2, acrophase_test2, mesor_test2 = statistics_test2['p'], rhythm_params_test2['amplitude'], rhythm_params_test2['acrophase'], rhythm_params_test2['mesor']
@@ -813,8 +816,8 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
         df_pop1 = df[df.test.str.startswith(pair[0])] 
         df_pop2 = df[df.test.str.startswith(pair[1])] 
 
-        _, statistics1, _, rhythm_params1, _, ind_params1= population_fit(df_pop1, n_components = n_components, period = period, lin_comp= lin_comp, model_type = model_type, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False, return_individual_params=True)
-        _, statistics2, _, rhythm_params2, _, ind_params2 = population_fit(df_pop2, n_components = n_components, period = period, lin_comp= lin_comp, model_type = model_type, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False, return_individual_params=True)
+        _, statistics1, _, rhythm_params1, _, ind_params1= population_fit(df_pop1, n_components = n_components, period = period, lin_comp= lin_comp, model_type = model_type, plot = False, plot_measurements=False, plot_individuals=False, plot_margins=False, return_individual_params=True)
+        _, statistics2, _, rhythm_params2, _, ind_params2 = population_fit(df_pop2, n_components = n_components, period = period, lin_comp= lin_comp, model_type = model_type, plot = False, plot_measurements=False, plot_individuals=False, plot_margins=False, return_individual_params=True)
 
         p1, amplitude1, acrophase1, mesor1 = statistics1['p'], rhythm_params1['amplitude'], rhythm_params1['acrophase'], rhythm_params1['mesor']
         p2, amplitude2, acrophase2, mesor2 = statistics2['p'], rhythm_params2['amplitude'], rhythm_params2['acrophase'], rhythm_params2['mesor']
@@ -2295,6 +2298,139 @@ def analyse_models(df, n_components = 3, period = 24, plot = False, folder = "",
     df_results_extended['q(acrophase)'] = multi.multipletests(df_results_extended['p(acrophase)'], method = 'fdr_bh')[1]
 
     return df_results_extended    
+
+# perform a more detailed analysis of the models that were identified to be the best, interesting... in previous analyses
+# the only option supported is the CI anaylsis: analysis of confidence intervals of regression coefficients
+def analyse_best_models_population(df, df_models, sparse_output = True, plot=False, folder = "", prefix="", **kwargs):
+    df_results_extended = pd.DataFrame(columns=['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase', 'CI(amplitude)', 'p(amplitude)', 'q(amplitude)', 'CI(acrophase)', 'p(acrophase)', 'q(acrophase)'], dtype=float)
+    
+    if sparse_output:
+        df_models = df_models[['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase']]
+
+    save_to = "" # for figures
+
+    #params_CI = False
+    #bootstrap = False
+    #if additional_analysis == "CI":
+    params_CI = True
+    #elif additional_analysis == "bootstrap":
+    #    bootstrap = True
+    #else:
+    #    print("Invalid option") 
+    #    return
+
+    for row in df_models.iterrows():        
+
+        name = row[1].test
+        n_comps = row[1].n_components
+        per = row[1].period
+        df_pop = df[df.test.str.startswith(name)] 
+               
+        if plot and folder:
+            save_to=os.path.join(folder,prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per)) 
+
+        _, statistics, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, plot = plot, save_to = save_to, params_CI = params_CI, **kwargs)  
+                        
+        row = dict(row[1])
+        
+        #if params_CI:
+        row['CI(amplitude)'] = rhythm_params['amplitude_CI']
+        row['p(amplitude)'] = rhythm_params['amplitude_CI_p']
+        row['q(amplitude)'] = np.nan
+
+        row['CI(acrophase)'] = rhythm_params['acrophase_CI']
+        row['p(acrophase)'] = rhythm_params['acrophase_CI_p']
+        row['q(acrophase)'] = np.nan
+        #elif bootstrap:
+        #    row['CI(amplitude)'] = rhythm_params['amplitude_bootstrap_CI']
+        #    row['p(amplitude)'] = rhythm_params['amplitude_bootstrap_p']
+        #    row['q(amplitude)'] = np.nan
+        
+            
+        #    row['CI(acrophase)'] = rhythm_params['acrophase_bootstrap_CI']  
+        #    row['p(acrophase)'] = rhythm_params['acrophase_bootstrap_p']
+        #    row['q(acrophase)'] = np.nan
+        
+    
+        df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
+
+    df_results_extended['q(amplitude)'] = multi.multipletests(df_results_extended['p(amplitude)'], method = 'fdr_bh')[1]
+    df_results_extended['q(acrophase)'] = multi.multipletests(df_results_extended['p(acrophase)'], method = 'fdr_bh')[1]
+
+    return df_results_extended    
+
+
+# perform a more detailed analysis of the models that were identified to be the best, interesting... in previous analyses
+# the only option supported is the CI anaylsis: analysis of confidence intervals of regression coefficients
+def analyse_models_population(df, n_components = 3, period = 24, plot=False, folder = "", prefix="", **kwargs):
+    df_results_extended = pd.DataFrame(columns=['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase', 'CI(amplitude)', 'p(amplitude)', 'q(amplitude)', 'CI(acrophase)', 'p(acrophase)', 'q(acrophase)'], dtype=float)
+    
+    save_to = "" # for figures
+
+    #params_CI = False
+    #bootstrap = False
+    #if additional_analysis == "CI":
+    params_CI = True
+    #elif additional_analysis == "bootstrap":
+    #    bootstrap = True
+    #else:
+    #    print("Invalid option") 
+    #    return
+    
+    names = np.unique(df.test) 
+    names = list(set(list(map(lambda x:x.split('_rep')[0], names))))
+    names.sort()
+
+    for name in names:
+        
+        n_comps = n_components
+        per = period
+        df_pop = df[df.test.str.startswith(name)] 
+               
+        if plot and folder:
+            save_to=os.path.join(folder,prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per)) 
+
+        _, statistics, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, plot = plot, save_to = save_to, params_CI = params_CI, **kwargs)  
+                        
+        #if sparse_output:
+        #    row = dict(row[1][['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase', 'mesor']])
+        #else:
+        row = {'test': name,
+               'period': per,
+               'n_components': n_comps,
+               'p': statistics['p'],
+               'q': np.nan,
+               'p_reject': statistics['p_reject'], 
+               'q_reject': np.nan, 
+               'amplitude': rhythm_params['amplitude'], 
+               'acrophase': rhythm_params['acrophase']}
+        
+        #if params_CI:
+        row['CI(amplitude)'] = rhythm_params['amplitude_CI']
+        row['p(amplitude)'] = rhythm_params['amplitude_CI_p']
+        row['q(amplitude)'] = np.nan
+
+        row['CI(acrophase)'] = rhythm_params['acrophase_CI']
+        row['p(acrophase)'] = rhythm_params['acrophase_CI_p']
+        row['q(acrophase)'] = np.nan
+        #elif bootstrap:
+        #    row['CI(amplitude)'] = rhythm_params['amplitude_bootstrap_CI']
+        #    row['p(amplitude)'] = rhythm_params['amplitude_bootstrap_p']
+        #    row['q(amplitude)'] = np.nan
+                    
+        #    row['CI(acrophase)'] = rhythm_params['acrophase_bootstrap_CI']  
+        #    row['p(acrophase)'] = rhythm_params['acrophase_bootstrap_p']
+        #    row['q(acrophase)'] = np.nan
+            
+        df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
+
+    df_results_extended['q'] = multi.multipletests(df_results_extended['p'], method = 'fdr_bh')[1]
+    df_results_extended['q_reject'] = multi.multipletests(df_results_extended['p_reject'], method = 'fdr_bh')[1]    
+    df_results_extended['q(amplitude)'] = multi.multipletests(df_results_extended['p(amplitude)'], method = 'fdr_bh')[1]
+    df_results_extended['q(acrophase)'] = multi.multipletests(df_results_extended['p(acrophase)'], method = 'fdr_bh')[1]
+
+    return df_results_extended    
+    
     
 def plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'], folder = '', **kwargs):
     
@@ -2470,19 +2606,14 @@ def compare_phase_pairs(df, pairs, min_per = 18, max_per = 36, folder = '', pref
         
         statistics, d = compare_nonlinear(X1, Y1, X2, Y2, test1 = test1, test2 = test2, min_per = min_per, max_per=max_per, compare_phase = True, compare_period = False, compare_amplitude = False, save_to = save_to, plot_residuals=plot_residuals)
         
-        
         d['test'] = test1 + ' vs. ' + test2
         d['p'] = statistics['p']
         d['p_reject'] = statistics['p_reject']
         d['ME'] = statistics['ME']
         d['resid_SE'] = statistics['resid_SE']
-        
-        
-        
+      
         df_results = df_results.append(d, ignore_index=True)
 
-   
-    
     for v in d:
         if v.startswith('p'):
             if v == "p_reject":
@@ -3311,8 +3442,8 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
     df_pop1 = df[df.test.str.startswith(test1)] 
     df_pop2 = df[df.test.str.startswith(test2)] 
 
-    _, statistics1, _, rhythm_params1, _ = population_fit(df_pop1, n_components = n_components1, period = period1, plot_on = False,plot_measurements=False, plot_individuals=False, plot_margins=False, params_CI = True, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, sampling_type = sampling_type, **kwargs)
-    _, statistics2, _, rhythm_params2, _ = population_fit(df_pop2, n_components = n_components2, period = period2, plot_on = False, plot_measurements=False, plot_individuals=False, plot_margins=False, params_CI = True, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, sampling_type = sampling_type, **kwargs)
+    _, statistics1, _, rhythm_params1, _ = population_fit(df_pop1, n_components = n_components1, period = period1, plot = False,plot_measurements=False, plot_individuals=False, plot_margins=False, params_CI = True, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, sampling_type = sampling_type, **kwargs)
+    _, statistics2, _, rhythm_params2, _ = population_fit(df_pop2, n_components = n_components2, period = period2, plot = False, plot_measurements=False, plot_individuals=False, plot_margins=False, params_CI = True, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, sampling_type = sampling_type, **kwargs)
 
     rhythm_params['rhythm_params1'] = rhythm_params1
     rhythm_params['rhythm_params2'] = rhythm_params2
