@@ -1,6 +1,6 @@
 # Why is the resolution of the periodograms so low?
 
-The density of period samples plotted in the periodograms cannot be increased without increasing the sampling frequency of your measurements. In the examples in [`demo_independent.ipynb`](demo_independent.ipynb) the periodograms are plotted on the data that were sampled every 2 hours (`1/fs`) for `test1` and `test2`, and every hour for `test3` and `test4`.  In the first two cases we have 25 samples (`N`), and in the latter two cases we have 49 samples. The frequency resolution (minimal frequency) is limited to 
+The density of period samples plotted in the periodograms cannot be increased without increasing the sampling frequency of your measurements. In the examples in [`demo_independent.ipynb`](https://github.com/mmoskon/CosinorPy/blob/master/demo_dependent.ipynb) the periodograms are plotted on the data that were sampled every 2 hours (`1/fs`) for `test1` and `test2`, and every hour for `test3` and `test4`.  In the first two cases we have 25 samples (`N`), and in the latter two cases we have 49 samples. The frequency resolution (minimal frequency) is limited to 
 
 `fs/N = 1/(2 * 25) = 0.02 h^{-1}`
 
