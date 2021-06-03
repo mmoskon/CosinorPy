@@ -34,7 +34,7 @@ Examples are given as interactive python notebook (ipynb) files:
 The repository as well includes the following R scripts: [`cosinor2_independent.R`](cosinor2_independent.R), [`cosinor2_independent_compare.R`](cosinor2_independent_compare.R), [`cosinor2_dependent.R`](cosinor2_dependent.R) and [`cosinor2_dependent_compare.R`](cosinor2_dependent_compare.R). These can be used to reproduce some of the results obtained with CosinorPy using cosinor and cosinor2 R packages.
 
 ## Questions
-* [Why is the resolution of the periodograms so low?](https://github.com/mmoskon/CosinorPy/blob/master/docs/periodograms.md)
+* [Why is the resolution of my periodograms so low?](https://github.com/mmoskon/CosinorPy/blob/master/docs/periodograms.md)
 
 ## How to cite CosinorPy
 If you are using CosinorPy for your scientific work, please cite:
