@@ -1226,14 +1226,10 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
 
 
 
-# Basic analysis: fist analysis according to LymoRhyde (Singer:2019). Extended with the extra sum-of-squares F test that compares two nested models
-# compare pairs with the presumption that the same model is used in both cases 
-# the same model: the same period and the same number of cosinor components
-#
+# compare pairs using a given number of components and period
 # analysis - options:
-# - CI1: independent analysis of confidence intervals of two models
-# - bootstrap
-# - CI2: analysis of confidence intervals of a merged model
+# - CI: independent analysis of confidence intervals of two models
+# - permutation: permutation/randomisation test
 def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix = "", analysis = "", **kwargs):
     
     params_CI_independent = False
@@ -1365,7 +1361,7 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
         
     return df_results
 
-# compare pairs using the best models as stored if df_best_models
+# compare pairs using the best models as stored in df_best_models
 # Basic analysis: fist analysis according to LymoRhyde (Singer:2019). Extended with the extra sum-of-squares F test that compares two nested models
 # compare pairs with the presumption that the same model is used in both cases 
 # the same model: the same period and the same number of cosinor components
@@ -1506,42 +1502,33 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
 
     return df_results
 
-# Basic analysis: fist analysis according to LymoRhyde (Singer:2019). Extended with the extra sum-of-squares F test that compares two nested models
-# compare pairs with the presumption that the same model is used in both cases 
-# the same model: the same period and the same number of cosinor components
-#
+# compare pairs using a given number of components and period
 # analysis - options:
 # - CI: independent analysis of confidence intervals of two models
 # - permutation: permutation/randomisation test
-def compare_pairs_population(df, pairs, n_components = 3, period = 24, folder = "", prefix = "", analysis = "CI", **kwargs):
+def compare_pairs_population(df, pairs, n_components = 3, period = 24, folder = "", prefix = "", analysis = "CI", lin_comp= False, model_type = 'lin', **kwargs):
     
     params_CI_independent = False
-    bootstrap = False
-    params_CI = False
-    
-
-    if analysis == "CI1":
+    permutation = False
+        
+    if analysis == "CI":
         params_CI_independent = True
-    elif analysis == "CI2":
-        params_CI_independent = True
-    elif analysis == "bootstrap":
-        bootstrap = True
-    elif analysis:
+    elif analysis == "permutation":
+        permutation = True
+    else:
         print("Invalid option")
         return
 
-    if analysis:
+    if analysis == "CI":
         df_results = pd.DataFrame(columns = ['test',
                                             'period', 
                                             'n_components', 
                                             'd_amplitude',
                                             'd_acrophase',
-                                            'p',
-                                            'q',
-                                            'p params',
-                                            'q params',
-                                            'p(F test)',
-                                            'q(F test)',
+                                            'p1',
+                                            'q1',
+                                            'p2',
+                                            'q2',
                                             'CI(d_amplitude)',
                                             'p(d_amplitude)',
                                             'q(d_amplitude)',
@@ -1549,19 +1536,22 @@ def compare_pairs_population(df, pairs, n_components = 3, period = 24, folder = 
                                             'p(d_acrophase)',
                                             'q(d_acrophase)'
                                             ])
-
     else:
         df_results = pd.DataFrame(columns = ['test',
                                             'period', 
                                             'n_components', 
                                             'd_amplitude',
                                             'd_acrophase',
-                                            'p',
-                                            'q',
-                                            'p params',
-                                            'q params',
-                                            'p(F test)',
-                                            'q(F test)'])
+                                            'p1',
+                                            'q1',
+                                            'p2',
+                                            'q2',
+                                            'p(d_amplitude)',
+                                            'q(d_amplitude)',
+                                            'p(d_acrophase)',
+                                            'q(d_acrophase)'
+                                            ])
+
 
     if type(period) == int:
         period = [period]
@@ -1577,74 +1567,58 @@ def compare_pairs_population(df, pairs, n_components = 3, period = 24, folder = 
                 else:
                     save_to = ''
                 
-                #pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
-                #p_overall, pvalues, params, _ = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to, **kwargs)
-                p_overall, p_params, p_F, _, _, rhythm_params = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to,  bootstrap = bootstrap, params_CI = params_CI, params_CI_independent=params_CI_independent, **kwargs)
-                
-                
+                df_pop1 = df[df.test.str.startswith(test1)] 
+                df_pop2 = df[df.test.str.startswith(test2)] 
+
+                _, statistics1, _, rhythm_params1, _ = population_fit(df_pop1, n_components = n_comps, period = per, plot = False, lin_comp = lin_comp, model_type = model_type)
+                _, statistics2, _, rhythm_params2, _ = population_fit(df_pop2, n_components = n_comps, period = per, plot = False, lin_comp = lin_comp, model_type = model_type)
+
+               
                 d = {}
                 d['test'] = test1 + ' vs. ' + test2
                 d['period'] = per
                 d['n_components'] = n_comps
 
-                d['d_amplitude'] = rhythm_params['d_amplitude']
-                d['d_acrophase'] = rhythm_params['d_acrophase']
+                d['d_amplitude'] = rhythm_params2['amplitude'] - rhythm_params1['amplitude']
+                d['d_acrophase'] = project_acr(rhythm_params2['acrophase'] - rhythm_params1['acrophase'])
 
-                d['p'] = p_overall
-                #for i, (param, p) in enumerate(zip(params, pvalues)):
-                #    d['param' + str(i+1)] = param
-                #    d['p' + str(i+1)] = p
+                d['p1'] = statistics1['p']
+                d['p2'] = statistics2['p']
                 
-                d['p params'] = p_params
-                
-                #d['p(F test)'] = pvalues[-1]
-                d['p(F test)'] = p_F
 
                 if params_CI_independent:
-                    #d['d_amplitude_indep'] = rhythm_params['d_amplitude_indep']
-                    d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI_indep']
-                    d['p(d_amplitude)'] = rhythm_params['d_amplitude_CI_p_indep']
-                    d['q(d_amplitude)'] = np.nan
+                    rhythm_params = compare_pair_population_CI(df, test1, test2, n_components=n_comps, period=per, lin_comp = lin_comp, model_type = model_type, **kwargs)
 
-                    #d['d_acrophase_indep'] = rhythm_params['d_acrophase_indep']
-                    d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI_indep']
-                    d['p(d_acrophase)'] = rhythm_params['d_acrophase_CI_p_indep']
-                    d['q(d_acrophase)'] = np.nan
-                elif bootstrap:
-                    d['CI(d_amplitude)'] = rhythm_params['d_amplitude_bootstrap_CI']
-                    d['p(d_amplitude)'] = rhythm_params['d_amplitude_bootstrap_p']
-                    d['q(d_amplitude)'] = np.nan
-                    #d['d_amplitude_bootstrap'] = rhythm_params['d_amplitude_bootstrap']
-                   
-                    d['CI(d_acrophase)'] = rhythm_params['d_acrophase_bootstrap_CI']
-                    d['p(d_acrophase)'] = rhythm_params['d_acrophase_bootstrap_p']
-                    d['q(d_acrophase)'] = np.nan
-                    #d['d_acrophase_bootstrap'] = rhythm_params['d_acrophase_bootstrap']
-                elif params_CI:
                     d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI']
                     d['p(d_amplitude)'] = rhythm_params['d_amplitude_CI_p']
                     d['q(d_amplitude)'] = np.nan
-                    
+
+                
                     d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI']
                     d['p(d_acrophase)'] = rhythm_params['d_acrophase_CI_p']
                     d['q(d_acrophase)'] = np.nan
-                    
+                elif permutation:
+                    df_perm = permutation_test_population_approx(df, [(test1,test2)], n_components=n_comps, period=per, plot=False, lin_comp = lin_comp, model_type = model_type, **kwargs)
+                    #d['CI(d_amplitude)'] = rhythm_params['d_amplitude_bootstrap_CI']
+                    d['p(d_amplitude)'] = df_perm.p_d_amp.values[0]
+                    d['q(d_amplitude)'] = np.nan
+                                
+                    #d['CI(d_acrophase)'] = rhythm_params['d_acrophase_bootstrap_CI']
+                    d['p(d_acrophase)'] = df_perm.p_d_acr.values[0]#rhythm_params['d_acrophase_bootstrap_p']
+                    d['q(d_acrophase)'] = np.nan
+               
                     
                 df_results = df_results.append(d, ignore_index=True)
   
-    df_results['q'] = multi.multipletests(df_results['p'], method = 'fdr_bh')[1]
+    df_results['q1'] = multi.multipletests(df_results['p1'], method = 'fdr_bh')[1]
+    df_results['q2'] = multi.multipletests(df_results['p2'], method = 'fdr_bh')[1]
     
-    df_results['q params'] = multi.multipletests(df_results['p params'], method = 'fdr_bh')[1]
-    df_results['q(F test)'] = multi.multipletests(df_results['p(F test)'], method = 'fdr_bh')[1]
-
-    
-    if analysis:
-        df_results['q(d_amplitude)'] = multi.multipletests(df_results['p(d_amplitude)'], method = 'fdr_bh')[1]     
-        df_results['q(d_acrophase)'] = multi.multipletests(df_results['p(d_acrophase)'], method = 'fdr_bh')[1]     
+    df_results['q(d_amplitude)'] = multi.multipletests(df_results['p(d_amplitude)'], method = 'fdr_bh')[1]     
+    df_results['q(d_acrophase)'] = multi.multipletests(df_results['p(d_acrophase)'], method = 'fdr_bh')[1]      
         
     return df_results
 
-# compare pairs using the best models as stored if df_best_models
+# compare pairs using the best models as stored in best_models
 # analysis - options:
 # - CI: independent analysis of confidence intervals of two models
 # - permutation: permutation/randomisation test

@@ -25,6 +25,8 @@ To install the software version described in [3], the following command should b
 
 ## Examples
 Examples are given as interactive python notebook (ipynb) files:
+* [`demo_independent_extended.ipynb`](demo_independent_extended.ipynb): cosinor analysis of independent data with extended functionalities of multi-component cosinor
+* [`demo_dependent_extended.ipynb`](demo_dependent_extended.ipynb): cosinor analysis of population (dependent) data with extended functionalities of multi-component cosinor
 * [`demo_independent.ipynb`](demo_independent.ipynb): cosinor analysis of independent data
 * [`demo_dependent.ipynb`](demo_dependent.ipynb): cosinor analysis of population (dependent) data
 * [`demo_csv.ipynb`](demo_csv.ipynb): reading from csv file 
