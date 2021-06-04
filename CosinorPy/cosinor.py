@@ -1379,8 +1379,8 @@ def compare_pairs_limo(df, pairs, n_components = 3, period = 24, folder = "", pr
 # analysis - options (from best to worst)
 # - CI: independent analysis of confidence intervals of two models
 # - bootstrap: independent bootstrap analysis
-# todo: accept df_results. If this is specified assess the differences without any additional fitting
-def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix = "", analysis = "CI", **kwargs):
+# if you want to increase the speed specify df_results_extended in which for all analysed models confidence intervals for amplitude and acrophase are given - result of cosinor.analyse_models
+def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix = "", analysis = "CI", df_results_extended = pd.DataFrame(columns=["test"]), **kwargs): 
     
     if (analysis != "CI") and (analysis != "bootstrap"):
         print("Invalid option")
@@ -1420,9 +1420,26 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
                 d['test'] = test1 + ' vs. ' + test2
                 d['period'] = per
                 d['n_components'] = n_comps
+
+                single_params = {}
+                if (test1 in list(df_results_extended['test'])) and (test2 in list(df_results_extended['test'])):
+                    try:
+                        res1 = dict(df_results_extended[(df_results_extended['test'] == test1) & (df_results_extended['n_components'] == n_comps) & (df_results_extended['period'] == per)].iloc[0])
+                        res2 = dict(df_results_extended[(df_results_extended['test'] == test2) & (df_results_extended['n_components'] == n_comps) & (df_results_extended['period'] == per)].iloc[0])
+
+                        res1['CI(mesor)'] = [0,0]
+                        res2['CI(mesor)'] = [0,0]
+                        
+                        single_params["test1"] = res1['CI(amplitude)'], res1['CI(acrophase)'], res1['CI(mesor)']
+                        single_params["test2"] = res2['CI(amplitude)'], res2['CI(acrophase)'], res2['CI(mesor)']
+                    except:
+                        pass
+                        
+                        
+
                
                 if analysis == "CI":
-                    rhythm_params = compare_pair_CI(df, test1, test2, n_components = n_comps, period = per, **kwargs)
+                    rhythm_params = compare_pair_CI(df, test1, test2, n_components = n_comps, period = per, single_params=single_params, **kwargs)
 
                     d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI_indep']
                     d['p(d_amplitude)'] = rhythm_params['d_amplitude_CI_p_indep']
@@ -1430,7 +1447,7 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
                     d['p(d_acrophase)'] = rhythm_params['d_acrophase_CI_p_indep']
                     
                 elif analysis == "bootstrap":
-                    rhythm_params = compare_pair_bootstrap(df, test1, test2, n_components = n_comps, period = per, **kwargs)
+                    rhythm_params = compare_pair_bootstrap(df, test1, test2, n_components = n_comps, period = per, single_params=single_params, **kwargs)
                     
                     d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI_bootstrap_indep']
                     d['p(d_amplitude)'] = rhythm_params['d_amplitude_p_bootstrap_indep']
@@ -1617,8 +1634,8 @@ def compare_pairs_best_models_limo(df, df_best_models, pairs, folder = "", prefi
 # analysis - options (from best to worst)
 # - CI: independent analysis of confidence intervals of two models
 # - bootstrap: independent bootstrap analysis
-# todo: accept df_results. If this is specified assess the differences without any additional fitting
-def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "", analysis = "CI", **kwargs):
+# if you want to increase the speed specify df_results_extended in which for all analysed models confidence intervals for amplitude and acrophase are given - result of cosinor.analyse_best_models
+def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "", analysis = "CI", df_results_extended = pd.DataFrame(columns=["test"]), **kwargs):
     params_CI_independent = False
     bootstrap = False
         
@@ -1679,9 +1696,25 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
         d['n_components1'] = n_components1
         d['period2'] = period2        
         d['n_components2'] = n_components2
+
+
+        single_params = {}
+        if (test1 in list(df_results_extended['test'])) and (test2 in list(df_results_extended['test'])):
+            try:
+                res1 = dict(df_results_extended[(df_results_extended['test'] == test1) & (df_results_extended['n_components'] == n_components1) & (df_results_extended['period'] == period1)].iloc[0])
+                res2 = dict(df_results_extended[(df_results_extended['test'] == test2) & (df_results_extended['n_components'] == n_components2) & (df_results_extended['period'] == period2)].iloc[0])
+                
+                res1['CI(mesor)'] = [0,0]
+                res2['CI(mesor)'] = [0,0]
+
+                single_params["test1"] = res1['CI(amplitude)'], res1['CI(acrophase)'], res1['CI(mesor)']
+                single_params["test2"] = res2['CI(amplitude)'], res2['CI(acrophase)'], res2['CI(mesor)']
+            except:
+                pass
+
         
         if analysis == "CI":
-            rhythm_params = compare_pair_CI(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, **kwargs)
+            rhythm_params = compare_pair_CI(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, single_params = single_params, **kwargs)
 
             d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI_indep']
             d['p(d_amplitude)'] = rhythm_params['d_amplitude_CI_p_indep']
@@ -1689,7 +1722,7 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
             d['p(d_acrophase)'] = rhythm_params['d_acrophase_CI_p_indep']
             
         elif analysis == "bootstrap":
-            rhythm_params = compare_pair_bootstrap(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, **kwargs)
+            rhythm_params = compare_pair_bootstrap(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, single_params = single_params, **kwargs)
             
             d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI_bootstrap_indep']
             d['p(d_amplitude)'] = rhythm_params['d_amplitude_p_bootstrap_indep']
@@ -2431,48 +2464,55 @@ def analyse_models(df, n_components = 3, period = 24, plot = False, folder = "",
         print("Invalid option") 
         return
 
+    if type(period) == int:
+        period = [period]
+        
+    if type(n_components) == int:
+        n_components = [n_components]
+                
     for test in df.test.unique():
-        
-        X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)   
-        
-        if plot and folder:
-            save_to = os.path.join(folder,test+'_compnts='+str(n_components) +'_per=' + str(period))
-            
-        _, statistics, rhythm_params, _, _ = fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = save_to, plot=plot, bootstrap=bootstrap, params_CI = params_CI, **kwargs)
-        
-        #if sparse_output:
-        #    row = dict(row[1][['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase', 'mesor']])
-        #else:
-        row = {'test': test,
-               'period': period,
-               'n_components': n_components,
-               'p': statistics['p'],
-               'q': np.nan,
-               'p_reject': statistics['p_reject'], 
-               'q_reject': np.nan, 
-               'amplitude': rhythm_params['amplitude'], 
-               'acrophase': rhythm_params['acrophase']}
-        
-        if params_CI:
-            row['CI(amplitude)'] = rhythm_params['amplitude_CI']
-            row['p(amplitude)'] = rhythm_params['amplitude_CI_p']
-            row['q(amplitude)'] = np.nan
+        for per in period:
+            for n_comps in n_components:     
+                X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)   
+                
+                if plot and folder:
+                    save_to = os.path.join(folder,test+'_compnts='+str(n_comps) +'_per=' + str(per))
+                    
+                _, statistics, rhythm_params, _, _ = fit_me(X, Y, n_components = n_comps, period = per, name = test, save_to = save_to, plot=plot, bootstrap=bootstrap, params_CI = params_CI, **kwargs)
+                
+                #if sparse_output:
+                #    row = dict(row[1][['test', 'per', 'n_comps', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase', 'mesor']])
+                #else:
+                row = {'test': test,
+                    'period': per,
+                    'n_components': n_comps,
+                    'p': statistics['p'],
+                    'q': np.nan,
+                    'p_reject': statistics['p_reject'], 
+                    'q_reject': np.nan, 
+                    'amplitude': rhythm_params['amplitude'], 
+                    'acrophase': rhythm_params['acrophase']}
+                
+                if params_CI:
+                    row['CI(amplitude)'] = rhythm_params['amplitude_CI']
+                    row['p(amplitude)'] = rhythm_params['amplitude_CI_p']
+                    row['q(amplitude)'] = np.nan
 
-            row['CI(acrophase)'] = rhythm_params['acrophase_CI']
-            row['p(acrophase)'] = rhythm_params['acrophase_CI_p']
-            row['q(acrophase)'] = np.nan
-        elif bootstrap:
-            row['CI(amplitude)'] = rhythm_params['amplitude_bootstrap_CI']
-            row['p(amplitude)'] = rhythm_params['amplitude_bootstrap_p']
-            row['q(amplitude)'] = np.nan
-            #row['amplitude_bootstrap'] = rhythm_params['amplitude_bootstrap']
+                    row['CI(acrophase)'] = rhythm_params['acrophase_CI']
+                    row['p(acrophase)'] = rhythm_params['acrophase_CI_p']
+                    row['q(acrophase)'] = np.nan
+                elif bootstrap:
+                    row['CI(amplitude)'] = rhythm_params['amplitude_bootstrap_CI']
+                    row['p(amplitude)'] = rhythm_params['amplitude_bootstrap_p']
+                    row['q(amplitude)'] = np.nan
+                    #row['amplitude_bootstrap'] = rhythm_params['amplitude_bootstrap']
+                    
+                    row['CI(acrophase)'] = rhythm_params['acrophase_bootstrap_CI']  
+                    row['p(acrophase)'] = rhythm_params['acrophase_bootstrap_p']
+                    row['q(acrophase)'] = np.nan
+                    #row['acrophase_bootstrap'] = rhythm_params['acrophase_bootstrap']
             
-            row['CI(acrophase)'] = rhythm_params['acrophase_bootstrap_CI']  
-            row['p(acrophase)'] = rhythm_params['acrophase_bootstrap_p']
-            row['q(acrophase)'] = np.nan
-            #row['acrophase_bootstrap'] = rhythm_params['acrophase_bootstrap']
-    
-        df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
+                df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
 
     df_results_extended['q'] = multi.multipletests(df_results_extended['p'], method = 'fdr_bh')[1]
     df_results_extended['q_reject'] = multi.multipletests(df_results_extended['p_reject'], method = 'fdr_bh')[1]    
@@ -4004,7 +4044,7 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
 
 
 # compare two pairs independently
-def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, samples_per_param_CI=5, max_samples_CI = 1000, norm_p = False, sampling_type="LHS", rhythm_params = {}, **kwargs):    
+def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, samples_per_param_CI=5, max_samples_CI = 1000, norm_p = False, sampling_type="LHS", rhythm_params = {}, single_params = {}, **kwargs):    
 
     n_components1 = n_components
     period1 = period
@@ -4017,10 +4057,15 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
     Y1 = df[(df.test == test1)].y
     X2 = df[(df.test == test2)].x
     Y2 = df[(df.test == test2)].y
-    
-    res1, statistics1, rhythm_params1, _, _ = fit_me(X1, Y1, n_components = n_components1, period = period1, plot = False, params_CI = True, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, sampling_type=sampling_type, **kwargs)
-    res2, statistics2, rhythm_params2, _, _ = fit_me(X2, Y2, n_components = n_components2, period = period2, plot = False, params_CI = True, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, sampling_type=sampling_type, **kwargs)
 
+    if single_params:
+        run_params_CI = False # fit_me is called without sampling
+    else:
+        run_params_CI = True # fit_me is called with sampling
+    
+    res1, statistics1, rhythm_params1, _, _ = fit_me(X1, Y1, n_components = n_components1, period = period1, plot = False, params_CI = run_params_CI, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, sampling_type=sampling_type, **kwargs)
+    res2, statistics2, rhythm_params2, _, _ = fit_me(X2, Y2, n_components = n_components2, period = period2, plot = False, params_CI = run_params_CI, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, sampling_type=sampling_type, **kwargs)
+    
     rhythm_params['rhythm_params1'] = rhythm_params1
     rhythm_params['rhythm_params2'] = rhythm_params2
 
@@ -4030,16 +4075,21 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
     p1, amplitude1, acrophase1, mesor1 = statistics1['p'], rhythm_params1['amplitude'], rhythm_params1['acrophase'], rhythm_params1['mesor']
     p2, amplitude2, acrophase2, mesor2 = statistics2['p'], rhythm_params2['amplitude'], rhythm_params2['acrophase'], rhythm_params2['mesor']
 
+        
+    if not single_params:
+        amplitude_CI1 = rhythm_params1['amplitude_CI']
+        amplitude_CI2 = rhythm_params2['amplitude_CI']
+        mesor_CI1 = rhythm_params1['mesor_CI']
+        mesor_CI2 = rhythm_params2['mesor_CI']
+        acrophase_CI1 = rhythm_params1['acrophase_CI']
+        acrophase_CI2 = rhythm_params2['acrophase_CI']
+    else:
+        amplitude_CI1, acrophase_CI1, mesor_CI1 = single_params['test1']
+        amplitude_CI2, acrophase_CI2, mesor_CI2 = single_params['test2']
+
     if p1 > 0.05 or p2 > 0.05:
         print("rhythmicity in one is not significant")
         return
-
-    amplitude_CI1 = rhythm_params1['amplitude_CI']
-    amplitude_CI2 = rhythm_params2['amplitude_CI']
-    mesor_CI1 = rhythm_params1['mesor_CI']
-    mesor_CI2 = rhythm_params2['mesor_CI']
-    acrophase_CI1 = rhythm_params1['acrophase_CI']
-    acrophase_CI2 = rhythm_params2['acrophase_CI']
 
     # !!!
     # t = abs(stats.t.ppf(0.05/2,df=k1+k2-1))
@@ -4047,6 +4097,8 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
     # p_val = 2 * (1 - stats.t.cdf(abs(T0), k1+k2-1))
     k = len(X1) + len(X2)
     n_params = len(res1.params)+len(res2.params)
+    
+    
 
     if norm_p:
         t = 1.96
@@ -4084,14 +4136,15 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
         p_val = 2 * (1 - stats.t.cdf(abs(T0), k-n_params))
         rhythm_params['d_amplitude_CI_p_indep'] = p_val
 
-    rhythm_params['d_mesor'] = d_mesor
-    rhythm_params['d_mesor_CI_indep'] = [d_mesor - t*se_mes, d_mesor + t*se_mes]
-    if norm_p:
-        rhythm_params['d_mesor_CI_p_indep'] = 2 * norm.cdf(-np.abs(d_mesor/se_mes))
-    else:
-        T0 = d_mesor/se_mes
-        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-n_params))
-        rhythm_params['d_mesor_CI_p_indep'] = p_val
+    if se_mes:
+        rhythm_params['d_mesor'] = d_mesor
+        rhythm_params['d_mesor_CI_indep'] = [d_mesor - t*se_mes, d_mesor + t*se_mes]
+        if norm_p:
+            rhythm_params['d_mesor_CI_p_indep'] = 2 * norm.cdf(-np.abs(d_mesor/se_mes))
+        else:
+            T0 = d_mesor/se_mes
+            p_val = 2 * (1 - stats.t.cdf(abs(T0), k-n_params))
+            rhythm_params['d_mesor_CI_p_indep'] = p_val
     
 
     rhythm_params['d_acrophase'] = d_acrophase
@@ -4114,7 +4167,7 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
     return rhythm_params
 
 # compare two pairs independently using bootstrap
-def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, rhythm_params = {}, bootstrap_size=1000, bootstrap_type="std", t_test = True, **kwargs):    
+def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, bootstrap_size=1000, bootstrap_type="std", t_test = True, rhythm_params = {}, single_params = {}, **kwargs):    
 
     n_components1 = n_components
     period1 = period
@@ -4128,8 +4181,13 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
     X2 = df[(df.test == test2)].x
     Y2 = df[(df.test == test2)].y
     
-    res1, statistics1, rhythm_params1, _, _ = fit_me(X1, Y1, n_components = n_components1, period = period1, plot = False, bootstrap=True, bootstrap_size=bootstrap_size, bootstrap_type = bootstrap_type, **kwargs)
-    res2, statistics2, rhythm_params2, _, _ = fit_me(X2, Y2, n_components = n_components2, period = period2, plot = False, bootstrap=True, bootstrap_size=bootstrap_size, bootstrap_type = bootstrap_type, **kwargs)
+    if single_params:
+        run_bootstrap = False
+    else:
+        run_bootstrap = True
+
+    res1, statistics1, rhythm_params1, _, _ = fit_me(X1, Y1, n_components = n_components1, period = period1, plot = False, bootstrap=run_bootstrap, bootstrap_size=bootstrap_size, bootstrap_type = bootstrap_type, **kwargs)
+    res2, statistics2, rhythm_params2, _, _ = fit_me(X2, Y2, n_components = n_components2, period = period2, plot = False, bootstrap=run_bootstrap, bootstrap_size=bootstrap_size, bootstrap_type = bootstrap_type, **kwargs)
 
     rhythm_params['rhythm_params1'] = rhythm_params1
     rhythm_params['rhythm_params2'] = rhythm_params2
@@ -4144,12 +4202,16 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
         print("rhythmicity in one is not significant")
         return
 
-    amplitude_CI1 = rhythm_params1['amplitude_bootstrap_CI']
-    amplitude_CI2 = rhythm_params2['amplitude_bootstrap_CI']
-    mesor_CI1 = rhythm_params1['mesor_bootstrap_CI']
-    mesor_CI2 = rhythm_params2['mesor_bootstrap_CI']
-    acrophase_CI1 = rhythm_params1['acrophase_bootstrap_CI']
-    acrophase_CI2 = rhythm_params2['acrophase_bootstrap_CI']
+    if not single_params:
+        amplitude_CI1 = rhythm_params1['amplitude_bootstrap_CI']
+        amplitude_CI2 = rhythm_params2['amplitude_bootstrap_CI']
+        mesor_CI1 = rhythm_params1['mesor_bootstrap_CI']
+        mesor_CI2 = rhythm_params2['mesor_bootstrap_CI']
+        acrophase_CI1 = rhythm_params1['acrophase_bootstrap_CI']
+        acrophase_CI2 = rhythm_params2['acrophase_bootstrap_CI']
+    else:
+        amplitude_CI1, acrophase_CI1, mesor_CI1 = single_params['test1']
+        amplitude_CI2, acrophase_CI2, mesor_CI2 = single_params['test2']
 
     # !!!
     # t = abs(stats.t.ppf(0.05/2,df=k1+k2-1))
@@ -4195,15 +4257,15 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
     else:
         rhythm_params['d_amplitude_p_bootstrap_indep'] = 2 * norm.cdf(-np.abs(d_amplitude/se_amp))
         
-
-    rhythm_params['d_mesor'] = d_mesor
-    rhythm_params['d_mesor_CI_bootstrap_indep'] = [d_mesor - 1.96*se_mes, d_mesor + 1.96*se_mes]
-    if t_test:
-        T0 = d_mesor/se_mes
-        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-n_params))
-        rhythm_params['d_mesor_p_bootstrap_indep'] = p_val        
-    else:
-        rhythm_params['d_mesor_p_bootstrap_indep'] = 2 * norm.cdf(-np.abs(d_mesor/se_mes))
+    if se_mes:
+        rhythm_params['d_mesor'] = d_mesor
+        rhythm_params['d_mesor_CI_bootstrap_indep'] = [d_mesor - 1.96*se_mes, d_mesor + 1.96*se_mes]
+        if t_test:
+            T0 = d_mesor/se_mes
+            p_val = 2 * (1 - stats.t.cdf(abs(T0), k-n_params))
+            rhythm_params['d_mesor_p_bootstrap_indep'] = p_val        
+        else:
+            rhythm_params['d_mesor_p_bootstrap_indep'] = 2 * norm.cdf(-np.abs(d_mesor/se_mes))
         
     rhythm_params['d_acrophase'] = d_acrophase
     rhythm_params['d_acrophase_CI_bootstrap_indep'] = get_acr_CI(d_acrophase, 1.96*se_acr)
@@ -4281,6 +4343,23 @@ def generate_samples(sampling_type, intervals, size):
 
 def get_acr_CI(mean_acr, dev_acr):
     return [mean_acr-np.abs(dev_acr), mean_acr+np.abs(dev_acr)]
+
+def get_CI_dev_diff(mean1, CI1, mean2, CI2, acr = False):
+    dev1 = np.abs(CI1[1] - mean1)/2 + np.abs(mean1 - CI1[0])/2
+    dev2 = np.abs(CI2[1] - mean2)/2 + np.abs(mean2 - CI2[0])/2
+    
+    dev = dev1 + dev2
+    diff = mean2 - mean1
+    if acr:
+        diff = project_acr(diff)
+    
+    CI = [diff - dev, diff + dev]
+
+    return CI, dev
+
+
+
+
 
 
 # when the number of samples is large, the 0.05 significance level should be decreased
