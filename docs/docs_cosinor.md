@@ -139,7 +139,7 @@ Plots the given models with the given data.
 ### `cosinor.plot_df_models_population(df, df_models, plot_residuals=True, folder ="")`
 Plots the given population-mean models with the given data.
 
-### `cosinor.compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix = "", **kwargs)`
+### `cosinor.compare_pairs_limo(df, pairs, n_components = 3, period = 24, folder = "", prefix = "", **kwargs)`
 Perform the LimoRhyde analysis of differential expression between the given pairs of measurements.
 #### Parameters
 * `df`: pandas dataframe of measurements
@@ -154,8 +154,8 @@ See arguments of `cosinor.fit_me`.
 #### Returns
 * dataframe with the results of comparison. These include p values for each added parameter and p value for the F statistic - should the more complex model be accepted? In the plot, the latter value is reported.
 
-### `cosinor.compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "", **kwargs)`
-Compares pairs from `pairs` using the data from `df` and an optimal number of components from `df_best_models`.
+### `cosinor.compare_pairs_best_models_limo(df, df_best_models, pairs, folder = "", prefix = "", **kwargs)`
+Compares pairs in a similar manner as `cosinor.compare_pairs_limo`. Compares pairs defined in `pairs` using the data from `df` and an optimal number of components from `df_best_models`.
 
 ### `cosinor.compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = '', bootstrap = False)`
 Compare two tests from `pair` using `n_components` cosinor with period equal to `period`. If `n_components2` or `period2` are specified, using a different number of components and/or period for the second model. 
