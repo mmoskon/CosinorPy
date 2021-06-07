@@ -1,3 +1,4 @@
+from numpy.ma import add
 import pandas as pd
 import numpy as np
 import scipy.signal as signal
@@ -930,7 +931,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                     plot_phases([phase], [amp], [name], period=per)#, plot_measurements=True, measurements=[X,Y])
 
     if bootstrap:
-        eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rhythm_params, bootstrap_size, bootstrap_type)
+        eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y,  model_type = model_type, rhythm_params=rhythm_params, bootstrap_size=bootstrap_size, bootstrap_type=bootstrap_type)
         
     if params_CI:
         eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param_CI, max_samples_CI, k=len(X), sampling_type=sampling_type)
@@ -1226,13 +1227,15 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
 
 
 # compare pairs using a given number of components and period
-# analysis - options (from best to worst)
+# analysis - options (from best to worst) (ADDITIONAL ANALYSIS)
 # - CI1: independent analysis of confidence intervals of two models
 # - bootstrap1: independent bootstrap analysis
 # - CI2: analysis of confidence intervals of a merged model
 # - bootstrap2: bootstrap analysis of a merged model
 def compare_pairs_limo(df, pairs, n_components = 3, period = 24, folder = "", prefix = "", analysis = "", **kwargs):
     
+    
+    """
     params_CI_independent = False
     bootstrap_independent = False
     bootstrap = False
@@ -1250,6 +1253,8 @@ def compare_pairs_limo(df, pairs, n_components = 3, period = 24, folder = "", pr
     elif analysis:
         print("Invalid option")
         return
+    """
+
 
     if analysis:
         df_results = pd.DataFrame(columns = ['test',
@@ -1300,7 +1305,7 @@ def compare_pairs_limo(df, pairs, n_components = 3, period = 24, folder = "", pr
                 
                 #pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
                 #p_overall, pvalues, params, _ = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to, **kwargs)
-                p_overall, p_params, p_F, _, _, rhythm_params = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to,  bootstrap = bootstrap, bootstrap_independent = bootstrap_independent, params_CI = params_CI, params_CI_independent=params_CI_independent, **kwargs)
+                p_overall, p_params, p_F, _, _, rhythm_params = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to,  additional_analysis = analysis, **kwargs)
                 
                 
                 d = {}
@@ -1312,53 +1317,16 @@ def compare_pairs_limo(df, pairs, n_components = 3, period = 24, folder = "", pr
                 d['d_acrophase'] = rhythm_params['d_acrophase']
 
                 d['p'] = p_overall
-                #for i, (param, p) in enumerate(zip(params, pvalues)):
-                #    d['param' + str(i+1)] = param
-                #    d['p' + str(i+1)] = p
-                
                 d['p params'] = p_params
-                
-                #d['p(F test)'] = pvalues[-1]
                 d['p(F test)'] = p_F
-       
       
-                if params_CI_independent:
-                    #d['d_amplitude_indep'] = rhythm_params['d_amplitude_indep']
-                    d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI_indep']
-                    d['p(d_amplitude)'] = rhythm_params['d_amplitude_CI_p_indep']
-                    d['q(d_amplitude)'] = np.nan
+                d['CI(d_amplitude)'] = rhythm_params['CI(d_amplitude)']
+                d['p(d_amplitude)'] = rhythm_params['p(d_amplitude)']
+                d['q(d_amplitude)'] = np.nan
 
-                    #d['d_acrophase_indep'] = rhythm_params['d_acrophase_indep']
-                    d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI_indep']
-                    d['p(d_acrophase)'] = rhythm_params['d_acrophase_CI_p_indep']
-                    d['q(d_acrophase)'] = np.nan
-                elif bootstrap_independent:
-                    d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI_bootstrap_indep']
-                    d['p(d_amplitude)'] = rhythm_params['d_amplitude_p_bootstrap_indep']
-                    d['q(d_amplitude)'] = np.nan
-                    
-                    d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI_bootstrap_indep']
-                    d['p(d_acrophase)'] = rhythm_params['d_acrophase_p_bootstrap_indep']
-                    d['q(d_acrophase)'] = np.nan                
-                elif params_CI:
-                    d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI']
-                    d['p(d_amplitude)'] = rhythm_params['d_amplitude_CI_p']
-                    d['q(d_amplitude)'] = np.nan
-                    
-                    d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI']
-                    d['p(d_acrophase)'] = rhythm_params['d_acrophase_CI_p']
-                    d['q(d_acrophase)'] = np.nan
-                elif bootstrap:
-                    d['CI(d_amplitude)'] = rhythm_params['d_amplitude_bootstrap_CI']
-                    d['p(d_amplitude)'] = rhythm_params['d_amplitude_bootstrap_p']
-                    d['q(d_amplitude)'] = np.nan
-                    #d['d_amplitude_bootstrap'] = rhythm_params['d_amplitude_bootstrap']
-                   
-                    d['CI(d_acrophase)'] = rhythm_params['d_acrophase_bootstrap_CI']
-                    d['p(d_acrophase)'] = rhythm_params['d_acrophase_bootstrap_p']
-                    d['q(d_acrophase)'] = np.nan
-                    #d['d_acrophase_bootstrap'] = rhythm_params['d_acrophase_bootstrap']
-                    
+                d['CI(d_acrophase)'] = rhythm_params['CI(d_acrophase)']
+                d['p(d_acrophase)'] = rhythm_params['p(d_acrophase)']
+                d['q(d_acrophase)'] = np.nan                   
                     
                 df_results = df_results.append(d, ignore_index=True)
   
@@ -1438,21 +1406,16 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
 
                
                 if analysis == "CI":
-                    rhythm_params = compare_pair_CI(df, test1, test2, n_components = n_comps, period = per, single_params=single_params, **kwargs)
-
-                    d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI_indep']
-                    d['p(d_amplitude)'] = rhythm_params['d_amplitude_CI_p_indep']
-                    d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI_indep']
-                    d['p(d_acrophase)'] = rhythm_params['d_acrophase_CI_p_indep']
-                    
+                    rhythm_params = compare_pair_CI(df, test1, test2, n_components = n_comps, period = per, single_params=single_params, **kwargs)                    
                 elif analysis == "bootstrap":
-                    rhythm_params = compare_pair_bootstrap(df, test1, test2, n_components = n_comps, period = per, single_params=single_params, **kwargs)
-                    
-                    d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI_bootstrap_indep']
-                    d['p(d_amplitude)'] = rhythm_params['d_amplitude_p_bootstrap_indep']
-                    d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI_bootstrap_indep']
-                    d['p(d_acrophase)'] = rhythm_params['d_acrophase_p_bootstrap_indep']
+                    rhythm_params = compare_pair_bootstrap(df, test1, test2, n_components = n_comps, period = per, single_params=single_params, **kwargs)                    
                                                    
+
+                d['CI(d_amplitude)'] = rhythm_params['CI(d_amplitude)']
+                d['p(d_amplitude)'] = rhythm_params['p(d_amplitude)']
+                d['CI(d_acrophase)'] = rhythm_params['CI(d_acrophase)']
+                d['p(d_acrophase)'] = rhythm_params['p(d_acrophase)']
+
                 d['d_amplitude'] = rhythm_params['d_amplitude']
                 d['d_acrophase'] = rhythm_params['d_acrophase']
                 d['q(d_amplitude)'] = np.nan
@@ -1483,6 +1446,7 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
 # - bootstrap2: bootstrap analysis of a merged model
 def compare_pairs_best_models_limo(df, df_best_models, pairs, folder = "", prefix = "", analysis = "", **kwargs):
 
+    """
     params_CI_independent = False
     bootstrap_independent = False
     bootstrap = False
@@ -1500,6 +1464,7 @@ def compare_pairs_best_models_limo(df, df_best_models, pairs, folder = "", prefi
     elif analysis:
         print("Invalid option")
         return
+    """
      
     if analysis:
         df_results = pd.DataFrame(columns = ['test',
@@ -1561,7 +1526,8 @@ def compare_pairs_best_models_limo(df, df_best_models, pairs, folder = "", prefi
         else:
             save_to = ''
         
-        p_overall, p_params, p_F, params, _, rhythm_params = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, save_to = save_to, bootstrap = bootstrap, bootstrap_independent = bootstrap_independent, params_CI = params_CI, params_CI_independent=params_CI_independent, **kwargs)
+        #p_overall, p_params, p_F, params, _, rhythm_params = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, save_to = save_to, bootstrap = bootstrap, bootstrap_independent = bootstrap_independent, params_CI = params_CI, params_CI_independent=params_CI_independent, **kwargs)
+        p_overall, p_params, p_F, params, _, rhythm_params = compare_pair_df_extended(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, save_to = save_to, additional_analysis = analysis, **kwargs)
         
         d = {}
         d['test'] = test1 + ' vs. ' + test2
@@ -1577,45 +1543,11 @@ def compare_pairs_best_models_limo(df, df_best_models, pairs, folder = "", prefi
         d['p params'] = p_params                
         d['p(F test)'] = p_F
 
-        if params_CI_independent:
-            #d['d_amplitude_indep'] = rhythm_params['d_amplitude_indep']
-            d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI_indep']
-            d['p(d_amplitude)'] = rhythm_params['d_amplitude_CI_p_indep']
-            d['q(d_amplitude)'] = np.nan
-
-            #d['d_acrophase_indep'] = rhythm_params['d_acrophase_indep']
-            d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI_indep']
-            d['p(d_acrophase)'] = rhythm_params['d_acrophase_CI_p_indep']
-            d['q(d_acrophase)'] = np.nan
-        elif bootstrap_independent:
-            d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI_bootstrap_indep']
-            d['p(d_amplitude)'] = rhythm_params['d_amplitude_p_bootstrap_indep']
-            d['q(d_amplitude)'] = np.nan
-            
-            d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI_bootstrap_indep']
-            d['p(d_acrophase)'] = rhythm_params['d_acrophase_p_bootstrap_indep']
-            d['q(d_acrophase)'] = np.nan
-        elif params_CI:
-            d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI']
-            d['p(d_amplitude)'] = rhythm_params['d_amplitude_CI_p']
-            d['q(d_amplitude)'] = np.nan
-            
-            d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI']
-            d['p(d_acrophase)'] = rhythm_params['d_acrophase_CI_p']
-            d['q(d_acrophase)'] = np.nan
-        elif bootstrap:
-            d['CI(d_amplitude)'] = rhythm_params['d_amplitude_bootstrap_CI']
-            d['p(d_amplitude)'] = rhythm_params['d_amplitude_bootstrap_p']
-            d['q(d_amplitude)'] = np.nan
-            #d['d_amplitude_bootstrap'] = rhythm_params['d_amplitude_bootstrap']
-            
-            d['CI(d_acrophase)'] = rhythm_params['d_acrophase_bootstrap_CI']
-            d['p(d_acrophase)'] = rhythm_params['d_acrophase_bootstrap_p']
-            d['q(d_acrophase)'] = np.nan
-            #d['d_acrophase_bootstrap'] = rhythm_params['d_acrophase_bootstrap']
-        
-
-        
+        d['CI(d_amplitude)'] = rhythm_params['CI(d_amplitude)']
+        d['p(d_amplitude)'] = rhythm_params['p(d_amplitude)']
+        d['CI(d_acrophase)'] = rhythm_params['CI(d_acrophase)']
+        d['p(d_acrophase)'] = rhythm_params['p(d_acrophase)']
+       
         df_results = df_results.append(d, ignore_index=True)
     
     df_results['q'] = multi.multipletests(df_results['p'], method = 'fdr_bh')[1]
@@ -1714,20 +1646,14 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
         
         if analysis == "CI":
             rhythm_params = compare_pair_CI(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, single_params = single_params, **kwargs)
-
-            d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI_indep']
-            d['p(d_amplitude)'] = rhythm_params['d_amplitude_CI_p_indep']
-            d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI_indep']
-            d['p(d_acrophase)'] = rhythm_params['d_acrophase_CI_p_indep']
-            
         elif analysis == "bootstrap":
             rhythm_params = compare_pair_bootstrap(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, single_params = single_params, **kwargs)
-            
-            d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI_bootstrap_indep']
-            d['p(d_amplitude)'] = rhythm_params['d_amplitude_p_bootstrap_indep']
-            d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI_bootstrap_indep']
-            d['p(d_acrophase)'] = rhythm_params['d_acrophase_p_bootstrap_indep']
-                                            
+
+        d['CI(d_amplitude)'] = rhythm_params['CI(d_amplitude)']
+        d['p(d_amplitude)'] = rhythm_params['p(d_amplitude)']
+        d['CI(d_acrophase)'] = rhythm_params['CI(d_acrophase)']
+        d['p(d_acrophase)'] = rhythm_params['p(d_acrophase)']
+
         d['d_amplitude'] = rhythm_params['d_amplitude']
         d['d_acrophase'] = rhythm_params['d_acrophase']
         d['q(d_amplitude)'] = np.nan
@@ -1850,13 +1776,13 @@ def compare_pairs_population(df, pairs, n_components = 3, period = 24, folder = 
 
                     rhythm_params = compare_pair_population_CI(df, test1, test2, n_components=n_comps, period=per, lin_comp = lin_comp, model_type = model_type, single_params = single_params, **kwargs)
 
-                    d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI']
-                    d['p(d_amplitude)'] = rhythm_params['d_amplitude_CI_p']
+                    d['CI(d_amplitude)'] = rhythm_params['CI(d_amplitude)']
+                    d['p(d_amplitude)'] = rhythm_params['p(d_amplitude)']
                     d['q(d_amplitude)'] = np.nan
 
                 
-                    d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI']
-                    d['p(d_acrophase)'] = rhythm_params['d_acrophase_CI_p']
+                    d['CI(d_acrophase)'] = rhythm_params['CI(d_acrophase)']
+                    d['p(d_acrophase)'] = rhythm_params['p(d_acrophase)']
                     d['q(d_acrophase)'] = np.nan
                 elif permutation:
                     df_perm = permutation_test_population_approx(df, [(test1,test2)], n_components=n_comps, period=per, plot=False, lin_comp = lin_comp, model_type = model_type, **kwargs)
@@ -1999,13 +1925,13 @@ def compare_pairs_best_models_population(df, df_best_models, pairs, folder = "",
 
             rhythm_params = compare_pair_population_CI(df, test1, test2, n_components=n_components1, period=period1, n_components2=n_components2, period2=period2, single_params = single_params, **kwargs)
 
-            d['CI(d_amplitude)'] = rhythm_params['d_amplitude_CI']
-            d['p(d_amplitude)'] = rhythm_params['d_amplitude_CI_p']
+            d['CI(d_amplitude)'] = rhythm_params['CI(d_amplitude)']
+            d['p(d_amplitude)'] = rhythm_params['p(d_amplitude)']
             d['q(d_amplitude)'] = np.nan
 
         
-            d['CI(d_acrophase)'] = rhythm_params['d_acrophase_CI']
-            d['p(d_acrophase)'] = rhythm_params['d_acrophase_CI_p']
+            d['CI(d_acrophase)'] = rhythm_params['CI(d_acrophase)']
+            d['p(d_acrophase)'] = rhythm_params['p(d_acrophase)']
             d['q(d_acrophase)'] = np.nan
         elif permutation:
             df_perm = permutation_test_population_approx(df, [(test1,test2)], n_components=n_components1, period=period1, n_components2=n_components2, period2=period2, plot=False, **kwargs)
@@ -2024,7 +1950,13 @@ def compare_pairs_best_models_population(df, df_best_models, pairs, folder = "",
 
     return df_results
 
-def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot=True, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = '', bootstrap = False, bootstrap_independent = False, bootstrap_type="std", bootstrap_size=1000, params_CI = False, params_CI_independent = False, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type="LHS"):
+#def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot=True, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = '', bootstrap = False, bootstrap_independent = False, bootstrap_type="std", bootstrap_size=1000, params_CI = False, params_CI_independent = False, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type="LHS"):
+# additional analysis - options (from best to worst)
+# - CI1: independent analysis of confidence intervals of two models
+# - bootstrap1: independent bootstrap analysis
+# - CI2: analysis of confidence intervals of a merged model
+# - bootstrap2: bootstrap analysis of a merged model
+def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot=True, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = '', additional_analysis = "", bootstrap_type="std", bootstrap_size=1000, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type="LHS"):
        
     n_components1 = n_components
     period1 = period
@@ -2288,19 +2220,16 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
                      'd_mesor': rhythm_params2['mesor']-rhythm_params1['mesor']}
 
     
-    if bootstrap:
-        eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, rhythm_params, bootstrap_size, bootstrap_type)    
-        #for param_name, param_value in rhythm_params_bootstrap.items():
-        #    rhythm_params[param_name] = param_value
-        
-    if params_CI:    
-        eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, samples_per_param_CI, max_samples_CI, k = len(X), sampling_type=sampling_type)
-        
-    if params_CI_independent:
-        compare_pair_CI(df, test1, test2, n_components1, period1, n_components2, period2, samples_per_param_CI, max_samples_CI, sampling_type=sampling_type, rhythm_params=rhythm_params)
-
-    if bootstrap_independent:
-        compare_pair_bootstrap(df, test1, test2, n_components1, period1, n_components2, period2, rhythm_params, bootstrap_size, bootstrap_type)
+    if additional_analysis == "CI1":
+        compare_pair_CI(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, samples_per_param_CI = samples_per_param_CI, max_samples_CI = max_samples_CI, sampling_type=sampling_type, rhythm_params=rhythm_params)
+    elif additional_analysis == "bootstrap1":
+        compare_pair_bootstrap(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2=period2, rhythm_params=rhythm_params, bootstrap_size=bootstrap_size, bootstrap_type=bootstrap_type)
+    elif additional_analysis == "CI2":
+        eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params = rhythm_params, samples_per_param = samples_per_param_CI, max_samples = max_samples_CI, k = len(X), sampling_type=sampling_type)
+    elif additional_analysis == "bootstrap2":
+        eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, rhythm_params = rhythm_params, bootstrap_size = bootstrap_size, bootstrap_type = bootstrap_type)    
+    else:
+        print("Invalid option")            
     
 
 
@@ -2445,25 +2374,14 @@ def analyse_best_models(df, df_models, sparse_output = True, plot = False, folde
         #else:
         row = dict(row[1])
         
-        if params_CI:
-            row['CI(amplitude)'] = rhythm_params['amplitude_CI']
-            row['p(amplitude)'] = rhythm_params['amplitude_CI_p']
-            row['q(amplitude)'] = np.nan
+        row['CI(amplitude)'] = rhythm_params['CI(amplitude)']
+        row['p(amplitude)'] = rhythm_params['p(amplitude)']
+        row['q(amplitude)'] = np.nan
 
-            row['CI(acrophase)'] = rhythm_params['acrophase_CI']
-            row['p(acrophase)'] = rhythm_params['acrophase_CI_p']
-            row['q(acrophase)'] = np.nan
-        elif bootstrap:
-            row['CI(amplitude)'] = rhythm_params['amplitude_bootstrap_CI']
-            row['p(amplitude)'] = rhythm_params['amplitude_bootstrap_p']
-            row['q(amplitude)'] = np.nan
-            #row['amplitude_bootstrap'] = rhythm_params['amplitude_bootstrap']
-            
-            row['CI(acrophase)'] = rhythm_params['acrophase_bootstrap_CI']  
-            row['p(acrophase)'] = rhythm_params['acrophase_bootstrap_p']
-            row['q(acrophase)'] = np.nan
-            #row['acrophase_bootstrap'] = rhythm_params['acrophase_bootstrap']
-    
+        row['CI(acrophase)'] = rhythm_params['CI(acrophase)']
+        row['p(acrophase)'] = rhythm_params['p(acrophase)']
+        row['q(acrophase)'] = np.nan
+        
         df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
 
     df_results_extended['q(amplitude)'] = multi.multipletests(df_results_extended['p(amplitude)'], method = 'fdr_bh')[1]
@@ -2520,24 +2438,13 @@ def analyse_models(df, n_components = 3, period = 24, plot = False, folder = "",
                     'amplitude': rhythm_params['amplitude'], 
                     'acrophase': rhythm_params['acrophase']}
                 
-                if params_CI:
-                    row['CI(amplitude)'] = rhythm_params['amplitude_CI']
-                    row['p(amplitude)'] = rhythm_params['amplitude_CI_p']
-                    row['q(amplitude)'] = np.nan
+                row['CI(amplitude)'] = rhythm_params['CI(amplitude)']
+                row['p(amplitude)'] = rhythm_params['p(amplitude)']
+                row['q(amplitude)'] = np.nan
 
-                    row['CI(acrophase)'] = rhythm_params['acrophase_CI']
-                    row['p(acrophase)'] = rhythm_params['acrophase_CI_p']
-                    row['q(acrophase)'] = np.nan
-                elif bootstrap:
-                    row['CI(amplitude)'] = rhythm_params['amplitude_bootstrap_CI']
-                    row['p(amplitude)'] = rhythm_params['amplitude_bootstrap_p']
-                    row['q(amplitude)'] = np.nan
-                    #row['amplitude_bootstrap'] = rhythm_params['amplitude_bootstrap']
-                    
-                    row['CI(acrophase)'] = rhythm_params['acrophase_bootstrap_CI']  
-                    row['p(acrophase)'] = rhythm_params['acrophase_bootstrap_p']
-                    row['q(acrophase)'] = np.nan
-                    #row['acrophase_bootstrap'] = rhythm_params['acrophase_bootstrap']
+                row['CI(acrophase)'] = rhythm_params['CI(acrophase)']
+                row['p(acrophase)'] = rhythm_params['p(acrophase)']
+                row['q(acrophase)'] = np.nan
             
                 df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
 
@@ -2572,12 +2479,12 @@ def analyse_best_models_population(df, df_models, sparse_output = True, plot=Fal
                         
         row = dict(row[1])
         
-        row['CI(amplitude)'] = rhythm_params['amplitude_CI']
-        row['p(amplitude)'] = rhythm_params['amplitude_CI_p']
+        row['CI(amplitude)'] = rhythm_params['CI(amplitude)']
+        row['p(amplitude)'] = rhythm_params['p(amplitude)']
         row['q(amplitude)'] = np.nan
 
-        row['CI(acrophase)'] = rhythm_params['acrophase_CI']
-        row['p(acrophase)'] = rhythm_params['acrophase_CI_p']
+        row['CI(acrophase)'] = rhythm_params['CI(acrophase)']
+        row['p(acrophase)'] = rhythm_params['p(acrophase)']
         row['q(acrophase)'] = np.nan
             
         df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
@@ -2626,12 +2533,12 @@ def analyse_models_population(df, n_components = 3, period = 24, plot=False, fol
                     'amplitude': rhythm_params['amplitude'], 
                     'acrophase': rhythm_params['acrophase']}
                 
-                row['CI(amplitude)'] = rhythm_params['amplitude_CI']
-                row['p(amplitude)'] = rhythm_params['amplitude_CI_p']
+                row['CI(amplitude)'] = rhythm_params['CI(amplitude)']
+                row['p(amplitude)'] = rhythm_params['p(amplitude)']
                 row['q(amplitude)'] = np.nan
 
-                row['CI(acrophase)'] = rhythm_params['acrophase_CI']
-                row['p(acrophase)'] = rhythm_params['acrophase_CI_p']
+                row['CI(acrophase)'] = rhythm_params['CI(acrophase)']
+                row['p(acrophase)'] = rhythm_params['p(acrophase)']
                 row['q(acrophase)'] = np.nan
                                    
                 df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
@@ -3313,14 +3220,12 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
 
 # eval parameters using bootstrapping
 # bootstrap type should be set to either std (CI = X+-1.96*STD(X)) or percentile (CI = [2.5th percentile, 97.5th percentile])
-def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rhythm_params, bootstrap_size=1000, bootstrap_type='std', t_test=True):    
+def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rhythm_params, bootstrap_size=1000, bootstrap_type='std', t_test=True):   
     amplitude_bs = np.zeros(bootstrap_size)
     mesor_bs = np.zeros(bootstrap_size)
     acrophase_bs = np.zeros(bootstrap_size)
 
     idxs = np.arange(len(X))
-
-   
 
     for i in range(bootstrap_size):
         
@@ -3414,22 +3319,22 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
         return        
     
     # statistics
-    
+
     rhythm_params['amplitude_bootstrap'] = mean_amp             
-    rhythm_params['amplitude_bootstrap_CI'] = [mean_amp - 1.96*se_amp, mean_amp + 1.96*se_amp]
+    rhythm_params['CI(amplitude)'] = [mean_amp - 1.96*se_amp, mean_amp + 1.96*se_amp]
     rhythm_params['mesor_bootstrap'] = mean_mes    
-    rhythm_params['mesor_bootstrap_CI'] = [mean_mes - 1.96*se_mes, mean_mes + 1.96*se_mes]
+    rhythm_params['CI(mesor)'] = [mean_mes - 1.96*se_mes, mean_mes + 1.96*se_mes]
     rhythm_params['acrophase_bootstrap'] = mean_acr
-    rhythm_params['acrophase_bootstrap_CI'] = get_acr_CI(mean_acr, 1.96*se_acr)
+    rhythm_params['CI(acrophase)'] = get_acr_CI(mean_acr, 1.96*se_acr)
     
     if t_test:    
-        rhythm_params['amplitude_bootstrap_p'] = get_p_t_test(mean_amp, se_amp, DoF) #2 * (1 - stats.t.cdf(abs(mean_amp/se_amp), DoF))           
-        rhythm_params['mesor_bootstrap_p'] = get_p_t_test(mean_mes, se_mes, DoF)#2 * (1 - stats.t.cdf(abs(mean_mes/se_mes), DoF))           
-        rhythm_params['acrophase_bootstrap_p'] = get_p_t_test(mean_acr, se_acr, DoF) #2 * (1 - stats.t.cdf(abs(mean_acr/se_acr), DoF))             
+        rhythm_params['p(amplitude)'] = get_p_t_test(mean_amp, se_amp, DoF) #2 * (1 - stats.t.cdf(abs(mean_amp/se_amp), DoF))           
+        rhythm_params['p(mesor)'] = get_p_t_test(mean_mes, se_mes, DoF)#2 * (1 - stats.t.cdf(abs(mean_mes/se_mes), DoF))           
+        rhythm_params['p(acrophase)'] = get_p_t_test(mean_acr, se_acr, DoF) #2 * (1 - stats.t.cdf(abs(mean_acr/se_acr), DoF))             
     else:
-        rhythm_params['amplitude_bootstrap_p'] = get_p_z_test(mean_amp, se_amp) #2 * norm.cdf(-np.abs(mean_amp/se_amp))
-        rhythm_params['mesor_bootstrap_p'] = get_p_z_test(mean_mes, se_mes) #2 * norm.cdf(-np.abs(mean_mes/se_mes))
-        rhythm_params['acrophase_bootstrap_p'] = get_p_z_test(mean_acr, se_acr) #2 * norm.cdf(-np.abs(mean_acr/se_acr))             
+        rhythm_params['p(amplitude)'] = get_p_z_test(mean_amp, se_amp) #2 * norm.cdf(-np.abs(mean_amp/se_amp))
+        rhythm_params['p(mesor)'] = get_p_z_test(mean_mes, se_mes) #2 * norm.cdf(-np.abs(mean_mes/se_mes))
+        rhythm_params['p(acrophase)'] = get_p_z_test(mean_acr, se_acr) #2 * norm.cdf(-np.abs(mean_acr/se_acr))             
     
     return rhythm_params
         
@@ -3542,22 +3447,22 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
     
     # statistics
     rhythm_params['d_amplitude_bootstrap'] = mean_d_amp
-    rhythm_params['d_amplitude_bootstrap_CI'] = [mean_d_amp - 1.96*se_d_amp, mean_d_amp + 1.96*se_d_amp]
+    rhythm_params['CI(d_amplitude)'] = [mean_d_amp - 1.96*se_d_amp, mean_d_amp + 1.96*se_d_amp]
     
     rhythm_params['d_mesor_bootstrap'] = mean_d_mes
-    rhythm_params['d_mesor_bootstrap_CI'] = [mean_d_mes - 1.96*se_d_mes, mean_d_mes + 1.96*se_d_mes]
+    rhythm_params['CI(d_mesor)'] = [mean_d_mes - 1.96*se_d_mes, mean_d_mes + 1.96*se_d_mes]
     
     rhythm_params['d_acrophase_bootstrap'] = mean_d_acr        
-    rhythm_params['d_acrophase_bootstrap_CI'] = get_acr_CI(mean_d_acr, 1.96*se_d_acr)
+    rhythm_params['CI(d_acrophase)'] = get_acr_CI(mean_d_acr, 1.96*se_d_acr)
     
     if t_test:
-        rhythm_params['d_amplitude_bootstrap_p'] = get_p_t_test(mean_d_amp, se_d_amp, DoF)
-        rhythm_params['d_mesor_bootstrap_p'] = get_p_t_test(mean_d_mes, se_d_mes, DoF)
-        rhythm_params['d_acrophase_bootstrap_p'] = get_p_t_test(mean_d_acr, se_d_acr, DoF)
+        rhythm_params['p(d_amplitude)'] = get_p_t_test(mean_d_amp, se_d_amp, DoF)
+        rhythm_params['p(d_mesor)'] = get_p_t_test(mean_d_mes, se_d_mes, DoF)
+        rhythm_params['p(d_acrophase)'] = get_p_t_test(mean_d_acr, se_d_acr, DoF)
     else:
-        rhythm_params['d_amplitude_bootstrap_p'] = get_p_z_test(mean_d_amp, se_d_amp)
-        rhythm_params['d_mesor_bootstrap_p'] = get_p_z_test(mean_d_mes, se_d_mes)    
-        rhythm_params['d_acrophase_bootstrap_p'] = get_p_z_test(mean_d_acr, se_d_acr)
+        rhythm_params['p(d_amplitude)'] = get_p_z_test(mean_d_amp, se_d_amp)
+        rhythm_params['p(d_mesor)'] = get_p_z_test(mean_d_mes, se_d_mes)    
+        rhythm_params['p(d_acrophase)'] = get_p_z_test(mean_d_acr, se_d_acr)
         
     return rhythm_params
 
@@ -3622,9 +3527,9 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param
                 dev_acr = dev_acr_tmp
     
     # statistics
-    rhythm_params['amplitude_CI'] = [amplitude - dev_amp, amplitude + dev_amp]
-    rhythm_params['mesor_CI'] = [mesor - dev_mes, mesor + dev_mes]
-    rhythm_params['acrophase_CI'] = get_acr_CI(acrophase, dev_acr)    
+    rhythm_params['CI(amplitude)'] = [amplitude - dev_amp, amplitude + dev_amp]
+    rhythm_params['CI(mesor)'] = [mesor - dev_mes, mesor + dev_mes]
+    rhythm_params['CI(acrophase)'] = get_acr_CI(acrophase, dev_acr)    
     
 
     if t_test:
@@ -3637,13 +3542,13 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param
     se_acr = dev_acr/t
 
     if t_test:        
-        rhythm_params['amplitude_CI_p'] = get_p_t_test(amplitude, se_amp, DoF)
-        rhythm_params['mesor_CI_p'] = get_p_t_test(mesor, se_mes, DoF)
-        rhythm_params['acrophase_CI_p'] = get_p_t_test(acrophase, se_acr, DoF)
+        rhythm_params['p(amplitude)'] = get_p_t_test(amplitude, se_amp, DoF)
+        rhythm_params['p(mesor)'] = get_p_t_test(mesor, se_mes, DoF)
+        rhythm_params['p(acrophase)'] = get_p_t_test(acrophase, se_acr, DoF)
     else:
-        rhythm_params['amplitude_CI_p'] = get_p_z_test(amplitude, se_amp) 
-        rhythm_params['mesor_CI_p'] = get_p_z_test(mesor, se_mes) 
-        rhythm_params['acrophase_CI_p'] = get_p_z_test(acrophase, se_acr)
+        rhythm_params['p(amplitude)'] = get_p_z_test(amplitude, se_amp) 
+        rhythm_params['p(mesor)'] = get_p_z_test(mesor, se_mes) 
+        rhythm_params['p(acrophase)'] = get_p_z_test(acrophase, se_acr)
 
     return rhythm_params 
 
@@ -3717,9 +3622,9 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, sample
 
 
     # statistics
-    rhythm_params['d_amplitude_CI'] = [d_amplitude - dev_amp, d_amplitude + dev_amp]
-    rhythm_params['d_mesor_CI'] = [d_mesor - dev_mes, d_mesor + dev_mes]
-    rhythm_params['d_acrophase_CI'] = get_acr_CI(d_acrophase, dev_acr)
+    rhythm_params['CI(d_amplitude)'] = [d_amplitude - dev_amp, d_amplitude + dev_amp]
+    rhythm_params['CI(d_mesor)'] = [d_mesor - dev_mes, d_mesor + dev_mes]
+    rhythm_params['CI(d_acrophase)'] = get_acr_CI(d_acrophase, dev_acr)
     
     if t_test:
         t = abs(stats.t.ppf(0.05/2,df=DoF))             
@@ -3731,19 +3636,19 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, sample
     se_acr = dev_acr/t
     
     if t_test:
-        rhythm_params['d_amplitude_CI_p'] = get_p_t_test(d_amplitude, se_amp, DoF)
-        rhythm_params['d_mesor_CI_p'] = get_p_t_test(d_mesor, se_mes, DoF)
-        rhythm_params['d_acrophase_CI_p'] = get_p_t_test(d_acrophase, se_acr, DoF) 
+        rhythm_params['p(d_amplitude)'] = get_p_t_test(d_amplitude, se_amp, DoF)
+        rhythm_params['p(d_mesor)'] = get_p_t_test(d_mesor, se_mes, DoF)
+        rhythm_params['p(d_acrophase)'] = get_p_t_test(d_acrophase, se_acr, DoF) 
     else:
-        rhythm_params['d_amplitude_CI_p'] = get_p_z_test(d_amplitude, se_amp)
-        rhythm_params['d_mesor_CI_p'] = get_p_z_test(d_mesor, se_mes) 
-        rhythm_params['d_acrophase_CI_p'] = get_p_z_test(d_acrophase, se_acr) 
+        rhythm_params['p(d_amplitude)'] = get_p_z_test(d_amplitude, se_amp)
+        rhythm_params['p(d_mesor)'] = get_p_z_test(d_mesor, se_mes) 
+        rhythm_params['p(d_acrophase)'] = get_p_z_test(d_acrophase, se_acr) 
   
     return rhythm_params
 
 
 # sample the parameters from the confidence interval, builds a set of models and assesses the rhythmicity parameters confidence intervals   
-def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=5, max_samples = 1000, t_test = True, k=0, sampling_type="LHS"): 
+def population_eval_params_CI_old(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=5, max_samples = 1000, t_test = True, k=0, sampling_type="LHS"): 
 
     res2 = copy.deepcopy(results)
     params = res2.params    
@@ -3802,9 +3707,9 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
                 dev_acr = dev_acr_tmp
 
     # statistics
-    rhythm_params['amplitude_CI'] = [amplitude - dev_amp, amplitude + dev_amp]
-    rhythm_params['mesor_CI'] = [mesor - dev_mes, mesor + dev_mes]
-    rhythm_params['acrophase_CI'] = get_acr_CI(acrophase, dev_acr)
+    rhythm_params['CI(amplitude)'] = [amplitude - dev_amp, amplitude + dev_amp]
+    rhythm_params['CI(mesor)'] = [mesor - dev_mes, mesor + dev_mes]
+    rhythm_params['CI(acrophase)'] = get_acr_CI(acrophase, dev_acr)
     
     if t_test:
         t = abs(stats.t.ppf(0.05/2,df=DoF))  
@@ -3816,16 +3721,93 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
     se_acr = dev_acr/t
     
     if t_test:
-        rhythm_params['amplitude_CI_p'] = get_p_t_test(amplitude, se_amp, DoF)
-        rhythm_params['mesor_CI_p'] = get_p_t_test(mesor, se_mes, DoF)
-        rhythm_params['acrophase_CI_p'] = get_p_t_test(acrophase, se_acr, DoF)
+        rhythm_params['p(amplitude)'] = get_p_t_test(amplitude, se_amp, DoF)
+        rhythm_params['p(mesor)'] = get_p_t_test(mesor, se_mes, DoF)
+        rhythm_params['p(acrophase)'] = get_p_t_test(acrophase, se_acr, DoF)
     else:
-        rhythm_params['amplitude_CI_p'] = get_p_z_test(amplitude, se_amp)
-        rhythm_params['mesor_CI_p'] = get_p_z_test(mesor, se_mes)
-        rhythm_params['acrophase_CI_p'] = get_p_z_test(acrophase, se_acr)
+        rhythm_params['p(amplitude)'] = get_p_z_test(amplitude, se_amp)
+        rhythm_params['p(mesor)'] = get_p_z_test(mesor, se_mes)
+        rhythm_params['p(acrophase)'] = get_p_z_test(acrophase, se_acr)
        
     return rhythm_params
 
+# sample the parameters from the confidence interval, builds a set of models and assesses the rhythmicity parameters confidence intervals   
+def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, params_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], samples_per_param=5, max_samples = 1000, t_test = True, k=0, sampling_type="LHS"): 
+    res2 = copy.deepcopy(results)
+    params = res2.params    
+    DoF = k-1
+    CIs = statistics_params['CI']
+    CIs = list(zip(*CIs))
+                
+    P = np.zeros((len(params), samples_per_param))
+    for i, CI in enumerate(CIs):                    
+        P[i,:] = np.linspace(CI[0], CI[1], samples_per_param)
+
+    mean_params = {}
+    dev_params = {}
+    for param in params_to_analyse:
+        if param in parameters_angular:
+            mean_params[param] = project_acr(rhythm_params[param])
+        else:
+            mean_params[param] = rhythm_params[param]
+
+        dev_params[param] = 0.0
+
+    if not sampling_type:
+        n_param_samples = P.shape[1]**P.shape[0] 
+        N = min(max_samples, n_param_samples)        
+        if n_param_samples < 10**6:
+            params_samples = np.random.choice(n_param_samples, size=N, replace=False)
+        else:
+            params_samples = my_random_choice(max_val=n_param_samples, size=N)
+    else:         
+        params_samples = generate_samples(sampling_type, CIs, max_samples)
+        if not params_samples:
+            print("Invalid sampling type")
+            return 
+
+    for i,idx in enumerate(params_samples):     
+        if not sampling_type:
+            p = lazy_prod(idx, P)
+        else: # if lhs
+            p = params_samples[i]  
+
+        res2.initialize(results.model, p)            
+        Y_test_CI = res2.predict(X_fit_eval_params)
+    
+        rhythm_params_CI = evaluate_rhythm_params(X_test, Y_test_CI)
+
+        for param in params_to_analyse:
+            dev_tmp = mean_params[param] - rhythm_params_CI[param]
+            if param in parameters_angular:                
+                dev_tmp = np.abs(project_acr(dev_tmp))
+            else:            
+                dev_tmp = np.abs(dev_tmp)
+
+            if dev_tmp > dev_params[param]:
+                dev_params[param] = dev_tmp
+            
+            
+    # statistics
+    for param in params_to_analyse:
+        if param in parameters_angular:
+            rhythm_params[f'CI({param})'] = get_acr_CI(mean_params[param], dev_params[param])
+        else:
+            rhythm_params[f'CI({param})'] = [mean_params[param] - dev_params[param], mean_params[param] + dev_params[param]]
+        
+    if t_test:
+        t = abs(stats.t.ppf(0.05/2,df=DoF))  
+    else:
+        t = 1.96
+
+    for param in params_to_analyse:
+        se_param = dev_params[param]/t   
+        if t_test:
+            rhythm_params[f'p({param})'] = get_p_t_test(mean_params[param], se_param, DoF)            
+        else:
+            rhythm_params[f'p({param})'] = get_p_z_test(mean_params[param], se_param)            
+        
+    return rhythm_params
 
 # compare two population fit pairs independently
 def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, samples_per_param_CI=5, max_samples_CI = 1000, t_test = True, sampling_type = "LHS", single_params = {}, **kwargs):
@@ -3860,12 +3842,12 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
     p2, amplitude2, acrophase2, mesor2 = statistics2['p'], rhythm_params2['amplitude'], rhythm_params2['acrophase'], rhythm_params2['mesor']
    
     if not single_params:
-        amplitude_CI1 = rhythm_params1['amplitude_CI']
-        amplitude_CI2 = rhythm_params2['amplitude_CI']
-        mesor_CI1 = rhythm_params1['mesor_CI']
-        mesor_CI2 = rhythm_params2['mesor_CI']
-        acrophase_CI1 = rhythm_params1['acrophase_CI']
-        acrophase_CI2 = rhythm_params2['acrophase_CI']
+        amplitude_CI1 = rhythm_params1['CI(amplitude)']
+        amplitude_CI2 = rhythm_params2['CI(amplitude)']
+        mesor_CI1 = rhythm_params1['CI(mesor)']
+        mesor_CI2 = rhythm_params2['CI(mesor)']
+        acrophase_CI1 = rhythm_params1['CI(acrophase)']
+        acrophase_CI2 = rhythm_params2['CI(acrophase)']
     else:
         amplitude_CI1, acrophase_CI1, mesor_CI1 = single_params['test1']
         amplitude_CI2, acrophase_CI2, mesor_CI2 = single_params['test2'] 
@@ -3895,28 +3877,25 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
     se_acr = (abs(project_acr(acrophase_CI1[1] - acrophase_CI1[0]))/2 + abs(project_acr(acrophase_CI2[1] - acrophase_CI2[0]))/2)/t
      
     rhythm_params['d_amplitude'] = d_amplitude
-    rhythm_params['d_amplitude_CI'] = [d_amplitude - t*se_amp, d_amplitude + t*se_amp]
+    rhythm_params['CI(d_amplitude)'] = [d_amplitude - t*se_amp, d_amplitude + t*se_amp]
     if se_mes:
         rhythm_params['d_mesor'] = d_mesor
-        rhythm_params['d_mesor_CI'] = [d_mesor - t*se_mes, d_mesor + t*se_mes]
+        rhythm_params['CI(d_mesor)'] = [d_mesor - t*se_mes, d_mesor + t*se_mes]
     rhythm_params['d_acrophase'] = d_acrophase   
-    rhythm_params['d_acrophase_CI'] = get_acr_CI(d_acrophase, t*se_acr)
-
+    rhythm_params['CI(d_acrophase)'] = get_acr_CI(d_acrophase, t*se_acr)
 
     if t_test:
-        rhythm_params['d_amplitude_CI_p'] = get_p_t_test(d_amplitude, se_amp, DoF)        
+        rhythm_params['p(d_amplitude)'] = get_p_t_test(d_amplitude, se_amp, DoF)        
         if se_mes:        
-            rhythm_params['d_mesor_CI_p'] = get_p_t_test(d_mesor, se_mes, DoF) 
-        rhythm_params['d_acrophase_CI_p'] = get_p_t_test(d_acrophase, se_acr, DoF)
+            rhythm_params['p(d_mesor)'] = get_p_t_test(d_mesor, se_mes, DoF) 
+        rhythm_params['p(d_acrophase)'] = get_p_t_test(d_acrophase, se_acr, DoF)
     else:
-        rhythm_params['d_amplitude_CI_p'] = get_p_z_test(d_amplitude, se_amp)
+        rhythm_params['p(d_amplitude)'] = get_p_z_test(d_amplitude, se_amp)
         if se_mes:        
-            rhythm_params['d_mesor_CI_p'] = get_p_z_test(d_mesor, se_mes) 
-        rhythm_params['d_acrophase_CI_p'] = get_p_z_test(d_acrophase, se_acr)
-    
+            rhythm_params['p(d_mesor)'] = get_p_z_test(d_mesor, se_mes) 
+        rhythm_params['p(d_acrophase)'] = get_p_z_test(d_acrophase, se_acr)
     
     return rhythm_params
-
 
 # compare two pairs independently
 def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, samples_per_param_CI=5, max_samples_CI = 1000, t_test = True, sampling_type="LHS", rhythm_params = {}, single_params = {}, **kwargs):    
@@ -3952,12 +3931,12 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
 
         
     if not single_params:
-        amplitude_CI1 = rhythm_params1['amplitude_CI']
-        amplitude_CI2 = rhythm_params2['amplitude_CI']
-        mesor_CI1 = rhythm_params1['mesor_CI']
-        mesor_CI2 = rhythm_params2['mesor_CI']
-        acrophase_CI1 = rhythm_params1['acrophase_CI']
-        acrophase_CI2 = rhythm_params2['acrophase_CI']
+        amplitude_CI1 = rhythm_params1['CI(amplitude)']
+        amplitude_CI2 = rhythm_params2['CI(amplitude)']
+        mesor_CI1 = rhythm_params1['CI(mesor)']
+        mesor_CI2 = rhythm_params2['CI(mesor)']
+        acrophase_CI1 = rhythm_params1['CI(acrophase)']
+        acrophase_CI2 = rhythm_params2['CI(acrophase)']
     else:
         amplitude_CI1, acrophase_CI1, mesor_CI1 = single_params['test1']
         amplitude_CI2, acrophase_CI2, mesor_CI2 = single_params['test2']
@@ -3987,23 +3966,23 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
     se_acr = (abs(project_acr(acrophase_CI1[1] - acrophase_CI1[0]))/2 + abs(project_acr(acrophase_CI2[1] - acrophase_CI2[0]))/2)/t
     
     rhythm_params['d_amplitude'] = d_amplitude
-    rhythm_params['d_amplitude_CI_indep'] = [d_amplitude - t*se_amp, d_amplitude + t*se_amp]
+    rhythm_params['CI(d_amplitude)'] = [d_amplitude - t*se_amp, d_amplitude + t*se_amp]
     if se_mes:   
         rhythm_params['d_mesor'] = d_mesor     
-        rhythm_params['d_mesor_CI_indep'] = [d_mesor - t*se_mes, d_mesor + t*se_mes]    
-    rhythm_params['d_acrophase_CI_indep'] = get_acr_CI(d_acrophase, t*se_acr)
+        rhythm_params['CI(d_mesor)'] = [d_mesor - t*se_mes, d_mesor + t*se_mes]    
+    rhythm_params['CI(d_acrophase)'] = get_acr_CI(d_acrophase, t*se_acr)
     rhythm_params['d_acrophase'] = d_acrophase
 
     if t_test:
-        rhythm_params['d_amplitude_CI_p_indep'] = get_p_t_test(d_amplitude, se_amp, DoF)
+        rhythm_params['p(d_amplitude)'] = get_p_t_test(d_amplitude, se_amp, DoF)
         if se_mes:
-            rhythm_params['d_mesor_CI_p_indep'] = get_p_t_test(d_mesor, se_mes, DoF)
-        rhythm_params['d_acrophase_CI_p_indep'] = get_p_t_test(d_acrophase, se_acr, DoF)
+            rhythm_params['p(d_mesor)'] = get_p_t_test(d_mesor, se_mes, DoF)
+        rhythm_params['p(d_acrophase)'] = get_p_t_test(d_acrophase, se_acr, DoF)
     else:
-        rhythm_params['d_amplitude_CI_p_indep'] = get_p_z_test(d_amplitude, se_amp)
+        rhythm_params['p(d_amplitude)'] = get_p_z_test(d_amplitude, se_amp)
         if se_mes:
-            rhythm_params['d_mesor_CI_p_indep'] = get_p_z_test(d_mesor, se_mes)       
-        rhythm_params['d_acrophase_CI_p_indep'] = get_p_z_test(d_acrophase, se_acr)    
+            rhythm_params['p(d_mesor)'] = get_p_z_test(d_mesor, se_mes)       
+        rhythm_params['p(d_acrophase)'] = get_p_z_test(d_acrophase, se_acr)    
 
     return rhythm_params
 
@@ -4027,6 +4006,7 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
     else:
         run_bootstrap = True
 
+    
     res1, statistics1, rhythm_params1, _, _ = fit_me(X1, Y1, n_components = n_components1, period = period1, plot = False, bootstrap=run_bootstrap, bootstrap_size=bootstrap_size, bootstrap_type = bootstrap_type, **kwargs)
     res2, statistics2, rhythm_params2, _, _ = fit_me(X2, Y2, n_components = n_components2, period = period2, plot = False, bootstrap=run_bootstrap, bootstrap_size=bootstrap_size, bootstrap_type = bootstrap_type, **kwargs)
 
@@ -4044,12 +4024,12 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
         return
 
     if not single_params:
-        amplitude_CI1 = rhythm_params1['amplitude_bootstrap_CI']
-        amplitude_CI2 = rhythm_params2['amplitude_bootstrap_CI']
-        mesor_CI1 = rhythm_params1['mesor_bootstrap_CI']
-        mesor_CI2 = rhythm_params2['mesor_bootstrap_CI']
-        acrophase_CI1 = rhythm_params1['acrophase_bootstrap_CI']
-        acrophase_CI2 = rhythm_params2['acrophase_bootstrap_CI']
+        amplitude_CI1 = rhythm_params1['CI(amplitude)']
+        amplitude_CI2 = rhythm_params2['CI(amplitude)']
+        mesor_CI1 = rhythm_params1['CI(mesor)']
+        mesor_CI2 = rhythm_params2['CI(mesor)']
+        acrophase_CI1 = rhythm_params1['CI(acrophase)']
+        acrophase_CI2 = rhythm_params2['CI(acrophase)']
     else:
         amplitude_CI1, acrophase_CI1, mesor_CI1 = single_params['test1']
         amplitude_CI2, acrophase_CI2, mesor_CI2 = single_params['test2']
@@ -4071,23 +4051,23 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
     se_acr = (abs(project_acr(acrophase_CI1[1] - acrophase_CI1[0]))/2 + abs(project_acr(acrophase_CI2[1] - acrophase_CI2[0]))/2)/1.96
     
     rhythm_params['d_amplitude'] = d_amplitude
-    rhythm_params['d_amplitude_CI_bootstrap_indep'] = [d_amplitude - 1.96*se_amp, d_amplitude + 1.96*se_amp]
+    rhythm_params['CI(d_amplitude)'] = [d_amplitude - 1.96*se_amp, d_amplitude + 1.96*se_amp]
     if se_mes:
         rhythm_params['d_mesor'] = d_mesor
-        rhythm_params['d_mesor_CI_bootstrap_indep'] = [d_mesor - 1.96*se_mes, d_mesor + 1.96*se_mes]
+        rhythm_params['CI(d_mesor)'] = [d_mesor - 1.96*se_mes, d_mesor + 1.96*se_mes]
     rhythm_params['d_acrophase'] = d_acrophase
-    rhythm_params['d_acrophase_CI_bootstrap_indep'] = get_acr_CI(d_acrophase, 1.96*se_acr)
+    rhythm_params['CI(d_acrophase)'] = get_acr_CI(d_acrophase, 1.96*se_acr)
 
     if t_test:        
-        rhythm_params['d_amplitude_p_bootstrap_indep'] = get_p_t_test(d_amplitude, se_amp, DoF)
+        rhythm_params['p(d_amplitude)'] = get_p_t_test(d_amplitude, se_amp, DoF)
         if se_mes:
-            rhythm_params['d_mesor_p_bootstrap_indep'] = get_p_t_test(d_mesor, se_mes, DoF)        
-        rhythm_params['d_acrophase_p_bootstrap_indep'] = get_p_t_test(d_acrophase, se_acr, DoF)
+            rhythm_params['p(d_mesor)'] = get_p_t_test(d_mesor, se_mes, DoF)        
+        rhythm_params['p(d_acrophase)'] = get_p_t_test(d_acrophase, se_acr, DoF)
     else:
-        rhythm_params['d_amplitude_p_bootstrap_indep'] = get_p_z_test(d_amplitude, se_amp)
+        rhythm_params['p(d_amplitude)'] = get_p_z_test(d_amplitude, se_amp)
         if se_mes:
-            rhythm_params['d_mesor_p_bootstrap_indep'] = get_p_z_test(d_mesor, se_mes)        
-        rhythm_params['d_acrophase_p_bootstrap_indep'] = get_p_z_test(d_acrophase, se_acr)               
+            rhythm_params['p(d_mesor)'] = get_p_z_test(d_mesor, se_mes)        
+        rhythm_params['p(d_acrophase)'] = get_p_z_test(d_acrophase, se_acr)               
 
     return rhythm_params
 
@@ -4178,9 +4158,6 @@ def get_p_t_test(X, se_X, DoF):
     p_val = 2 * (1 - stats.t.cdf(abs(T0), DoF))
     return p_val
 
-
-
-
 # when the number of samples is large, the 0.05 significance level should be decreased
 # calculate_significance_level allows you to define a significance level in such cases
 # N: number of samples
@@ -4206,7 +4183,6 @@ def calculate_significance_level(N, **kwargs):
     else:
         print('At least n_params or n_components need to be specified.')
         return
-
 
     dof1 = n_params-1
 
