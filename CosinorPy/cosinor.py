@@ -24,7 +24,6 @@ import os
 from skopt.space import Space
 from skopt.sampler import Lhs
 
-
 def plot_components(X, Y, n_components = 3, period = 24, name = '', save_to = ''):
     
     A = np.sin((X/period)*np.pi*2)
@@ -3504,7 +3503,7 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
         dev_acr = np.nanmax([np.abs(d_acr_l), np.abs(d_acr_u)])
         se_acr = dev_acr/1.96
         rhythm_params['acrophase_bootstrap'] = mean_acr
-        rhythm_params['acrophase_bootstrap_CI'] = [acr_l, acr_h]
+        rhythm_params['acrophase_bootstrap_CI'] = [acr_l, acr_h] # !!!
         if t_test:
             rhythm_params['acrophase_bootstrap_p'] = 2 * (1 - stats.t.cdf(abs(mean_acr/se_acr), DoF))           
         else:
@@ -3619,7 +3618,7 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
         dev_amp = np.nanmax([np.abs(mean_amp-amp_l), np.abs(mean_amp-amp_h)])
         se_amp = dev_amp/1.96
         rhythm_params['d_amplitude_bootstrap'] = mean_amp
-        rhythm_params['d_amplitude_bootstrap_CI'] = [amp_l, amp_h]
+        rhythm_params['d_amplitude_bootstrap_CI'] = [amp_l, amp_h] # !!!
         if t_test:
             rhythm_params['d_amplitude_bootstrap_p'] = 2 * (1 - stats.t.cdf(abs(mean_amp/se_amp), DoF))           
         else:
@@ -4258,46 +4257,27 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
         amplitude_CI1, acrophase_CI1, mesor_CI1 = single_params['test1']
         amplitude_CI2, acrophase_CI2, mesor_CI2 = single_params['test2']
 
-    # !!!
-    # t = abs(stats.t.ppf(0.05/2,df=k1+k2-1))
-    # T0 = amp/se
-    # p_val = 2 * (1 - stats.t.cdf(abs(T0), k1+k2-1))
+    # DoF
     k = len(X1) + len(X2)
     n_params = len(res1.params)+len(res2.params)
+    DoF = k - n_params
 
-
-    #if norm_p:
-    #    t = 1.96
-    #else:
-    #    t = abs(stats.t.ppf(0.05/2,df=k-n_params))  
 
     d_amplitude = amplitude2 - amplitude1
-    #d_amp_l = amplitude_CI2[0] - amplitude_CI1[1]
-    #d_amp_u = amplitude_CI2[1] - amplitude_CI1[0]
-    #d_amplitude_CI = [d_amp_l, d_amp_u]
     se_amp = (abs(amplitude_CI1[0] - amplitude_CI1[1])/2 + abs(amplitude_CI2[0] - amplitude_CI2[1])/2)/1.96
 
     d_mesor = mesor2 - mesor1
-    #d_mes_l = mesor_CI2[0] - mesor_CI1[1]
-    #d_mes_u = mesor_CI2[1] - mesor_CI1[0]
-    #d_mesor_CI = [d_mes_l, d_mes_u]
     se_mes = (abs(mesor_CI1[0] - mesor_CI1[1])/2 + abs(mesor_CI2[0] - mesor_CI2[1])/2)/1.96
 
     d_acrophase = acrophase2 - acrophase1
-     # project d_acrophase to the interval [-pi, pi]
     d_acrophase = project_acr(d_acrophase)
-    #d_acr_l = acrophase_CI2[0] - acrophase_CI1[1]
-    #d_acr_u = acrophase_CI2[1] - acrophase_CI1[0]
-    #d_acrophase_CI = [d_acr_l, d_acr_u]
     se_acr = (abs(acrophase_CI1[0] - acrophase_CI1[1])/2 + abs(acrophase_CI2[0] - acrophase_CI2[1])/2)/1.96
-
-   
     
     rhythm_params['d_amplitude'] = d_amplitude
     rhythm_params['d_amplitude_CI_bootstrap_indep'] = [d_amplitude - 1.96*se_amp, d_amplitude + 1.96*se_amp]
     if t_test:
         T0 = d_amplitude/se_amp
-        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-n_params))
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), DoF))
         rhythm_params['d_amplitude_p_bootstrap_indep'] = p_val
     else:
         rhythm_params['d_amplitude_p_bootstrap_indep'] = 2 * norm.cdf(-np.abs(d_amplitude/se_amp))
@@ -4307,7 +4287,7 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
         rhythm_params['d_mesor_CI_bootstrap_indep'] = [d_mesor - 1.96*se_mes, d_mesor + 1.96*se_mes]
         if t_test:
             T0 = d_mesor/se_mes
-            p_val = 2 * (1 - stats.t.cdf(abs(T0), k-n_params))
+            p_val = 2 * (1 - stats.t.cdf(abs(T0), DoF))
             rhythm_params['d_mesor_p_bootstrap_indep'] = p_val        
         else:
             rhythm_params['d_mesor_p_bootstrap_indep'] = 2 * norm.cdf(-np.abs(d_mesor/se_mes))
@@ -4317,7 +4297,7 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
     
     if t_test:
         T0 = d_acrophase/se_acr
-        p_val = 2 * (1 - stats.t.cdf(abs(T0), k-n_params))
+        p_val = 2 * (1 - stats.t.cdf(abs(T0), DoF))
         rhythm_params['d_acrophase_p_bootstrap_indep'] = p_val
     else:
         rhythm_params['d_acrophase_p_bootstrap_indep'] = 2 * norm.cdf(-np.abs(d_acrophase/se_acr))
@@ -4402,7 +4382,16 @@ def get_CI_dev_diff(mean1, CI1, mean2, CI2, acr = False):
 
     return CI, dev
 
+# z-test for parameter significance
+def get_p_z_test(X, se_X):
+    p_val = 2 * norm.cdf(-np.abs(X/se_X))
+    return p_val
 
+# t-test for parameter significance
+def get_p_t_test(X, se_X, DoF):
+    T0 = X/se_X
+    p_val = 2 * (1 - stats.t.cdf(abs(T0), DoF))
+    return p_val
 
 
 
