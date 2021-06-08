@@ -3318,13 +3318,12 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
         
         
 
-# eval rhythmicity parameter differences using bootstrapping
+# eval rhythmicity parameter differences using bootstrap in a combination with limorhyde
 # bootstrap type should be set to either std (CI = X+-1.96*STD(X)) or percentile (CI = [2.5th percentile, 97.5th percentile])
-def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, rhythm_params, bootstrap_size, bootstrap_type, t_test=True):    
-
-    d_amplitude_bs = np.zeros(bootstrap_size)
-    d_mesor_bs = np.zeros(bootstrap_size)
-    d_acrophase_bs = np.zeros(bootstrap_size)
+def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, rhythm_params, bootstrap_size, bootstrap_type, t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase']):    
+    params_bs = {}
+    for param in parameters_to_analyse:
+        params_bs[param] = np.zeros(bootstrap_size)
 
     idxs = np.arange(len(X.values))
 
@@ -3355,10 +3354,10 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
         rhythm_params1_bs = evaluate_rhythm_params(X_full, Y_fit_full1_bs)
         rhythm_params2_bs = evaluate_rhythm_params(X_full, Y_fit_full2_bs)
     
-        d_amplitude_bs[i] = rhythm_params2_bs['amplitude'] - rhythm_params1_bs['amplitude']
-        d_mesor_bs[i] = rhythm_params2_bs['mesor'] - rhythm_params1_bs['mesor']
-        d_acrophase_bs[i] = rhythm_params2_bs['acrophase'] - rhythm_params1_bs['acrophase']                    
-
+        for param in parameters_to_analyse:
+            params_bs[param][i] = rhythm_params2_bs[param] - rhythm_params1_bs[param]
+            if param in parameters_angular:
+                params_bs[param][i] = params_bs[param][i]#project_acr(params_bs[param][i])
     if t_test:
         DoF = len(X.values) - len(results_bs.params)
         
@@ -3369,78 +3368,59 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
     # SE or STD?
     # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1255808/
     # https://ocw.mit.edu/courses/mathematics/18-05-introduction-to-probability-and-statistics-spring-2014/readings/MIT18_05S14_Reading24.pdf
+    mean_params = {}
+    se_params = {}
+    for param in parameters_to_analyse:
+        if param in parameters_angular:
 
-    mean_d_amp = np.nanmean(d_amplitude_bs) 
+            phases = params_bs[param]
+            phases = phases[~np.isnan(phases)]    
+            mean_phase = project_acr(circmean(phases, high = 0, low = -2*np.pi))
+            std_phase = circstd(phases, high = 0, low = -2*np.pi)
 
-    mean_d_mes = np.nanmean(d_mesor_bs)
-
-    d_acrophase_bs = d_acrophase_bs[~np.isnan(d_acrophase_bs)]
-    mean_d_acr = circmean(d_acrophase_bs, high = 0, low = -2*np.pi)    
-    mean_d_acr = project_acr(mean_d_acr)
-
-
-    if bootstrap_type == "se":
-        se_d_amp = sem(d_amplitude_bs, nan_policy='omit')
-        
-        se_d_mes = sem(d_mesor_bs, nan_policy='omit')
-    
-        std_d_acr = circstd(d_acrophase_bs, high = 0, low = -2*np.pi)
-        se_d_acr = std_d_acr/(len(d_acrophase_bs)-1)**0.5        
-
-    elif bootstrap_type == "std":
-        se_d_amp = np.nanstd(d_amplitude_bs)
-
-        se_d_mes = np.nanstd(d_mesor_bs)
-
-        std_d_acr = circstd(d_acrophase_bs, high = 0, low = -2*np.pi)
-        se_d_acr = std_d_acr
-
-    elif bootstrap_type == "percentile":
-        # percentiles are used for the calculation of standard error. Confidence intervals are evaluated on the basis of the lower/upper percentile with the largest deviance from the mean
-        amp_l=np.percentile(d_amplitude_bs,2.5)
-        amp_h=np.percentile(d_amplitude_bs,97.5)        
-        dev_amp = np.nanmax([np.abs(mean_d_amp-amp_l), np.abs(mean_d_amp-amp_h)])
-        se_d_amp = dev_amp/1.96
-
-        mes_l=np.percentile(d_mesor_bs,2.5)
-        mes_h=np.percentile(d_mesor_bs,97.5)        
-        dev_mes = np.nanmax([np.abs(mean_d_mes-mes_l), np.abs(mean_d_mes-mes_h)])
-        se_d_mes = dev_mes/1.96
-
-        #https://math.stackexchange.com/questions/1756425/is-it-possible-to-calculate-the-xth-percentile-of-a-collection-of-wind-vectors
-        cos_d_acrophase_bs = np.cos(d_acrophase_bs)
-        cos_acr_l=np.percentile(cos_d_acrophase_bs,2.5)
-        cos_acr_h=np.percentile(cos_d_acrophase_bs,97.5)
-        acr_l = np.arccos(cos_acr_l)
-        acr_h = np.arccos(cos_acr_h)
-        
-        d_acr_l = project_acr(mean_d_acr - acr_l)
-        d_acr_u = project_acr(acr_h - mean_d_acr)
-        dev_acr = np.nanmax([np.abs(d_acr_l), np.abs(d_acr_u)])
-        se_d_acr = dev_acr/1.96
-      
-    else:
-        print("Invalid bootstrap type")
-        return
+            mean_params[param] = mean_phase
+            if bootstrap_type == "se":
+                se_params[param] = std_phase/(len(phases)-1)**0.5
+            elif bootstrap_type == "std":
+                se_params[param] = std_phase
+            elif bootstrap_type == "percentile":
+                # percentiles are used for the calculation of standard error. Confidence intervals are evaluated on the basis of the lower/upper percentile with the largest deviance from the mean
+                # https://math.stackexchange.com/questions/1756425/is-it-possible-to-calculate-the-xth-percentile-of-a-collection-of-wind-vectors
+                cos_phases = np.cos(phases)
+                cos_ci_l = np.percentile(cos_phases,2.5)
+                cos_ci_h = np.percentile(cos_phases,97.5)
+                ci_l = np.arccos(cos_ci_l)
+                ci_h = np.arccos(cos_ci_h)   
+                d_phase_l = project_acr(mean_phase - ci_l)
+                d_phase_u = project_acr(ci_h - mean_phase)
+                dev_phase = np.nanmax([np.abs(d_phase_l), np.abs(d_phase_u)])
+                se_params[param] = dev_phase/1.96        
+        else:                           
+            mean_params[param] = np.nanmean(params_bs[param])
+            
+            if bootstrap_type == "se":
+                se_params[param] = sem(params_bs[param], nan_policy='omit')
+            elif bootstrap_type == "std":
+                se_params[param] = np.nanstd(params_bs[param])
+            elif bootstrap_type == "percentile":
+                # percentiles are used for the calculation of standard error. Confidence intervals are evaluated on the basis of the lower/upper percentile with the largest deviance from the mean
+                ci_l = np.percentile(params_bs[param],2.5)
+                ci_h = np.percentile(params_bs[param],97.5)
+                dev = np.nanmax([np.abs(mean_params[param]-ci_l), np.abs(mean_params[param]-ci_h)])
+                se_params[param] = dev/1.96
     
     # statistics
-    rhythm_params['d_amplitude_bootstrap'] = mean_d_amp
-    rhythm_params['CI(d_amplitude)'] = [mean_d_amp - 1.96*se_d_amp, mean_d_amp + 1.96*se_d_amp]
-    
-    rhythm_params['d_mesor_bootstrap'] = mean_d_mes
-    rhythm_params['CI(d_mesor)'] = [mean_d_mes - 1.96*se_d_mes, mean_d_mes + 1.96*se_d_mes]
-    
-    rhythm_params['d_acrophase_bootstrap'] = mean_d_acr        
-    rhythm_params['CI(d_acrophase)'] = get_acrophase_CI(mean_d_acr, 1.96*se_d_acr)
-    
-    if t_test:
-        rhythm_params['p(d_amplitude)'] = get_p_t_test(mean_d_amp, se_d_amp, DoF)
-        rhythm_params['p(d_mesor)'] = get_p_t_test(mean_d_mes, se_d_mes, DoF)
-        rhythm_params['p(d_acrophase)'] = get_p_t_test(mean_d_acr, se_d_acr, DoF)
-    else:
-        rhythm_params['p(d_amplitude)'] = get_p_z_test(mean_d_amp, se_d_amp)
-        rhythm_params['p(d_mesor)'] = get_p_z_test(mean_d_mes, se_d_mes)    
-        rhythm_params['p(d_acrophase)'] = get_p_z_test(mean_d_acr, se_d_acr)
+    for param in parameters_to_analyse:
+        rhythm_params[f'd_{param}_bootstrap'] = mean_params[param]
+        if param in parameters_angular: 
+            rhythm_params[f'CI(d_{param})'] = get_acrophase_CI(mean_params[param], 1.96*se_params[param])
+        else:
+            rhythm_params[f'CI(d_{param})'] = [mean_params[param] - 1.96*se_params[param], mean_params[param] + 1.96*se_params[param]]
+
+        if t_test:    
+            rhythm_params[f'p(d_{param})'] = get_p_t_test(mean_params[param], se_params[param], DoF)
+        else:
+            rhythm_params[f'p(d_{param})'] = get_p_z_test(mean_params[param], se_params[param])  
         
     return rhythm_params
 
