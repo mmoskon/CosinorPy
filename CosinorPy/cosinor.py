@@ -462,7 +462,48 @@ def generate_independents(X, n_components = 3, period = 24, lin_comp = False):
     X_fit = sm.add_constant(X_fit, has_constant='add')
     
     return X_fit
+
+def generate_independents_compare(X1, X2, n_components1 = 3, period1 = 24, n_components2 = 3, period2 = 24, lin_comp = False, non_rhythmic=False):
+    H1 = np.zeros(X1.size)
+    H2 = np.ones(X2.size)
     
+    X = np.concatenate((X1, X2))
+    H_i = np.concatenate((H1, H2))
+    X_i = H_i * X
+   
+
+    for i in np.arange(n_components1):
+        n = i+1
+
+        A = np.sin((X/(period1/n))*np.pi*2)        
+        B = np.cos((X/(period1/n))*np.pi*2) 
+        if not i:
+            X_fit = np.column_stack((A, B))        
+        else:
+            X_fit = np.column_stack((X_fit, np.column_stack((A, B))))
+        
+    if non_rhythmic:
+        X_fit = np.column_stack((X_fit, H_i))                
+    else:
+        for i in np.arange(n_components2):
+            n = i+1
+
+            A_i = H_i * np.sin((X/(period2/n))*np.pi*2)        
+            B_i = H_i * np.cos((X/(period2/n))*np.pi*2) 
+        
+               
+            X_fit = np.column_stack((X_fit, np.column_stack((A_i, B_i))))
+        
+        X_fit = np.column_stack((X_fit, H_i))
+        
+    if lin_comp:
+        X_fit = np.column_stack((X_i, X_fit))
+        X_fit = np.column_stack((X, X_fit))    
+
+    X_fit = sm.add_constant(X_fit, has_constant='add')
+
+    return X_fit
+
     
 def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', plot = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label='', return_individual_params = False, params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type = "LHS", **kwargs):
 
@@ -934,7 +975,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
         eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y,  model_type = model_type, rhythm_params=rhythm_params, bootstrap_size=bootstrap_size, bootstrap_type=bootstrap_type)
         
     if params_CI:
-        eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param_CI, max_samples_CI, k=len(X), sampling_type=sampling_type)
+        eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param = samples_per_param_CI, max_samples = max_samples_CI, k=len(X), sampling_type=sampling_type)
 
     if return_model: 
         return results, statistics, rhythm_params, X_test, Y_test, model
@@ -1077,7 +1118,7 @@ def evaluate_rhythm_params(X,Y, project_acrophase=True):
     if PERIOD:
         ACROPHASE = phase_to_radians(PHASE, PERIOD)
         if project_acrophase:
-            ACROPHASE = project_acr(ACROPHASE)
+            ACROPHASE = project_angle(ACROPHASE)
     else:
         ACROPHASE = np.nan
 
@@ -1753,7 +1794,7 @@ def compare_pairs_population(df, pairs, n_components = 3, period = 24, folder = 
                 d['n_components'] = n_comps
 
                 d['d_amplitude'] = rhythm_params2['amplitude'] - rhythm_params1['amplitude']
-                d['d_acrophase'] = project_acr(rhythm_params2['acrophase'] - rhythm_params1['acrophase'])
+                d['d_acrophase'] = project_angle(rhythm_params2['acrophase'] - rhythm_params1['acrophase'])
 
                 d['p1'] = statistics1['p']
                 d['p2'] = statistics2['p']
@@ -1885,7 +1926,7 @@ def compare_pairs_best_models_population(df, df_best_models, pairs, folder = "",
         q2 = model2.q
 
         d_amplitude = model2.amplitude - model1.amplitude
-        d_acrophase = project_acr(model2.acrophase - model1.acrophase)
+        d_acrophase = project_angle(model2.acrophase - model1.acrophase)
 
         d = {}
         d['test'] = test1 + ' vs. ' + test2
@@ -2214,7 +2255,7 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
                      'd_amplitude': rhythm_params2['amplitude']-rhythm_params1['amplitude'],
                      'acrophase1': rhythm_params1['acrophase'],
                      'acrophase2': rhythm_params2['acrophase'],
-                     'd_acrophase': project_acr(rhythm_params2['acrophase']-rhythm_params1['acrophase']),
+                     'd_acrophase': project_angle(rhythm_params2['acrophase']-rhythm_params1['acrophase']),
                      'mesor1': rhythm_params1['mesor'],
                      'mesor2': rhythm_params2['mesor'],
                      'd_mesor': rhythm_params2['mesor']-rhythm_params1['mesor']}
@@ -2234,51 +2275,6 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
 
 
     return (p_overall, p_params, p_f, results.params[idx_params], results, rhythm_params)
-
-
-
-def generate_independents_compare(X1, X2, n_components1 = 3, period1 = 24, n_components2 = 3, period2 = 24, lin_comp = False, non_rhythmic=False):
-    H1 = np.zeros(X1.size)
-    H2 = np.ones(X2.size)
-    
-    X = np.concatenate((X1, X2))
-    H_i = np.concatenate((H1, H2))
-    X_i = H_i * X
-   
-
-    for i in np.arange(n_components1):
-        n = i+1
-
-        A = np.sin((X/(period1/n))*np.pi*2)        
-        B = np.cos((X/(period1/n))*np.pi*2) 
-        if not i:
-            X_fit = np.column_stack((A, B))        
-        else:
-            X_fit = np.column_stack((X_fit, np.column_stack((A, B))))
-        
-    if non_rhythmic:
-        X_fit = np.column_stack((X_fit, H_i))                
-    else:
-        for i in np.arange(n_components2):
-            n = i+1
-
-            A_i = H_i * np.sin((X/(period2/n))*np.pi*2)        
-            B_i = H_i * np.cos((X/(period2/n))*np.pi*2) 
-        
-               
-            X_fit = np.column_stack((X_fit, np.column_stack((A_i, B_i))))
-        
-        X_fit = np.column_stack((X_fit, H_i))
-        
-    if lin_comp:
-        X_fit = np.column_stack((X_i, X_fit))
-        X_fit = np.column_stack((X, X_fit))    
-
-    X_fit = sm.add_constant(X_fit, has_constant='add')
-
-    return X_fit
-
-
 
 # compare two models according to the F-test
 # http://people.reed.edu/~jones/Courses/P24.pdf
@@ -2777,13 +2773,9 @@ def compare_nonlinear_pairs(df, pairs, min_per = 18, max_per = 36, folder = '', 
         d['p_reject'] = statistics['p_reject']
         d['ME'] = statistics['ME']
         d['resid_SE'] = statistics['resid_SE']
-        
-        
-        
+     
         df_results = df_results.append(d, ignore_index=True)
-
-   
-    
+  
     for v in d:
         if v.startswith('p'):
             if v == "p_reject":
@@ -2910,9 +2902,7 @@ def compare_nonlinear(X1, Y1, X2, Y2, test1 = '', test2 = '', min_per = 18, max_
     
     plt.plot(X_full, Y1_full, 'k', label = 'fit '+test1)    
     plt.plot(X_full, Y2_full, 'r', label = 'fit '+test2)    
-    
-    
-     
+      
     plt.title(test1 + ' vs. ' + test2)
     plt.xlabel('time [h]')
     plt.ylabel('measurements')
@@ -3127,8 +3117,6 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
 
     for pair in pairs:
 
-        
-
         df_pop1 = df[df.test.str.startswith(pair[0])] 
         df_pop2 = df[df.test.str.startswith(pair[1])] 
 
@@ -3153,8 +3141,8 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
         # equations below only present an approximation
         amplitude1 = np.mean(amps1)
         amplitude2 = np.mean(amps2)
-        acrophase1 = project_acr(circmean(acrs1, high = 0, low = -2*np.pi))#np.mean(acrs1)
-        acrophase2 = project_acr(circmean(acrs2, high = 0, low = -2*np.pi))#np.mean(acrs2)
+        acrophase1 = project_angle(circmean(acrs1, high = 0, low = -2*np.pi))#np.mean(acrs1)
+        acrophase2 = project_angle(circmean(acrs2, high = 0, low = -2*np.pi))#np.mean(acrs2)
         mesor1 = np.mean(mesors1)
         mesor2 = np.mean(mesors2)
 
@@ -3163,7 +3151,7 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
             continue
 
         d_amp = abs(amplitude1 - amplitude2)
-        d_acr = abs(project_acr(acrophase1 - acrophase2))
+        d_acr = abs(project_angle(acrophase1 - acrophase2))
         d_mesor = abs(mesor1 - mesor2)
         d_amps, d_acrs, d_mesors = [], [], []
 
@@ -3187,13 +3175,13 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
 
             amplitude_test1 = np.mean(amps[perm1])
             amplitude_test2 = np.mean(amps[perm2])
-            acrophase_test1 = project_acr(circmean(acrs[perm1], high = 0, low = -2*np.pi))#np.mean(acrs[perm1])
-            acrophase_test2 = project_acr(circmean(acrs[perm2], high = 0, low = -2*np.pi))#np.mean(acrs[perm2])
+            acrophase_test1 = project_angle(circmean(acrs[perm1], high = 0, low = -2*np.pi))#np.mean(acrs[perm1])
+            acrophase_test2 = project_angle(circmean(acrs[perm2], high = 0, low = -2*np.pi))#np.mean(acrs[perm2])
             mesor_test1 = np.mean(mesors[perm1])
             mesor_test2 = np.mean(mesors[perm2])
 
             d_amp_test = abs(amplitude_test1 - amplitude_test2)
-            d_acr_test = abs(project_acr(acrophase_test1 - acrophase_test2))
+            d_acr_test = abs(project_angle(acrophase_test1 - acrophase_test2))
             d_mesor_test = abs(mesor_test1 - mesor_test2)
             
             d_amps.append(d_amp_test)
@@ -3208,7 +3196,7 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
         d = {"pair": tuple(pair),
              "d_amp": d_amp, 
              "p_d_amp": p_d_amp, 
-             "d_acr": project_acr(acrophase1 - acrophase2), 
+             "d_acr": project_angle(acrophase1 - acrophase2), 
              "p_d_acr": p_d_acr, 
              "d_mesor": d_mesor, 
              "p_d_mesor": p_d_mesor}
@@ -3272,7 +3260,7 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
     
     acrophase_bs = acrophase_bs[~np.isnan(acrophase_bs)]    
     mean_acr = circmean(acrophase_bs, high = 0, low = -2*np.pi)
-    mean_acr = project_acr(mean_acr)  # project mean acr to the interval [-pi, pi]
+    mean_acr = project_angle(mean_acr)  # project mean acr to the interval [-pi, pi]
 
     
     if bootstrap_type == "se":
@@ -3310,8 +3298,8 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
         acr_l = np.arccos(cos_acr_l)
         acr_h = np.arccos(cos_acr_h)        
         
-        d_acr_l = project_acr(mean_acr - acr_l)
-        d_acr_u = project_acr(acr_h - mean_acr)
+        d_acr_l = project_angle(mean_acr - acr_l)
+        d_acr_u = project_angle(acr_h - mean_acr)
         dev_acr = np.nanmax([np.abs(d_acr_l), np.abs(d_acr_u)])
         se_acr = dev_acr/1.96        
     else:
@@ -3325,7 +3313,7 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
     rhythm_params['mesor_bootstrap'] = mean_mes    
     rhythm_params['CI(mesor)'] = [mean_mes - 1.96*se_mes, mean_mes + 1.96*se_mes]
     rhythm_params['acrophase_bootstrap'] = mean_acr
-    rhythm_params['CI(acrophase)'] = get_acr_CI(mean_acr, 1.96*se_acr)
+    rhythm_params['CI(acrophase)'] = get_angle_CI(mean_acr, 1.96*se_acr)
     
     if t_test:    
         rhythm_params['p(amplitude)'] = get_p_t_test(mean_amp, se_amp, DoF) #2 * (1 - stats.t.cdf(abs(mean_amp/se_amp), DoF))           
@@ -3398,7 +3386,7 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
 
     d_acrophase_bs = d_acrophase_bs[~np.isnan(d_acrophase_bs)]
     mean_d_acr = circmean(d_acrophase_bs, high = 0, low = -2*np.pi)    
-    mean_d_acr = project_acr(mean_d_acr)
+    mean_d_acr = project_angle(mean_d_acr)
 
 
     if bootstrap_type == "se":
@@ -3436,8 +3424,8 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
         acr_l = np.arccos(cos_acr_l)
         acr_h = np.arccos(cos_acr_h)
         
-        d_acr_l = project_acr(mean_d_acr - acr_l)
-        d_acr_u = project_acr(acr_h - mean_d_acr)
+        d_acr_l = project_angle(mean_d_acr - acr_l)
+        d_acr_u = project_angle(acr_h - mean_d_acr)
         dev_acr = np.nanmax([np.abs(d_acr_l), np.abs(d_acr_u)])
         se_d_acr = dev_acr/1.96
       
@@ -3453,7 +3441,7 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
     rhythm_params['CI(d_mesor)'] = [mean_d_mes - 1.96*se_d_mes, mean_d_mes + 1.96*se_d_mes]
     
     rhythm_params['d_acrophase_bootstrap'] = mean_d_acr        
-    rhythm_params['CI(d_acrophase)'] = get_acr_CI(mean_d_acr, 1.96*se_d_acr)
+    rhythm_params['CI(d_acrophase)'] = get_angle_CI(mean_d_acr, 1.96*se_d_acr)
     
     if t_test:
         rhythm_params['p(d_amplitude)'] = get_p_t_test(mean_d_amp, se_d_amp, DoF)
@@ -3467,7 +3455,7 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
     return rhythm_params
 
 # sample the parameters from the confidence interval, builds a set of models and assesses the rhythmicity parameters confidence intervals   
-def eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param=5, max_samples = 1000, t_test=True, k=0, sampling_type="LHS"):
+def eval_params_CI(X_test, X_fit_test, results, rhythm_params, params_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], samples_per_param=5, max_samples = 1000, t_test=True, k=0, sampling_type="LHS"):
     res2 = copy.deepcopy(results)
     params = res2.params
     n_params=len(params)
@@ -3481,17 +3469,14 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param
     for i, CI in enumerate(CIs):                    
         P[i,:] = np.linspace(CI[0], CI[1], samples_per_param)
 
-    amplitude = rhythm_params['amplitude']
-    mesor = rhythm_params['mesor']
-    acrophase = rhythm_params['acrophase']
-
-    # project acrophase to the interval [-pi, pi]
-    acrophase = project_acr(acrophase)
-
-    dev_amp = 0.0
-    dev_mes = 0.0
-    dev_acr = 0.0
-    
+    mean_params = {}
+    dev_params = {}
+    for param in params_to_analyse:
+        mean_params[param] = rhythm_params[param]
+        if param in parameters_angular:
+            mean_params[param] = project_angle(mean_params[param])
+        dev_params[param] = 0.0
+   
     if not sampling_type:
         n_param_samples = P.shape[1]**P.shape[0] 
         N = min(max_samples, n_param_samples)
@@ -3516,42 +3501,36 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param
        
         rhythm_params_CI = evaluate_rhythm_params(X_test, Y_test_CI)
 
-        dev_amp = np.nanmax([dev_amp, np.abs(amplitude-rhythm_params_CI['amplitude'])])
-        dev_mes = np.nanmax([dev_mes, np.abs(mesor-rhythm_params_CI['mesor'])])
+        for param in params_to_analyse:
+            dev_tmp = mean_params[param] - rhythm_params_CI[param]
+            if param in parameters_angular:                
+                dev_tmp = np.abs(project_angle(dev_tmp))
+            else:            
+                dev_tmp = np.abs(dev_tmp)
 
-        if ~np.isnan(rhythm_params_CI['acrophase']):
-            dev_acr_tmp = (rhythm_params_CI['acrophase'] - acrophase)
-            dev_acr_tmp = project_acr(dev_acr_tmp)
-
-            if np.abs(dev_acr_tmp) > np.abs(dev_acr):     
-                dev_acr = dev_acr_tmp
+            if dev_tmp > dev_params[param]:
+                dev_params[param] = dev_tmp
     
     # statistics
-    rhythm_params['CI(amplitude)'] = [amplitude - dev_amp, amplitude + dev_amp]
-    rhythm_params['CI(mesor)'] = [mesor - dev_mes, mesor + dev_mes]
-    rhythm_params['CI(acrophase)'] = get_acr_CI(acrophase, dev_acr)    
-    
-
+    for param in params_to_analyse:
+        if param in parameters_angular:
+            rhythm_params[f'CI({param})'] = get_angle_CI(mean_params[param], dev_params[param])
+        else:
+            rhythm_params[f'CI({param})'] = [mean_params[param] - dev_params[param], mean_params[param] + dev_params[param]]
+        
     if t_test:
-        t = abs(stats.t.ppf(0.05/2,df=DoF))        
+        t = abs(stats.t.ppf(0.05/2,df=DoF))  
     else:
         t = 1.96
 
-    se_amp = dev_amp/t
-    se_mes = dev_mes/t
-    se_acr = dev_acr/t
-
-    if t_test:        
-        rhythm_params['p(amplitude)'] = get_p_t_test(amplitude, se_amp, DoF)
-        rhythm_params['p(mesor)'] = get_p_t_test(mesor, se_mes, DoF)
-        rhythm_params['p(acrophase)'] = get_p_t_test(acrophase, se_acr, DoF)
-    else:
-        rhythm_params['p(amplitude)'] = get_p_z_test(amplitude, se_amp) 
-        rhythm_params['p(mesor)'] = get_p_z_test(mesor, se_mes) 
-        rhythm_params['p(acrophase)'] = get_p_z_test(acrophase, se_acr)
-
+    for param in params_to_analyse:
+        se_param = dev_params[param]/t   
+        if t_test:
+            rhythm_params[f'p({param})'] = get_p_t_test(mean_params[param], se_param, DoF)            
+        else:
+            rhythm_params[f'p({param})'] = get_p_z_test(mean_params[param], se_param)    
+  
     return rhythm_params 
-
 
 # eval rhythmicity parameter differences using parameter confidence intervals
 def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, samples_per_param=5, max_samples=1000, t_test=True, k=0, sampling_type="LHS"):
@@ -3573,7 +3552,7 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, sample
     d_acrophase = rhythm_params['d_acrophase']
 
     # project d_acrophase to the interval [-pi, pi]
-    d_acrophase = project_acr(d_acrophase)
+    d_acrophase = project_angle(d_acrophase)
 
     dev_amp = 0.0
     dev_mes = 0.0
@@ -3616,7 +3595,7 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, sample
 
         if ~np.isnan(d_acr):
             dev_acr_tmp = (d_acrophase - d_acr)
-            dev_acr_tmp = project_acr(dev_acr_tmp)            
+            dev_acr_tmp = project_angle(dev_acr_tmp)            
             if np.abs(dev_acr_tmp) > np.abs(dev_acr):     
                 dev_acr = dev_acr_tmp
 
@@ -3624,7 +3603,7 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, sample
     # statistics
     rhythm_params['CI(d_amplitude)'] = [d_amplitude - dev_amp, d_amplitude + dev_amp]
     rhythm_params['CI(d_mesor)'] = [d_mesor - dev_mes, d_mesor + dev_mes]
-    rhythm_params['CI(d_acrophase)'] = get_acr_CI(d_acrophase, dev_acr)
+    rhythm_params['CI(d_acrophase)'] = get_angle_CI(d_acrophase, dev_acr)
     
     if t_test:
         t = abs(stats.t.ppf(0.05/2,df=DoF))             
@@ -3646,91 +3625,6 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, sample
   
     return rhythm_params
 
-
-# sample the parameters from the confidence interval, builds a set of models and assesses the rhythmicity parameters confidence intervals   
-def population_eval_params_CI_old(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=5, max_samples = 1000, t_test = True, k=0, sampling_type="LHS"): 
-
-    res2 = copy.deepcopy(results)
-    params = res2.params    
-    DoF = k-1
-    CIs = statistics_params['CI']
-    CIs = list(zip(*CIs))
-                
-    P = np.zeros((len(params), samples_per_param))
-    for i, CI in enumerate(CIs):                    
-        P[i,:] = np.linspace(CI[0], CI[1], samples_per_param)
-
-    amplitude = rhythm_params['amplitude']
-    mesor = rhythm_params['mesor']
-    acrophase = rhythm_params['acrophase']
-
-    # project acrophase to the interval [-pi, pi]
-    acrophase = project_acr(acrophase)
-
-    dev_amp = 0.0
-    dev_mes = 0.0
-    dev_acr = 0.0
-
-
-    if not sampling_type:
-        n_param_samples = P.shape[1]**P.shape[0] 
-        N = min(max_samples, n_param_samples)        
-        if n_param_samples < 10**6:
-            params_samples = np.random.choice(n_param_samples, size=N, replace=False)
-        else:
-            params_samples = my_random_choice(max_val=n_param_samples, size=N)
-    else:         
-        params_samples = generate_samples(sampling_type, CIs, max_samples)
-        if not params_samples:
-            print("Invalid sampling type")
-            return 
-
-    for i,idx in enumerate(params_samples):     
-        if not sampling_type:
-            p = lazy_prod(idx, P)
-        else: # if lhs
-            p = params_samples[i]  
-
-        res2.initialize(results.model, p)            
-        Y_test_CI = res2.predict(X_fit_eval_params)
-    
-        rhythm_params_CI = evaluate_rhythm_params(X_test, Y_test_CI)
-
-        dev_amp = np.nanmax([dev_amp, np.abs(amplitude-rhythm_params_CI['amplitude'])])
-        dev_mes = np.nanmax([dev_mes, np.abs(mesor-rhythm_params_CI['mesor'])])
-
-        if ~np.isnan(rhythm_params_CI['acrophase']):
-            dev_acr_tmp = (rhythm_params_CI['acrophase'] - acrophase) 
-            dev_acr_tmp = project_acr(dev_acr_tmp)
-            
-            if np.abs(dev_acr_tmp) > np.abs(dev_acr):     
-                dev_acr = dev_acr_tmp
-
-    # statistics
-    rhythm_params['CI(amplitude)'] = [amplitude - dev_amp, amplitude + dev_amp]
-    rhythm_params['CI(mesor)'] = [mesor - dev_mes, mesor + dev_mes]
-    rhythm_params['CI(acrophase)'] = get_acr_CI(acrophase, dev_acr)
-    
-    if t_test:
-        t = abs(stats.t.ppf(0.05/2,df=DoF))  
-    else:
-        t = 1.96
-
-    se_amp = dev_amp/t
-    se_mes = dev_mes/t
-    se_acr = dev_acr/t
-    
-    if t_test:
-        rhythm_params['p(amplitude)'] = get_p_t_test(amplitude, se_amp, DoF)
-        rhythm_params['p(mesor)'] = get_p_t_test(mesor, se_mes, DoF)
-        rhythm_params['p(acrophase)'] = get_p_t_test(acrophase, se_acr, DoF)
-    else:
-        rhythm_params['p(amplitude)'] = get_p_z_test(amplitude, se_amp)
-        rhythm_params['p(mesor)'] = get_p_z_test(mesor, se_mes)
-        rhythm_params['p(acrophase)'] = get_p_z_test(acrophase, se_acr)
-       
-    return rhythm_params
-
 # sample the parameters from the confidence interval, builds a set of models and assesses the rhythmicity parameters confidence intervals   
 def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, params_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], samples_per_param=5, max_samples = 1000, t_test = True, k=0, sampling_type="LHS"): 
     res2 = copy.deepcopy(results)
@@ -3747,7 +3641,7 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
     dev_params = {}
     for param in params_to_analyse:
         if param in parameters_angular:
-            mean_params[param] = project_acr(rhythm_params[param])
+            mean_params[param] = project_angle(rhythm_params[param])
         else:
             mean_params[param] = rhythm_params[param]
 
@@ -3780,7 +3674,7 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
         for param in params_to_analyse:
             dev_tmp = mean_params[param] - rhythm_params_CI[param]
             if param in parameters_angular:                
-                dev_tmp = np.abs(project_acr(dev_tmp))
+                dev_tmp = np.abs(project_angle(dev_tmp))
             else:            
                 dev_tmp = np.abs(dev_tmp)
 
@@ -3791,7 +3685,7 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
     # statistics
     for param in params_to_analyse:
         if param in parameters_angular:
-            rhythm_params[f'CI({param})'] = get_acr_CI(mean_params[param], dev_params[param])
+            rhythm_params[f'CI({param})'] = get_angle_CI(mean_params[param], dev_params[param])
         else:
             rhythm_params[f'CI({param})'] = [mean_params[param] - dev_params[param], mean_params[param] + dev_params[param]]
         
@@ -3873,8 +3767,8 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
     se_mes = (abs(mesor_CI1[1] - mesor_CI1[0])/2 + abs(mesor_CI2[1] - mesor_CI2[0])/2)/t
 
     d_acrophase = acrophase2 - acrophase1
-    d_acrophase = project_acr(d_acrophase)
-    se_acr = (abs(project_acr(acrophase_CI1[1] - acrophase_CI1[0]))/2 + abs(project_acr(acrophase_CI2[1] - acrophase_CI2[0]))/2)/t
+    d_acrophase = project_angle(d_acrophase)
+    se_acr = (abs(project_angle(acrophase_CI1[1] - acrophase_CI1[0]))/2 + abs(project_angle(acrophase_CI2[1] - acrophase_CI2[0]))/2)/t
      
     rhythm_params['d_amplitude'] = d_amplitude
     rhythm_params['CI(d_amplitude)'] = [d_amplitude - t*se_amp, d_amplitude + t*se_amp]
@@ -3882,7 +3776,7 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
         rhythm_params['d_mesor'] = d_mesor
         rhythm_params['CI(d_mesor)'] = [d_mesor - t*se_mes, d_mesor + t*se_mes]
     rhythm_params['d_acrophase'] = d_acrophase   
-    rhythm_params['CI(d_acrophase)'] = get_acr_CI(d_acrophase, t*se_acr)
+    rhythm_params['CI(d_acrophase)'] = get_angle_CI(d_acrophase, t*se_acr)
 
     if t_test:
         rhythm_params['p(d_amplitude)'] = get_p_t_test(d_amplitude, se_amp, DoF)        
@@ -3954,7 +3848,7 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
     d_amplitude = amplitude2 - amplitude1
     d_mesor = mesor2 - mesor1
     d_acrophase = acrophase2 - acrophase1
-    d_acrophase = project_acr(d_acrophase)
+    d_acrophase = project_angle(d_acrophase)
 
     if t_test:
         t = abs(stats.t.ppf(0.05/2,df=DoF))  
@@ -3963,14 +3857,14 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
 
     se_amp = (abs(amplitude_CI1[1] - amplitude_CI1[0])/2 + abs(amplitude_CI2[1] - amplitude_CI2[0])/2)/t
     se_mes = (abs(mesor_CI1[1] - mesor_CI1[0])/2 + abs(mesor_CI2[1] - mesor_CI2[0])/2)/t
-    se_acr = (abs(project_acr(acrophase_CI1[1] - acrophase_CI1[0]))/2 + abs(project_acr(acrophase_CI2[1] - acrophase_CI2[0]))/2)/t
+    se_acr = (abs(project_angle(acrophase_CI1[1] - acrophase_CI1[0]))/2 + abs(project_angle(acrophase_CI2[1] - acrophase_CI2[0]))/2)/t
     
     rhythm_params['d_amplitude'] = d_amplitude
     rhythm_params['CI(d_amplitude)'] = [d_amplitude - t*se_amp, d_amplitude + t*se_amp]
     if se_mes:   
         rhythm_params['d_mesor'] = d_mesor     
         rhythm_params['CI(d_mesor)'] = [d_mesor - t*se_mes, d_mesor + t*se_mes]    
-    rhythm_params['CI(d_acrophase)'] = get_acr_CI(d_acrophase, t*se_acr)
+    rhythm_params['CI(d_acrophase)'] = get_angle_CI(d_acrophase, t*se_acr)
     rhythm_params['d_acrophase'] = d_acrophase
 
     if t_test:
@@ -4047,8 +3941,8 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
     se_mes = (abs(mesor_CI1[1] - mesor_CI1[0])/2 + abs(mesor_CI2[1] - mesor_CI2[0])/2)/1.96
 
     d_acrophase = acrophase2 - acrophase1
-    d_acrophase = project_acr(d_acrophase)
-    se_acr = (abs(project_acr(acrophase_CI1[1] - acrophase_CI1[0]))/2 + abs(project_acr(acrophase_CI2[1] - acrophase_CI2[0]))/2)/1.96
+    d_acrophase = project_angle(d_acrophase)
+    se_acr = (abs(project_angle(acrophase_CI1[1] - acrophase_CI1[0]))/2 + abs(project_angle(acrophase_CI2[1] - acrophase_CI2[0]))/2)/1.96
     
     rhythm_params['d_amplitude'] = d_amplitude
     rhythm_params['CI(d_amplitude)'] = [d_amplitude - 1.96*se_amp, d_amplitude + 1.96*se_amp]
@@ -4056,7 +3950,7 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
         rhythm_params['d_mesor'] = d_mesor
         rhythm_params['CI(d_mesor)'] = [d_mesor - 1.96*se_mes, d_mesor + 1.96*se_mes]
     rhythm_params['d_acrophase'] = d_acrophase
-    rhythm_params['CI(d_acrophase)'] = get_acr_CI(d_acrophase, 1.96*se_acr)
+    rhythm_params['CI(d_acrophase)'] = get_angle_CI(d_acrophase, 1.96*se_acr)
 
     if t_test:        
         rhythm_params['p(d_amplitude)'] = get_p_t_test(d_amplitude, se_amp, DoF)
@@ -4102,7 +3996,7 @@ def my_random_choice(max_val, size):
     return S
 
 # project acrophase to the interval [-pi, pi]
-def project_acr(acr):
+def project_angle(acr):
     acr %= (2*np.pi)
     if acr > np.pi:
         acr -= 2*np.pi
@@ -4131,7 +4025,7 @@ def generate_samples(sampling_type, intervals, size):
 
     return lhs.generate(space.dimensions, size)
 
-def get_acr_CI(mean_acr, dev_acr):
+def get_angle_CI(mean_acr, dev_acr):
     return [mean_acr-np.abs(dev_acr), mean_acr+np.abs(dev_acr)]
 
 def get_CI_dev_diff(mean1, CI1, mean2, CI2, acr = False):
@@ -4141,7 +4035,7 @@ def get_CI_dev_diff(mean1, CI1, mean2, CI2, acr = False):
     dev = dev1 + dev2
     diff = mean2 - mean1
     if acr:
-        diff = project_acr(diff)
+        diff = project_angle(diff)
     
     CI = [diff - dev, diff + dev]
 
