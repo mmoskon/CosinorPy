@@ -3313,7 +3313,7 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
     rhythm_params['mesor_bootstrap'] = mean_mes    
     rhythm_params['CI(mesor)'] = [mean_mes - 1.96*se_mes, mean_mes + 1.96*se_mes]
     rhythm_params['acrophase_bootstrap'] = mean_acr
-    rhythm_params['CI(acrophase)'] = get_angle_CI(mean_acr, 1.96*se_acr)
+    rhythm_params['CI(acrophase)'] = get_acrophase_CI(mean_acr, 1.96*se_acr)
     
     if t_test:    
         rhythm_params['p(amplitude)'] = get_p_t_test(mean_amp, se_amp, DoF) #2 * (1 - stats.t.cdf(abs(mean_amp/se_amp), DoF))           
@@ -3441,7 +3441,7 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
     rhythm_params['CI(d_mesor)'] = [mean_d_mes - 1.96*se_d_mes, mean_d_mes + 1.96*se_d_mes]
     
     rhythm_params['d_acrophase_bootstrap'] = mean_d_acr        
-    rhythm_params['CI(d_acrophase)'] = get_angle_CI(mean_d_acr, 1.96*se_d_acr)
+    rhythm_params['CI(d_acrophase)'] = get_acrophase_CI(mean_d_acr, 1.96*se_d_acr)
     
     if t_test:
         rhythm_params['p(d_amplitude)'] = get_p_t_test(mean_d_amp, se_d_amp, DoF)
@@ -3503,6 +3503,10 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, parameters_to_ana
 
         for param in parameters_to_analyse:
             dev_tmp = mean_params[param] - rhythm_params_CI[param]
+
+            if np.isnan(dev_tmp):
+                continue
+
             if param in parameters_angular:                
                 dev_tmp = np.abs(project_acr(dev_tmp))
             else:            
@@ -3514,7 +3518,7 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, parameters_to_ana
     # statistics
     for param in parameters_to_analyse:
         if param in parameters_angular:
-            rhythm_params[f'CI({param})'] = get_angle_CI(mean_params[param], dev_params[param])
+            rhythm_params[f'CI({param})'] = get_acrophase_CI(mean_params[param], dev_params[param])
         else:
             rhythm_params[f'CI({param})'] = [mean_params[param] - dev_params[param], mean_params[param] + dev_params[param]]
         
@@ -3533,7 +3537,7 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, parameters_to_ana
     return rhythm_params 
 
 # eval rhythmicity parameter differences using parameter confidence intervals
-def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, samples_per_param=5, max_samples=1000, t_test=True, k=0, sampling_type="LHS"):
+def eval_params_diff_CI_old(X_full, X_fit_full, locs, results, rhythm_params, samples_per_param=5, max_samples=1000, t_test=True, k=0, sampling_type="LHS"):
 
     res2 = copy.deepcopy(results)
     params = res2.params
@@ -3603,7 +3607,7 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, sample
     # statistics
     rhythm_params['CI(d_amplitude)'] = [d_amplitude - dev_amp, d_amplitude + dev_amp]
     rhythm_params['CI(d_mesor)'] = [d_mesor - dev_mes, d_mesor + dev_mes]
-    rhythm_params['CI(d_acrophase)'] = get_angle_CI(d_acrophase, dev_acr)
+    rhythm_params['CI(d_acrophase)'] = get_acrophase_CI(d_acrophase, dev_acr)
     
     if t_test:
         t = abs(stats.t.ppf(0.05/2,df=DoF))             
@@ -3624,6 +3628,94 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, sample
         rhythm_params['p(d_acrophase)'] = get_p_z_test(d_acrophase, se_acr) 
   
     return rhythm_params
+
+# eval rhythmicity parameter differences using parameter confidence intervals
+def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, parameters_to_analyse = ['d_amplitude', 'd_acrophase', 'd_mesor'], parameters_angular = ['d_acrophase'], samples_per_param=5, max_samples=1000, t_test=True, k=0, sampling_type="LHS"):
+
+    res2 = copy.deepcopy(results)
+    params = res2.params
+    n_params = len(params)
+    DoF = k-n_params
+    CIs = results.conf_int()
+    if type(CIs) != np.ndarray:
+        CIs = CIs.values
+                
+    P = np.zeros((len(params), samples_per_param))
+    for i, CI in enumerate(CIs):                    
+        P[i,:] = np.linspace(CI[0], CI[1], samples_per_param)
+
+    mean_params = {}
+    dev_params = {}
+    for param in parameters_to_analyse:
+        mean_params[param] = rhythm_params[param]
+        if param in parameters_angular:
+            mean_params[param] = project_acr(mean_params[param])
+        dev_params[param] = 0.0
+
+    if not sampling_type:
+        n_param_samples = P.shape[1]**P.shape[0] 
+        N = min(max_samples, n_param_samples)
+        if n_param_samples < 10**6:
+            params_samples = np.random.choice(n_param_samples, size=N, replace=False)
+        else:
+            params_samples = my_random_choice(max_val=n_param_samples, size=N)
+    else:
+        params_samples = generate_samples(sampling_type, CIs, max_samples)
+        if not params_samples:
+            print("Invalid sampling type")
+            return 
+
+    for i,idx in enumerate(params_samples):     
+        if not sampling_type:
+            p = lazy_prod(idx, P)
+        else: # if lhs
+            p = params_samples[i]
+    
+        res2.initialize(results.model, p)        
+
+        Y_fit_CI1 = res2.predict(X_fit_full[locs])
+        Y_fit_CI2 = res2.predict(X_fit_full[~locs])
+
+        rhythm_params1_CI = evaluate_rhythm_params(X_full, Y_fit_CI1)
+        rhythm_params2_CI = evaluate_rhythm_params(X_full, Y_fit_CI2)
+
+        for param in parameters_to_analyse:
+            param_name_orig = param[2:] # presumes that the param name is prefixed with 'd_'
+            d_param = rhythm_params2_CI[param_name_orig] - rhythm_params1_CI[param_name_orig]
+            dev_tmp = mean_params[param] - d_param
+
+            if np.isnan(dev_tmp):
+                continue
+
+            if param in parameters_angular:                
+                dev_tmp = np.abs(project_acr(dev_tmp))
+            else:            
+                dev_tmp = np.abs(dev_tmp)
+
+            if dev_tmp > dev_params[param]:
+                dev_params[param] = dev_tmp
+
+    # statistics
+    for param in parameters_to_analyse:
+        if param in parameters_angular:
+            rhythm_params[f'CI({param})'] = get_acrophase_CI(mean_params[param], dev_params[param])
+        else:
+            rhythm_params[f'CI({param})'] = [mean_params[param] - dev_params[param], mean_params[param] + dev_params[param]]
+   
+    if t_test:
+        t = abs(stats.t.ppf(0.05/2,df=DoF))             
+    else:
+        t = 1.96
+
+    for param in parameters_to_analyse:
+        se_param = dev_params[param]/t   
+        if t_test:
+            rhythm_params[f'p({param})'] = get_p_t_test(mean_params[param], se_param, DoF)            
+        else:
+            rhythm_params[f'p({param})'] = get_p_z_test(mean_params[param], se_param) 
+
+    return rhythm_params
+
 
 # sample the parameters from the confidence interval, builds a set of models and assesses the rhythmicity parameters confidence intervals   
 def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], samples_per_param=5, max_samples = 1000, t_test = True, k=0, sampling_type="LHS"): 
@@ -3673,6 +3765,9 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
 
         for param in parameters_to_analyse:
             dev_tmp = mean_params[param] - rhythm_params_CI[param]
+            if np.isnan(dev_tmp):
+                continue
+
             if param in parameters_angular:                
                 dev_tmp = np.abs(project_acr(dev_tmp))
             else:            
@@ -3685,7 +3780,7 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
     # statistics
     for param in parameters_to_analyse:
         if param in parameters_angular:
-            rhythm_params[f'CI({param})'] = get_angle_CI(mean_params[param], dev_params[param])
+            rhythm_params[f'CI({param})'] = get_acrophase_CI(mean_params[param], dev_params[param])
         else:
             rhythm_params[f'CI({param})'] = [mean_params[param] - dev_params[param], mean_params[param] + dev_params[param]]
         
@@ -3776,7 +3871,7 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
         rhythm_params['d_mesor'] = d_mesor
         rhythm_params['CI(d_mesor)'] = [d_mesor - t*se_mes, d_mesor + t*se_mes]
     rhythm_params['d_acrophase'] = d_acrophase   
-    rhythm_params['CI(d_acrophase)'] = get_angle_CI(d_acrophase, t*se_acr)
+    rhythm_params['CI(d_acrophase)'] = get_acrophase_CI(d_acrophase, t*se_acr)
 
     if t_test:
         rhythm_params['p(d_amplitude)'] = get_p_t_test(d_amplitude, se_amp, DoF)        
@@ -3864,7 +3959,7 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
     if se_mes:   
         rhythm_params['d_mesor'] = d_mesor     
         rhythm_params['CI(d_mesor)'] = [d_mesor - t*se_mes, d_mesor + t*se_mes]    
-    rhythm_params['CI(d_acrophase)'] = get_angle_CI(d_acrophase, t*se_acr)
+    rhythm_params['CI(d_acrophase)'] = get_acrophase_CI(d_acrophase, t*se_acr)
     rhythm_params['d_acrophase'] = d_acrophase
 
     if t_test:
@@ -3950,7 +4045,7 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
         rhythm_params['d_mesor'] = d_mesor
         rhythm_params['CI(d_mesor)'] = [d_mesor - 1.96*se_mes, d_mesor + 1.96*se_mes]
     rhythm_params['d_acrophase'] = d_acrophase
-    rhythm_params['CI(d_acrophase)'] = get_angle_CI(d_acrophase, 1.96*se_acr)
+    rhythm_params['CI(d_acrophase)'] = get_acrophase_CI(d_acrophase, 1.96*se_acr)
 
     if t_test:        
         rhythm_params['p(d_amplitude)'] = get_p_t_test(d_amplitude, se_amp, DoF)
@@ -4025,7 +4120,7 @@ def generate_samples(sampling_type, intervals, size):
 
     return lhs.generate(space.dimensions, size)
 
-def get_angle_CI(mean_acr, dev_acr):
+def get_acrophase_CI(mean_acr, dev_acr):
     return [mean_acr-np.abs(dev_acr), mean_acr+np.abs(dev_acr)]
 
 def get_CI_dev_diff(mean1, CI1, mean2, CI2, acr = False):
