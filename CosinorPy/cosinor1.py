@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import statsmodels.formula.api as smf
 import matplotlib.pyplot as plt
-from scipy.stats import ncf, f, norm
+#from scipy.stats import ncf, f, norm # use stats.ncf, stats.f, stats.norm instead
 import scipy.stats as stats
 import statsmodels.stats.multitest as multi
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
@@ -403,7 +403,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
         sem = sdm/(k**0.5)    
         T0 = MESOR/sem
         p_mesor = 2 * (1 - stats.t.cdf(abs(T0), k-1))
-        #p_mesor = 2 * norm.cdf(-np.abs(MESOR/sem))
+        #p_mesor = 2 * stats.norm.cdf(-np.abs(MESOR/sem))
 
 
         ampu=amp+(t*(c22**0.5))
@@ -412,7 +412,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
 
         T0 = amp/se_amp
         p_amp = 2 * (1 - stats.t.cdf(abs(T0), k-1))
-        #p_amp = 2 * norm.cdf(-np.abs(amp/se_amp))
+        #p_amp = 2 * stats.norm.cdf(-np.abs(amp/se_amp))
         
         if (ampu > 0 and ampl < 0):
             fiu=np.nan
@@ -757,7 +757,7 @@ def test_cosinor_single(data, period = 24, corrected = True):
     
     cov_trans = np.dot(np.dot(jac, indVmat), np.transpose(jac))
     se_trans_only =np.sqrt(np.diag(cov_trans))
-    zt = abs(norm.ppf((1-0.95)/2))
+    zt = abs(stats.norm.ppf((1-0.95)/2))
 
     trans_names = [results.params.index.values[0]] + ['amp', 'acr']
     coef_trans = np.array([results.params.iloc[0], amp, acr])
@@ -768,7 +768,7 @@ def test_cosinor_single(data, period = 24, corrected = True):
  
     lower_CI_trans = coef_trans - zt * se_trans           
     upper_CI_trans = coef_trans + zt * se_trans
-    p_value_trans = 2 * norm.cdf(-np.abs(coef_trans/se_trans)) 
+    p_value_trans = 2 * stats.norm.cdf(-np.abs(coef_trans/se_trans)) 
 
     statistics= {'parameters': trans_names,
                     'values': coef_trans,
@@ -828,7 +828,7 @@ def test_cosinor_pair(data, period, corrected = True):
     se_trans_only =np.sqrt(np.diag(cov_trans))
     
     
-    zt = abs(norm.ppf((1-0.95)/2))
+    zt = abs(stats.norm.ppf((1-0.95)/2))
     
     
     coef_raw = results.params
@@ -837,7 +837,7 @@ def test_cosinor_pair(data, period, corrected = True):
     se_raw = np.sqrt(np.diag(results.cov_params()))
     lower_CI_raw = coef_raw - zt * se_raw
     upper_CI_raw = coef_raw + zt * se_raw
-    p_value_raw = 2 * norm.cdf(-np.abs(coef_raw/se_raw))
+    p_value_raw = 2 * stats.norm.cdf(-np.abs(coef_raw/se_raw))
     statistics_raw={'parameters': raw_names,
                     'values': coef_raw,
                     'SE': se_raw,
@@ -853,7 +853,7 @@ def test_cosinor_pair(data, period, corrected = True):
     se_trans = np.concatenate((np.sqrt(np.diag(results.cov_params().loc[['Intercept', 'group'], ['Intercept', 'group']])),se_trans_only))             
     lower_CI_trans = coef_trans - zt * se_trans
     upper_CI_trans = coef_trans + zt * se_trans
-    p_value_trans = 2 * norm.cdf(-np.abs(coef_trans/se_trans))
+    p_value_trans = 2 * stats.norm.cdf(-np.abs(coef_trans/se_trans))
     statistics_trans={'parameters': trans_names,
                     'values': coef_trans,
                     'SE': se_trans,
@@ -870,7 +870,7 @@ def test_cosinor_pair(data, period, corrected = True):
     interval_amp = np.array((diff_est_amp - 1.96 * np.sqrt(np.diag(diff_var_amp)), diff_est_amp + 1.96 * np.sqrt(np.diag(diff_var_amp))))
     df_amp = 1
     global_p_value_amp = 1-stats.chi2.cdf(glob_chi_amp, df_amp)
-    ind_p_value_amp = 2*norm.cdf(-abs(ind_Z_amp))
+    ind_p_value_amp = 2*stats.norm.cdf(-abs(ind_Z_amp))
 
     diff_est_acr = coef_trans[5] - coef_trans[4]
     diff_est_acr = cosinor.project_acr(diff_est_acr)
@@ -881,7 +881,7 @@ def test_cosinor_pair(data, period, corrected = True):
     interval_acr = np.array((diff_est_acr - 1.96 * np.sqrt(np.diag(diff_var_acr)), diff_est_acr + 1.96 * np.sqrt(np.diag(diff_var_acr))))
     df_acr = 1
     global_p_value_acr = 1-stats.chi2.cdf(glob_chi_acr, df_acr)
-    ind_p_value_acr = 2*norm.cdf(-abs(ind_Z_acr))
+    ind_p_value_acr = 2*stats.norm.cdf(-abs(ind_Z_acr))
     
     
     global_test_amp = {'name': 'global test of amplitude change',
@@ -923,8 +923,8 @@ def amplitude_detection(A, var, p = 0.95, alpha = 0.05):
     
     while True:
         lmbda = (N * C_2)/4       
-        f2 = f(2, N-3, 0).ppf(1-alpha)
-        F = 1-ncf(2,N-3,lmbda).cdf(f2)
+        f2 = stats.f(2, N-3, 0).ppf(1-alpha)
+        F = 1-stats.ncf(2,N-3,lmbda).cdf(f2)
         if F >= p:
             break
         
@@ -938,7 +938,7 @@ def amplitude_detection(A, var, p = 0.95, alpha = 0.05):
 # alpha ... 1-alpha = confidence level of the cofidence interval
 def amplitude_confidence(L, var, alpha = 0.05):
     sigma2 = var
-    N = 8 * sigma2 * (norm.ppf(1-alpha/2)**2)/(L**2)
+    N = 8 * sigma2 * (stats.norm.ppf(1-alpha/2)**2)/(L**2)
     return int(np.ceil(N))
 
 # acrophase_confidence: determines the minimal number of samples to obtain a given length of the confidence interval for the estimated acrophase
@@ -948,8 +948,8 @@ def amplitude_confidence(L, var, alpha = 0.05):
 # alpha ... 1-alpha = confidence level of the cofidence interval
 def acrophase_confidence(L, A_0, var, alpha = 0.05):
     sigma2 = var
-    #N = 8 * sigma2 * (norm.ppf(1-alpha/2)**2)/(L**2 * A_0**2) # approximation
-    N = (2 * norm.ppf(1-alpha/2)**2 * sigma2)/(A_0**2 * np.sin(L/2)**2) # accurate
+    #N = 8 * sigma2 * (stats.norm.ppf(1-alpha/2)**2)/(L**2 * A_0**2) # approximation
+    N = (2 * stats.norm.ppf(1-alpha/2)**2 * sigma2)/(A_0**2 * np.sin(L/2)**2) # accurate
 
     return int(np.ceil(N))
 
