@@ -722,11 +722,21 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         min_Y = min(min_Y, np.min(y))
         max_Y = max(max_Y, np.max(y))
                         
-        results, statistics, rhythm_params, X_test, _, model = fit_me(x, y, n_components = n_components, period = period, plot = False, return_model = True, **kwargs)
+        results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, plot = False, return_model = True, **kwargs)
         if type(params) == int:
             params = results.params
+            if plot and plot_margins and model_type == 'lin':
+                #_, lowers, uppers = wls_prediction_std(results, exog=X_fit_eval_params, alpha=0.05)     
+                Y_test_all = Y_test
         else:
             params = np.vstack([params, results.params])
+            if plot and plot_margins and model_type == 'lin':
+                #_, l, u = wls_prediction_std(results, exog=X_fit_eval_params, alpha=0.05)    
+                #lowers = np.vstack([lowers, l])
+                #uppers = np.vstack([uppers, u])
+                Y_test_all = np.vstack([Y_test_all, Y_test])
+
+            
         if (plot and plot_individuals) or return_individual_params:
             Y_eval_params = results.predict(X_fit_eval_params)            
             if (plot and plot_individuals):
@@ -749,14 +759,14 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
     #http://reliawiki.com/index.php/Multiple_Linear_Regression_Analysis
     if k > 1:
         means = np.mean(params, axis=0)
-        variances = np.sum((params-np.mean(params, axis=0))**2, axis = 0)/(k-1) # np.var(params, axis=0) # var deli s k in s (k-1)
+        variances = np.sum((params-np.mean(params, axis=0))**2, axis = 0)/(k-1) # np.var(params, axis=0) # isto kot var z ddof=k-1
         sd = variances**0.5
-        se = sd/(k**0.5)
+        se = sd/((k-1)**0.5)
         T0 = means/se
         p_values = 2 * (1 - stats.t.cdf(abs(T0), k-1))
         t = abs(stats.t.ppf(0.05/2,df=k-1))
-        lower_CI = means - ((t*sd)/(k**0.5))
-        upper_CI = means + ((t*sd)/(k**0.5))        
+        lower_CI = means - ((t*sd)/((k-1)**0.5))
+        upper_CI = means + ((t*sd)/((k-1)**0.5))        
         results.initialize(model, means)
     else:
         means = params
@@ -798,9 +808,18 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
     
         
 
-    if plot and plot_margins and model_type=='lin':
-        _, lower, upper = wls_prediction_std(results, exog=X_fit_eval_params, alpha=0.05)
-        plt.fill_between(X_test, lower, upper, color='#888888', alpha=0.1)                   
+    if plot and plot_margins:
+        if model_type == 'lin':
+            if k == 1:
+                _, lower, upper = wls_prediction_std(results, exog=X_fit_eval_params, alpha=0.05)        
+            else:
+                #lower = np.mean(lowers, axis=0)
+                #upper = np.mean(uppers, axis=0)
+                var_Y = np.var(Y_test_all, axis=0, ddof = k-1)
+                sd_Y = var_Y**0.5
+                lower = Y_eval_params - ((t*sd_Y)/((k-1)**0.5))
+                upper = Y_eval_params + ((t*sd_Y)/((k-1)**0.5))
+            plt.fill_between(X_test, lower, upper, color='#888888', alpha=0.1)                   
     
     if plot: 
         if plot_measurements:

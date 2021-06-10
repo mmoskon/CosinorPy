@@ -354,7 +354,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
             data = pd.DataFrame()
             data['rrr'] = rrr_fit
             data['sss'] = sss_fit
-            Y_fit = fit_results.predict(data)   
+            Y_fit = fit_results.predict(data)          
         
             plt.plot(X_fit, Y_fit, 'k', alpha=0.5)
         
@@ -366,9 +366,13 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
         
         if type(params) == int:
             params = np.append(fit_results.params, np.array([amp, acr]))
+            if plot_margins:
+                Y_fit_all = Y_fit
         else:
             params = np.vstack([params, np.append(fit_results.params, np.array([amp, acr]))])
- 
+            if plot_margins:
+                Y_fit_all = np.vstack([Y_fit_all, Y_fit])
+
         cosinors.append(fit_results)
  
     if k > 1:
@@ -434,13 +438,13 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
         fil = acr
         
     if plot_on:
-        x = np.linspace(min(df_pop.x), max(df_pop.x), 100)
-        y = evaluate_cosinor(x, MESOR, amp, acr, period)
-        plt.plot(x, y, 'r')
+        #x = np.linspace(min(df_pop.x), max(df_pop.x), 100)
+        Y_fit = evaluate_cosinor(X_fit, MESOR, amp, acr, period)
+        plt.plot(X_fit, Y_fit, 'r')
 
 
         if plot_margins:
-
+            """
             me = np.linspace(mesoru, mesorl, 5)
             am = np.linspace(ampu, ampl, 5)
             fi = np.linspace(fiu, fil, 5)
@@ -459,6 +463,17 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
             upper = np.max(Y, axis=0)        
 
             plt.fill_between(x, lower, upper, color='black', alpha=0.1)  
+            """
+            if k == 0:                
+                _, lower, upper = wls_prediction_std(fit_results, exog=sm.add_constant(data, has_constant='add'), alpha=0.05)        
+            else:
+                var_Y = np.var(Y_fit_all, axis=0, ddof = k-1)
+                sd_Y = var_Y**0.5
+                lower = Y_fit - ((t*sd_Y)/(k**0.5)) # biased se as above
+                upper = Y_fit + ((t*sd_Y)/(k**0.5)) # biased se as above                
+            plt.fill_between(X_fit, lower, upper, color='#888888', alpha=0.1)
+
+            
 
 
         if save_to:
