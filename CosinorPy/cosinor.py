@@ -8,7 +8,6 @@ import statsmodels
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 import statsmodels.stats.multitest as multi
-from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from scipy.optimize import curve_fit
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from scipy.stats import percentileofscore
