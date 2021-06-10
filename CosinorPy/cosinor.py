@@ -686,7 +686,7 @@ def population_fit_group(df, n_components = 2, period = 24, folder = '', prefix=
 ******************************
 """
     
-def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', plot = True, plot_measurements=True, plot_individuals=True, plot_margins=True, save_to = '', x_label='', y_label='', return_individual_params = False, params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type = "LHS", parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):
+def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', plot = True, plot_measurements=True, plot_individuals=True, plot_margins=True, hold = False, save_to = '', x_label='', y_label='', return_individual_params = False, params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type = "LHS", parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], color="black", **kwargs):
 
     if return_individual_params:
         ind_params = {}
@@ -740,7 +740,10 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         if (plot and plot_individuals) or return_individual_params:
             Y_eval_params = results.predict(X_fit_eval_params)            
             if (plot and plot_individuals):
-                plt.plot(X_test,Y_eval_params,'k', label=test)
+                if not hold:
+                    plt.plot(X_test,Y_eval_params,color=color, alpha=0.25, label=test)
+                else:
+                    plt.plot(X_test,Y_eval_params,color=color, alpha=0.25)
             
             min_Y_test = min(min_Y_test, np.min(Y_eval_params))
             max_Y_test = max(max_Y_test, np.max(Y_eval_params))
@@ -751,7 +754,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
                     ind_params[param].append(rhythm_ind_params[param])
             
         if plot and plot_measurements:
-            plt.plot(x,y,'ko', markersize=1)
+            plt.plot(x,y,'o', color=color, markersize=1)
     
 
 
@@ -790,8 +793,12 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
     Y_eval_params = results.predict(X_fit_eval_params)    
     rhythm_params = evaluate_rhythm_params(X_test, Y_eval_params)
         
-    if plot:        
-        plt.plot(X_test,Y_eval_params,'r', label="population fit")
+    if plot:      
+        pop_name = "_".join(test.split("_")[:-1])  
+        if not hold:
+            plt.plot(X_test,Y_eval_params, color=color, label="population fit")
+        else:            
+            plt.plot(X_test,Y_eval_params, color=color, label=pop_name)
         plt.legend()
         if x_label:
             plt.xlabel(x_label)    
@@ -819,7 +826,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
                 sd_Y = var_Y**0.5
                 lower = Y_eval_params - ((t*sd_Y)/((k-1)**0.5))
                 upper = Y_eval_params + ((t*sd_Y)/((k-1)**0.5))
-            plt.fill_between(X_test, lower, upper, color='#888888', alpha=0.1)                   
+            plt.fill_between(X_test, lower, upper, color=color, alpha=0.1)                   
     
     if plot: 
         if plot_measurements:
@@ -833,15 +840,16 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         
     
     if plot:
-        pop_name = "_".join(test.split("_")[:-1])
-        plt.title(pop_name + ', p-value=' + "{0:.5f}".format(statistics['p']))
+        #pop_name = "_".join(test.split("_")[:-1])
+        if not hold:
+            plt.title(pop_name + ', p-value=' + "{0:.5f}".format(statistics['p']))
 
-        if save_to:
-            plt.savefig(save_to+'.png')
-            plt.savefig(save_to+'.pdf')
-            plt.close()
-        else:
-            plt.show()
+            if save_to:
+                plt.savefig(save_to+'.png')
+                plt.savefig(save_to+'.pdf')
+                plt.close()
+            else:
+                plt.show()
     
     statistics = calculate_statistics(x, y, Y_fit, n_components, period, lin_comp)   
     statistics_params = {'values': means,
@@ -2470,6 +2478,10 @@ def plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'
             min_x = min(min(X), min_x)
             if 'plot_measurements' in kwargs and kwargs['plot_measurements'] == False:
                 max_x = max(max(X % period), max_x)
+            else:
+                max_x = max(max(X), max_x)
+
+
             min_y = min(min(Y), min_y)
             max_y = max(max(Y), max_y)
 
@@ -2484,12 +2496,157 @@ def plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'
         plt.legend()
 
         if folder:            
-            save_to = os.path.join(folder,"+".join(T))   
+            save_to = os.path.join(folder,"+".join(T)+"_"+str(period)+"_"+str(n_components))    
             plt.savefig(save_to+'.png')
             plt.savefig(save_to+'.pdf')
         else:
             plt.show()
         plt.close()
+
+def plot_tuples_best_population(df, df_best_models, tuples, colors = ['black', 'red'], folder = '', **kwargs):
+    
+    
+    for T in tuples:
+        min_x = 1000
+        max_x = -1000
+        min_y = 1000
+        max_y = -1000
+
+
+        for test, color in zip(T, colors):
+            model = df_best_models[df_best_models["test"] == test].iloc[0]
+            n_components = model.n_components
+            period = model.period
+            df_pop = df[df.test.str.startswith(test)] 
+
+            X, Y = np.array(df_pop.x), np.array(df_pop.y)  
+
+
+            min_x = min(min(X), min_x)
+            if 'plot_measurements' in kwargs and kwargs['plot_measurements'] == False:
+                max_x = max(max(X % period), max_x)
+            else:
+                max_x = max(max(X), max_x)
+            min_y = min(min(Y), min_y)
+            max_y = max(max(Y), max_y)
+
+            population_fit(df_pop, n_components = n_components, period = period, save_to = "", hold=True, color = color, **kwargs)
+        
+        plt.title(" + ".join(T))
+        
+                
+        plt.axis([min(min_x,0), max_x, 0.9*min_y, 1.1*max_y])
+        
+        plt.legend()
+
+        if folder:            
+            save_to = os.path.join(folder,"+".join(T)+"_"+str(period)+"_"+str(n_components))   
+            plt.savefig(save_to+'.png')
+            plt.savefig(save_to+'.pdf')
+        else:
+            plt.show()
+        plt.close()
+
+def plot_tuples_models(df, tuples, n_components = 2, period = 24, colors = ['black', 'red'], folder = '', **kwargs):
+    
+    if type(period) == int:
+        period = [period]
+        
+    if type(n_components) == int:
+        n_components = [n_components]
+
+    for per in period:
+        for n_comps in n_components:
+
+
+            for T in tuples:
+                min_x = 1000
+                max_x = -1000
+                min_y = 1000
+                max_y = -1000
+
+
+                for test, color in zip(T, colors):
+                    X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)  
+
+                    min_x = min(min(X), min_x)
+                    if 'plot_measurements' in kwargs and kwargs['plot_measurements'] == False:
+                        max_x = max(max(X % per), max_x)
+                    else:
+                        max_x = max(max(X), max_x)
+
+
+                    min_y = min(min(Y), min_y)
+                    max_y = max(max(Y), max_y)
+
+                    fit_me(X, Y, n_components = n_comps, period = per, name = test, save_to = "", plot_residuals = False, hold=True, color = color, **kwargs)
+                
+                plt.title(" + ".join(T))
+                
+                        
+                plt.axis([min(min_x,0), max_x, 0.9*min_y, 1.1*max_y])
+
+
+                plt.legend()
+
+                if folder:            
+                    save_to = os.path.join(folder,"+".join(T)+"_"+str(per)+"_"+str(n_comps))    
+                    plt.savefig(save_to+'.png')
+                    plt.savefig(save_to+'.pdf')
+                else:
+                    plt.show()
+                plt.close()
+
+def plot_tuples_population(df, tuples, n_components = 2, period = 24, colors = ['black', 'red'], folder = '', **kwargs):
+    
+    
+    if type(period) == int:
+        period = [period]
+        
+    if type(n_components) == int:
+        n_components = [n_components]
+
+    for per in period:
+        for n_comps in n_components:
+
+
+            for T in tuples:
+                min_x = 1000
+                max_x = -1000
+                min_y = 1000
+                max_y = -1000
+
+
+                for test, color in zip(T, colors):
+                    df_pop = df[df.test.str.startswith(test)] 
+
+                    X, Y = np.array(df_pop.x), np.array(df_pop.y)  
+
+
+                    min_x = min(min(X), min_x)
+                    if 'plot_measurements' in kwargs and kwargs['plot_measurements'] == False:
+                        max_x = max(max(X % per), max_x)
+                    else:
+                        max_x = max(max(X), max_x)
+                    min_y = min(min(Y), min_y)
+                    max_y = max(max(Y), max_y)
+
+                    population_fit(df_pop, n_components = n_comps, period = per, save_to = "", hold=True, color = color, **kwargs)
+                
+                plt.title(" + ".join(T))
+                
+                        
+                plt.axis([min(min_x,0), max_x, 0.9*min_y, 1.1*max_y])
+                
+                plt.legend()
+
+                if folder:            
+                    save_to = os.path.join(folder,"+".join(T)+"_"+str(per)+"_"+str(n_comps))      
+                    plt.savefig(save_to+'.png')
+                    plt.savefig(save_to+'.pdf')
+                else:
+                    plt.show()
+                plt.close()
 
 
 

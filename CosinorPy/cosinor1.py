@@ -356,7 +356,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
             data['sss'] = sss_fit
             Y_fit = fit_results.predict(data)          
         
-            plt.plot(X_fit, Y_fit, 'k', alpha=0.5)
+            plt.plot(X_fit, Y_fit, color='black', alpha=0.25)
         
             #M = fit_results.params[0]
             #y_fit = evaluate_cosinor(x, M, amp, acr, period)
@@ -409,7 +409,6 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
         p_mesor = 2 * (1 - stats.t.cdf(abs(T0), k-1))
         #p_mesor = 2 * stats.norm.cdf(-np.abs(MESOR/sem))
 
-
         ampu=amp+(t*(c22**0.5))
         ampl=amp-(t*(c22**0.5))
         se_amp = c22**0.5
@@ -440,7 +439,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
     if plot_on:
         #x = np.linspace(min(df_pop.x), max(df_pop.x), 100)
         Y_fit = evaluate_cosinor(X_fit, MESOR, amp, acr, period)
-        plt.plot(X_fit, Y_fit, 'r')
+        plt.plot(X_fit, Y_fit, 'black')
 
 
         if plot_margins:
@@ -471,7 +470,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
                 sd_Y = var_Y**0.5
                 lower = Y_fit - ((t*sd_Y)/(k**0.5)) # biased se as above
                 upper = Y_fit + ((t*sd_Y)/(k**0.5)) # biased se as above                
-            plt.fill_between(X_fit, lower, upper, color='#888888', alpha=0.1)
+            plt.fill_between(X_fit, lower, upper, color='black', alpha=0.1)
 
             
 
