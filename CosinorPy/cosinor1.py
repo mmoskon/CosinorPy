@@ -258,7 +258,7 @@ def evaluate_cosinor(x, MESOR, amp, acr, period):
     return MESOR + amp*np.cos((2*np.pi*x/period) + acr)
 
 def population_fit_group(df, period = 24, save_folder='', **kwargs):    
-    df_cosinor1_fits = pd.DataFrame(columns = ['test', 'p', 'q', 'amplitude', 'p(amplitude)', 'q(amplitude)', 'LB(amplitude)', 'UB(amplitude)', 'mesor', 'p(mesor)', 'q(mesor)', 'LB(mesor)', 'UB(mesor)', 'acrophase', 'LB(acrophase)','UB(acrophase)'], dtype=float)
+    df_cosinor1_fits = pd.DataFrame(columns = ['test', 'p', 'q', 'amplitude', 'p(amplitude)', 'q(amplitude)', 'CI(amplitude)', 'mesor', 'p(mesor)', 'q(mesor)', 'CI(mesor)', 'acrophase', 'p(acrophase)', 'q(acrophase)', 'CI(acrophase)'], dtype=float)
     
     names = df.test.unique()
     names = list(set(map(lambda x:x.split('_rep')[0], names)))
@@ -279,15 +279,13 @@ def population_fit_group(df, period = 24, save_folder='', **kwargs):
          'p':res['p_value'], 
          'amplitude': res['means'][-2],
          'p(amplitude)':res['p_amp'],
-         'LB(amplitude)': res['confint']['amp'][0],  
-         'UB(amplitude)': res['confint']['amp'][1],
+         'CI(amplitude)': [res['confint']['amp'][0], res['confint']['amp'][1]],
          'p(mesor)':res['p_mesor'],
          'mesor': res['means'][0],
-         'LB(mesor)': res['confint']['MESOR'][0],  
-         'UB(mesor)': res['confint']['MESOR'][1],
+         'CI(mesor)': [res['confint']['MESOR'][0], res['confint']['MESOR'][1]],
          'acrophase':res['means'][-1],
-         'LB(acrophase)': res['confint']['acr'][0],  
-         'UB(acrophase)': res['confint']['acr'][1],
+         'p(acrophase)':res['p_acr'],
+         'CI(acrophase)': [res['confint']['acr'][0], res['confint']['acr'][1]],
          'acrophase[h]':cosinor.acrophase_to_hours(res['means'][-1],period)}
     
         df_cosinor1_fits = df_cosinor1_fits.append(d, ignore_index=True)
@@ -295,18 +293,17 @@ def population_fit_group(df, period = 24, save_folder='', **kwargs):
     df_cosinor1_fits['q'] = multi.multipletests(df_cosinor1_fits['p'], method = 'fdr_bh')[1]
     df_cosinor1_fits['q(amplitude)'] = multi.multipletests(df_cosinor1_fits['p(amplitude)'], method = 'fdr_bh')[1]
     df_cosinor1_fits['q(mesor)'] = multi.multipletests(df_cosinor1_fits['p(mesor)'], method = 'fdr_bh')[1]
+    df_cosinor1_fits['q(acrophase)'] = multi.multipletests(df_cosinor1_fits['p(acrophase)'], method = 'fdr_bh')[1]
 
 
     return df_cosinor1_fits    
 
 def population_test_cosinor_pairs(df, pairs, period = 24):
     df_res = pd.DataFrame(columns = ['test', 
-                                    'amplitude1', 
-                                    'amplitude2',
+                                    'd_amplitude', 
                                     'p(d_amplitude)',
                                     'q(d_amplitude)',                              
-                                    'acrophase1',
-                                    'acrophase2',
+                                    'd_acrophase',
                                     'p(d_acrophase)',
                                     'q(d_acrophase)'], dtype=float)
 
@@ -319,11 +316,9 @@ def population_test_cosinor_pairs(df, pairs, period = 24):
 
         res = population_test_cosinor(res1, res2)
         d = {'test': res['test'], 
-            'amplitude1':res['amp']['pop1'], 
-            'amplitude2':res['amp']['pop2'], 
+            'd_amplitude':res['amp']['pop2'] - res['amp']['pop1'], 
             'p(d_amplitude)':res['amp']['p_value'],            
-            'acrophase1':res['acr']['pop1'],
-            'acrophase2':res['acr']['pop2'], 
+            'd_acrophase1':cosinor.project_acr(res['acr']['pop2']-res['acr']['pop1']),
             'p(d_acrophase)':res['acr']['p_value']}
 
         df_res = df_res.append(d, ignore_index=True)
@@ -345,11 +340,13 @@ def population_test_cosinor_pairs_independent(df, pairs, period=24, period2=None
                                     'd_amplitude',
                                     'p(d_amplitude)',
                                     'q(d_amplitude)',                              
+                                    'CI(d_amplitude)',
                                     'acrophase1',
                                     'acrophase2',
-                                    'd_acrophase',
+                                    'd_acrophase',                                    
                                     'p(d_acrophase)',
-                                    'q(d_acrophase)'], dtype=float)
+                                    'q(d_acrophase)',
+                                    'CI(d_acrophase)'], dtype=float)
 
     for pair in pairs:
         df_pop1 = df[df.test.str.startswith(pair[0])] 
@@ -368,8 +365,10 @@ def population_test_cosinor_pairs_independent(df, pairs, period=24, period2=None
         amp1, amp2 = res1['means'][-2], res2['means'][-2]
         dev1 = abs(res1['confint'][param][1] - res1['confint'][param][0])/2
         dev2 = abs(res2['confint'][param][1] - res2['confint'][param][0])/2
+        dev = dev1+dev2
         se = (dev1 + dev2)/t
         d_amp = amp2 - amp1
+        CI_amp = [d_amp-dev, d_amp+dev]
         T0 = d_amp/se
         p_val_amp = 2 * (1 - stats.t.cdf(abs(T0), DoF))
 
@@ -381,8 +380,10 @@ def population_test_cosinor_pairs_independent(df, pairs, period=24, period2=None
         dev2 = (res2['confint'][param][1] - res2['confint'][param][0])/2
         dev1 = abs(cosinor.project_acr(dev1))
         dev2 = abs(cosinor.project_acr(dev2))
+        dev = dev1+dev2
         se = (dev1 + dev2)/t
         d_acr = cosinor.project_acr(acr2-acr1)
+        CI_acr = [d_acr - dev, d_acr + dev]
         T0 = d_acr/se
         p_val_acr = 2 * (1 - stats.t.cdf(abs(T0), DoF))
 
@@ -391,10 +392,12 @@ def population_test_cosinor_pairs_independent(df, pairs, period=24, period2=None
             'amplitude2':amp2,
             'd_amplitude': d_amp,
             'p(d_amplitude)':p_val_amp,
+            'CI(d_amplitude)':CI_amp,
             'acrophase1':acr1,
             'acrophase2':acr2,
-            'd_acrophase': d_amp,
-            'p(d_acrophase)':p_val_acr}
+            'd_acrophase': d_acr,
+            'p(d_acrophase)':p_val_acr,
+            'CI(d_acrophase)':CI_acr}
 
         df_res = df_res.append(d, ignore_index=True)
 
@@ -673,7 +676,7 @@ def population_test_cosinor(pop1, pop2):
             
 
 def fit_group(df, period = 24, save_folder='', plot_on=True):
-    df_cosinor1_fits = pd.DataFrame(columns = ['test', 'p', 'q', 'amplitude', 'p(amplitude)', 'q(amplitude)', 'acrophase', 'p(acrophase)','q(acrophase)'], dtype=float)
+    df_cosinor1_fits = pd.DataFrame(columns = ['test', 'p', 'q', 'amplitude', 'p(amplitude)', 'q(amplitude)', 'CI(amplitude)', 'acrophase', 'p(acrophase)','q(acrophase)', 'CI(acrophase)'], dtype=float)
     
     if (type(period) == int) or (type(period)==float):
         period = [period] 
@@ -686,16 +689,18 @@ def fit_group(df, period = 24, save_folder='', plot_on=True):
                 fit_results, amp, acr, statistics = fit_cosinor(x, y, per, test=test, save_to=os.path.join(save_folder,test+"_"+str(per)+".pdf"),  plot_on = plot_on)
             else:
                 fit_results, amp, acr, statistics = fit_cosinor(x, y, per, test=test, plot_on = plot_on)
-            if acr <0:
-                acr += 2 * np.pi
+            #if acr <0:
+            #    acr += 2 * np.pi
         
             d = {'test': test, 
             'p':fit_results.f_pvalue, 
             'amplitude': amp,
             'period': per,
             'p(amplitude)': statistics['p-values'][1], 
-            'acrophase':acr,
+            'CI(amplitude)': [statistics['CI'][0][1], statistics['CI'][1][1]],
+            'acrophase':acr,            
             'p(acrophase)': statistics['p-values'][2],
+            'CI(acrophase)': [statistics['CI'][0][2], statistics['CI'][1][2]],
             'acrophase[h]':cosinor.acrophase_to_hours(acr,per)}
         
             df_cosinor1_fits = df_cosinor1_fits.append(d, ignore_index=True)
@@ -735,6 +740,7 @@ def test_cosinor_pairs(df, pairs, period = 24, folder = '', prefix='', plot_meas
                                          'd_amplitude', 
                                          'p(d_amplitude)', 
                                          'q(d_amplitude)',
+                                         'CI(d_amplitde)',
                                          'acrophase1', 
                                          'p(acrophase1)',
                                          'q(acrophase1)',
@@ -743,7 +749,8 @@ def test_cosinor_pairs(df, pairs, period = 24, folder = '', prefix='', plot_meas
                                          'q(acrophase2)',
                                          'd_acrophase',
                                          'p(d_acrophase)',
-                                         'q(d_acrophase)'], dtype=float)
+                                         'q(d_acrophase)',
+                                         'CI(d_acrophase)'], dtype=float)
     
     for test1, test2 in pairs:    
         if folder:
@@ -780,12 +787,14 @@ def test_cosinor_pairs(df, pairs, period = 24, folder = '', prefix='', plot_meas
             'p(amplitude2)':statistics_trans['p-values'][idx_group_amp],
             'd_amplitude': ind_test_amp['value'],
             'p(d_amplitude)': float(ind_test_amp['p_value']),
+            'CI(d_amplitude)': ind_test_amp['conf_int'],
             'acrophase1': statistics_trans['values'][idx_acr],
             'p(acrophase1)':statistics_trans['p-values'][idx_acr],
             'acrophase2': statistics_trans['values'][idx_group_acr],
             'p(acrophase2)':statistics_trans['p-values'][idx_group_acr],
             'd_acrophase': ind_test_acr['value'],
-            'p(d_acrophase)': float(ind_test_acr['p_value'])}
+            'p(d_acrophase)': float(ind_test_acr['p_value']),
+            'CI(d_acrophase)': ind_test_acr['conf_int']}
 
         df_results = df_results.append(d, ignore_index=True)
         plot_pair(df_pair, fit_results, test1=test1, test2=test2, plot_measurements=plot_measurements, save_to=save_to, period=period, legend=legend)
@@ -826,11 +835,13 @@ def test_cosinor_pairs_independent(df, pairs, period = 24, period2 = None, df_be
                                          'd_amplitude', 
                                          'p(d_amplitude)', 
                                          'q(d_amplitude)',
+                                         'CI(d_amplitude)',
                                          'acrophase1', 
                                          'acrophase2',
                                          'd_acrophase',
                                          'p(d_acrophase)',
-                                         'q(d_acrophase)'], dtype=float)
+                                         'q(d_acrophase)',
+                                         'CI(d_acrophase)'], dtype=float)
     
     for test1, test2 in pairs:           
         
@@ -857,9 +868,11 @@ def test_cosinor_pairs_independent(df, pairs, period = 24, period2 = None, df_be
         amp2_l, amp2_u = stats2['CI'][0][-2], stats2['CI'][1][-2]
         dev_amp1 = abs(amp1_u - amp1_l)/2
         dev_amp2 = abs(amp2_u - amp2_l)/2
+        dev_amp = dev_amp1 + dev_amp2
         se_amp = (dev_amp1 + dev_amp2)/t
         T0 = d_amp/se_amp
         p_val_amp = 2 * (1 - stats.t.cdf(abs(T0), DoF))
+        CI_amp = [d_amp-dev_amp, d_amp+dev_amp]
 
         acr1_l, acr1_u = stats1['CI'][0][-1], stats1['CI'][1][-1]
         acr2_l, acr2_u = stats2['CI'][0][-1], stats2['CI'][1][-1]
@@ -867,9 +880,11 @@ def test_cosinor_pairs_independent(df, pairs, period = 24, period2 = None, df_be
         dev_acr2 = (acr2_u - acr2_l)/2
         dev_acr1 = abs(cosinor.project_acr(dev_acr1))
         dev_acr2 = abs(cosinor.project_acr(dev_acr2))
+        dev_acr = dev_acr1 + dev_acr2
         se_acr = (dev_acr1 + dev_acr2)/t  
         T0 = d_acr/se_acr
         p_val_acr = 2 * (1 - stats.t.cdf(abs(T0), DoF))
+        CI_acr = [d_acr - dev_acr, d_acr + dev_acr]
              
         d = {'test':test1+' vs. '+test2,
             'p1': fit_results1.f_pvalue,
@@ -880,10 +895,12 @@ def test_cosinor_pairs_independent(df, pairs, period = 24, period2 = None, df_be
             'amplitude2': amp2,
             'd_amplitude': d_amp,
             'p(d_amplitude)': p_val_amp,
+            'CI(d_amplitude)': CI_amp,
             'acrophase1': acr1,
             'acrophase2': acr2,
             'd_acrophase': d_acr,
-            'p(d_acrophase)': p_val_acr}
+            'p(d_acrophase)': p_val_acr,
+            'CI(d_acrophase)': CI_acr}
 
         df_results = df_results.append(d, ignore_index=True)
         
@@ -911,6 +928,8 @@ def test_cosinor_single(data, period = 24, corrected = True):
     beta_s = results.params['sss']
     beta_r = results.params['rrr']
     amp, acr = amp_acr(beta_s, beta_r)
+    # project acropahse to interval -pi,pi
+    acr = cosinor.project_acr(acr)
     
     vmat = results.cov_params().loc[['rrr', 'sss'], ['rrr', 'sss']]
     indVmat = vmat
@@ -932,14 +951,16 @@ def test_cosinor_single(data, period = 24, corrected = True):
     zt = abs(stats.norm.ppf((1-0.95)/2))
 
     trans_names = [results.params.index.values[0]] + ['amp', 'acr']
+    
     coef_trans = np.array([results.params.iloc[0], amp, acr])
     se_trans = np.concatenate((np.sqrt(np.diag(results.cov_params().loc[['Intercept'], ['Intercept']])),se_trans_only))  
 
-    # correct acropahse
-    coef_trans[-1] = cosinor.project_acr(coef_trans[-1])
+    
+    
+    
  
-    lower_CI_trans = coef_trans - zt * se_trans           
-    upper_CI_trans = coef_trans + zt * se_trans
+    lower_CI_trans = coef_trans - np.abs(zt * se_trans)
+    upper_CI_trans = coef_trans + np.abs(zt * se_trans)
     p_value_trans = 2 * stats.norm.cdf(-np.abs(coef_trans/se_trans)) 
 
     statistics= {'parameters': trans_names,
