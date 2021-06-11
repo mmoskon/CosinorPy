@@ -698,62 +698,89 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
     tests = df_pop.test.unique()
     k = len(tests)
     
-    X_test = np.linspace(0, 100, 1000)
-    X_fit_eval_params = generate_independents(X_test, n_components = n_components, period = period, lin_comp = lin_comp)
-    if lin_comp:
-        X_fit_eval_params[:,1] = 0    
+
+    #X_test = np.linspace(0, 2*period, 1000)
+    #X_fit_eval_params = generate_independents(X_test, n_components = n_components, period = period, lin_comp = lin_comp)
+    #if lin_comp:
+    #    X_fit_eval_params[:,1] = 0    
     
+    min_X = np.min(df_pop.x.values)
+    max_X = np.max(df_pop.x.values)
+    min_Y = np.min(df_pop.y.values)
+    max_Y = np.max(df_pop.y.values)
+
+
+    if plot:
+        if plot_measurements:
+            X_plot = np.linspace(min(min_X,0), 1.1*max(max_X,period), 1000)
+        else:
+            X_plot = np.linspace(0, 1.1*period, 1000)
+
+        X_plot_fits = generate_independents(X_plot, n_components = n_components, period = period, lin_comp = lin_comp)
+        if lin_comp:
+            X_plot_fits[:,1] = 0   
+
+    """
     min_X = 1000
     max_X = 0
     min_Y = 1000
     max_Y = 0
+    min_X_test = np.min(X_test)
+    """
     min_Y_test = 1000
     max_Y_test = 0
-    min_X_test = np.min(X_test)
     
     
     for test in tests:
         x,y = np.array(df_pop[df_pop.test == test].x), np.array(df_pop[df_pop.test == test].y)
         
+        """
         min_X = min(min_X, np.min(x))
         max_X = max(max_X, np.max(x))
         
         min_Y = min(min_Y, np.min(y))
         max_Y = max(max_Y, np.max(y))
-                        
-        results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, plot = False, return_model = True, **kwargs)
+        """
+
+        results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, plot = False, return_model = True, lin_comp=lin_comp, **kwargs)
+        X_fit_eval_params = generate_independents(X_test, n_components = n_components, period = period, lin_comp = lin_comp)
+        if lin_comp:
+            X_fit_eval_params[:,1] = 0    
+
+        if return_individual_params:
+            Y_eval_params = results.predict(X_fit_eval_params)    
+            rhythm_ind_params = evaluate_rhythm_params(X_test, Y_eval_params, period=period)    
+            for param in parameters_to_analyse:
+                ind_params[param].append(rhythm_ind_params[param])
+            
+        if (plot and plot_individuals):
+            #Y_eval_params = results.predict(X_fit_eval_params)            
+            Y_plot_fits = results.predict(X_plot_fits)            
+            if (plot and plot_individuals):
+                if not hold:
+                    plt.plot(X_plot,Y_plot_fits,color=color, alpha=0.25, label=test)
+                else:
+                    plt.plot(X_plot,Y_plot_fits,color=color, alpha=0.25)
+            
+            min_Y_test = min(min_Y_test, np.min(Y_plot_fits))
+            max_Y_test = max(max_Y_test, np.max(Y_plot_fits))
+            
+        
+        if plot and plot_measurements:
+            plt.plot(x,y,'o', color=color, markersize=1)
+
         if type(params) == int:
             params = results.params
             if plot and plot_margins and model_type == 'lin':
                 #_, lowers, uppers = wls_prediction_std(results, exog=X_fit_eval_params, alpha=0.05)     
-                Y_test_all = Y_test
+                Y_plot_fits_all = Y_plot_fits
         else:
             params = np.vstack([params, results.params])
             if plot and plot_margins and model_type == 'lin':
                 #_, l, u = wls_prediction_std(results, exog=X_fit_eval_params, alpha=0.05)    
                 #lowers = np.vstack([lowers, l])
                 #uppers = np.vstack([uppers, u])
-                Y_test_all = np.vstack([Y_test_all, Y_test])
-
-            
-        if (plot and plot_individuals) or return_individual_params:
-            Y_eval_params = results.predict(X_fit_eval_params)            
-            if (plot and plot_individuals):
-                if not hold:
-                    plt.plot(X_test,Y_eval_params,color=color, alpha=0.25, label=test)
-                else:
-                    plt.plot(X_test,Y_eval_params,color=color, alpha=0.25)
-            
-            min_Y_test = min(min_Y_test, np.min(Y_eval_params))
-            max_Y_test = max(max_Y_test, np.max(Y_eval_params))
-            
-            if return_individual_params:
-                rhythm_ind_params = evaluate_rhythm_params(X_test, Y_eval_params)    
-                for param in parameters_to_analyse:
-                    ind_params[param].append(rhythm_ind_params[param])
-            
-        if plot and plot_measurements:
-            plt.plot(x,y,'o', color=color, markersize=1)
+                Y_plot_fits_all = np.vstack([Y_plot_fits_all, Y_plot_fits])
     
 
 
@@ -790,14 +817,17 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
     Y_fit = results.predict(X_fit)
     
     Y_eval_params = results.predict(X_fit_eval_params)    
-    rhythm_params = evaluate_rhythm_params(X_test, Y_eval_params)
+    rhythm_params = evaluate_rhythm_params(X_test, Y_eval_params, period=period)
         
     if plot:      
         pop_name = "_".join(test.split("_")[:-1])  
+
+        Y_plot_fits = results.predict(X_plot_fits)            
+        
         if not hold:
-            plt.plot(X_test,Y_eval_params, color=color, label="population fit")
+            plt.plot(X_plot,Y_plot_fits, color=color, label="population fit")
         else:            
-            plt.plot(X_test,Y_eval_params, color=color, label=pop_name)
+            plt.plot(X_plot,Y_plot_fits, color=color, label=pop_name)
         plt.legend()
         if x_label:
             plt.xlabel(x_label)    
@@ -817,15 +847,15 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
     if plot and plot_margins:
         if model_type == 'lin':
             if k == 1:
-                _, lower, upper = wls_prediction_std(results, exog=X_fit_eval_params, alpha=0.05)        
+                _, lower, upper = wls_prediction_std(results, exog=X_plot_fits, alpha=0.05)        
             else:
                 #lower = np.mean(lowers, axis=0)
                 #upper = np.mean(uppers, axis=0)
-                var_Y = np.var(Y_test_all, axis=0, ddof = k-1)
+                var_Y = np.var(Y_plot_fits_all, axis=0, ddof = k-1)
                 sd_Y = var_Y**0.5
-                lower = Y_eval_params - ((t*sd_Y)/((k-1)**0.5))
-                upper = Y_eval_params + ((t*sd_Y)/((k-1)**0.5))
-            plt.fill_between(X_test, lower, upper, color=color, alpha=0.1)                   
+                lower = Y_plot_fits - ((t*sd_Y)/((k-1)**0.5))
+                upper = Y_plot_fits + ((t*sd_Y)/((k-1)**0.5))
+            plt.fill_between(X_plot, lower, upper, color=color, alpha=0.1)                   
     
     if plot: 
         if plot_measurements:
@@ -835,7 +865,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
                 plt.axis([min(min_X,0), max_X, 0.9*min(min_Y, min_Y_test), 1.1*max(max_Y, max_Y_test)])
             
         else:
-            plt.axis([min_X_test, 50, min_Y_test*0.9, max_Y_test*1.1])
+            plt.axis([0, period, min_Y_test*0.9, max_Y_test*1.1])
         
     
     if plot:
@@ -858,8 +888,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
 
 
     if params_CI:
-        population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=samples_per_param_CI, max_samples = max_samples_CI, k=k, sampling_type=sampling_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular)
-        
+        population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=samples_per_param_CI, max_samples = max_samples_CI, k=k, sampling_type=sampling_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, period=period)
 
     if return_individual_params:        
         return params, statistics, statistics_params, rhythm_params, results, ind_params
@@ -873,8 +902,9 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
     # prepare the independent variables
     ###
     """
-    X_test = np.linspace(0, 100, 1000)
+    
 
+    """
     if n_components == 0:
         X_fit = X
         X_fit_test = X_test
@@ -894,19 +924,21 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
             else:
                 X_fit = np.column_stack((X_fit, np.column_stack((A, B))))
                 X_fit_test = np.column_stack((X_fit_test, np.column_stack((A_test, B_test))))
+    """
 
+    X_fit = generate_independents(X, n_components=n_components, period=period, lin_comp=lin_comp)    
     
-    X_fit_eval_params = X_fit_test
+    #X_fit_eval_params = X_fit_test
     
-    if lin_comp and n_components:
-        X_fit = np.column_stack((X, X_fit))
-        X_fit_eval_params = np.column_stack((np.zeros(len(X_test)), X_fit_test))
-        X_fit_test = np.column_stack((X_test, X_fit_test))                              
+    #if lin_comp and n_components:
+    #    X_fit = np.column_stack((X, X_fit))
+    #    X_fit_eval_params = np.column_stack((np.zeros(len(X_test)), X_fit_test))
+    #    X_fit_test = np.column_stack((X_test, X_fit_test))                              
 
 
-    X_fit = sm.add_constant(X_fit, has_constant='add')
-    X_fit_test = sm.add_constant(X_fit_test, has_constant='add')
-    X_fit_eval_params = sm.add_constant(X_fit_eval_params, has_constant='add')
+    #X_fit = sm.add_constant(X_fit, has_constant='add')
+    #X_fit_test = sm.add_constant(X_fit_test, has_constant='add')
+    #X_fit_eval_params = sm.add_constant(X_fit_eval_params, has_constant='add')
     """
     ###
     # fit
@@ -962,43 +994,89 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
         p = results.llr_pvalue
         statistics = {'p':p, 'RSS':RSS, 'count': np.sum(Y)}
     
-    Y_test = results.predict(X_fit_test)
-    Y_eval_params = results.predict(X_fit_eval_params)
-    
-    rhythm_params = evaluate_rhythm_params(X_test, Y_eval_params)
+    #Y_test = results.predict(X_fit_test)
+    X_test = np.linspace(0, 2*period, 1000)
+    X_fit_test = generate_independents(X_test, n_components=n_components, period=period, lin_comp=lin_comp)
+    Y_fit_test = results.predict(X_fit_test)
+    rhythm_params = evaluate_rhythm_params(X_test, Y_fit_test, period=period)
     
     """
     ###
     # plot
     ###
     """
+         
     if plot:
+
+        if plot_measurements:
+            min_X = min(0,np.min(X))
+            max_X = np.max(X)
+        else:
+            min_X = 0
+            max_X = period
+                
+        X_plot = np.linspace(min_X, max_X, 1000)
+        X_plot_fits = generate_independents(X_plot, n_components=n_components, period=period, lin_comp=lin_comp)
+        Y_plot = results.predict(X_plot_fits)
+        
+
+        ###
+        if not color:
+            color = 'black'
+
+        if plot_measurements:        
+            if not hold:             
+                plt.plot(X,Y, 'ko', markersize=1, label = 'data', color=color)
+            else:
+                plt.plot(X,Y, 'ko', markersize=1, color=color)
+                
+        if not hold:
+            plt.plot(X_plot, Y_plot, 'k', label = 'fit', color=color)
+        else:
+            plt.plot(X_plot, Y_plot, 'k', label = name, color=color)
+        
+        # plot measurements
+        if plot_measurements:
+            if rescale_to_period:
+                X = X % period
+
+            if model_type == 'lin':               
+                plt.axis([min_X, max_X, 0.9*min(min(Y), min(Y_plot)), 1.1*max(max(Y), max(Y_plot))])
+            else:
+                plt.axis([min_X, max_X, 0.9*min(min(Y), min(Y_plot)), 1.1*max(max(Y), max(Y_plot))])
+        else:
+            plt.axis([min_X, max_X, min(Y_plot)*0.9, max(Y_plot)*1.1])
+        if model_type == 'lin':
+            if name: 
+                plt.title(name + ', p-value=' + "{0:.5f}".format(statistics['p']))
+            else:
+                plt.title('p-value=' + "{0:.5f}".format(statistics['p']))
+        else:
+            if name:
+                plt.title(name + ', p-value=' + '{0:.3f}'.format(statistics['p']) + ' (n='+str(statistics['count'])+ ')')            
+            else:
+                plt.title('p-value=' + '{0:.3f}'.format(statistics['p']) + ' (n='+str(statistics['count'])+ ')')
+        if x_label:
+            plt.xlabel(x_label)
+        else:
+            plt.xlabel('Time [h]')
+        
+        if y_label:
+            plt.ylabel(y_label)
+        elif model_type == 'lin':
+            plt.ylabel('Measurements')
+        else:
+            plt.ylabel('Count')
+        
+        # plot confidence intervals
         if plot_margins:
             if model_type == 'lin':
-                _, lower, upper = wls_prediction_std(results, exog=X_fit_test, alpha=0.05)
-                """
-                rhythm_params_lower = evaluate_rhythm_params(X_test, lower)
-                
-                # could take out at least amplitude!
-                mean_amp = rhythm_params['amplitude']
-                se_amp = abs(mean_amp - rhythm_params_lower['amplitude'])
-                rhythm_params['amplitude_CI'] = [mean_amp - 1.96*se_amp, mean_amp + 1.96*se_amp]
-                rhythm_params['amplitude_CI_p'] = 2 * norm.cdf(-np.abs(mean_amp/se_amp))
-
-                mean_mes = rhythm_params['mesor']
-                se_mes = abs(mean_mes - rhythm_params_lower['mesor'])
-                rhythm_params['mesor_CI'] = [mean_mes - 1.96*se_mes, mean_mes + 1.96*se_mes]
-                rhythm_params['mesor_CI_p'] = 2 * norm.cdf(-np.abs(mean_mes/se_mes))
-
-                mean_acr = rhythm_params['acrophase']
-                se_acr = abs(mean_acr - rhythm_params_lower['acrophase'])
-                rhythm_params['acrophase_CI'] = [mean_acr - 1.96*se_acr, mean_acr + 1.96*se_acr]
-                rhythm_params['acrophase_CI_p'] = 2 * norm.cdf(-np.abs(mean_acr/se_acr))
-                """
+                _, lower, upper = wls_prediction_std(results, exog=X_plot_fits, alpha=0.05)
+             
                 if color:
-                    plt.fill_between(X_test, lower, upper, color=color, alpha=0.1)
+                    plt.fill_between(X_plot, lower, upper, color=color, alpha=0.1)
                 else:
-                    plt.fill_between(X_test, lower, upper, color='#888888', alpha=0.1)
+                    plt.fill_between(X_plot, lower, upper, color='#888888', alpha=0.1)
             else: 
                 # calculate and draw plots from the combinations of parameters from the  95 % confidence intervals of assessed parameters
 
@@ -1023,12 +1101,6 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                 for i, CI in enumerate(CIs):                    
                     P[i,:] = np.linspace(CI[0], CI[1], N2)
 
-                """    
-                amplitude_CI = [rhythm_params['amplitude']]
-                mesor_CI = [rhythm_params['mesor']]
-                acrophase_CI = [rhythm_params['acrophase']]
-                """
-
                 n_param_samples = P.shape[1]**P.shape[0] 
                 N = n_param_samples #min(max_samples_CI, n_param_samples)
             
@@ -1042,106 +1114,16 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                     p = lazy_prod(idx, P)
             
                     res2.initialize(results.model, p)            
-                    Y_test_CI = res2.predict(X_fit_test)
+                    Y_test_CI = res2.predict(X_plot_fits)
 
-                    """ 
-                    rhythm_params_CI = evaluate_rhythm_params(X_test, Y_test_CI)
-                    amplitude_CI.append(rhythm_params_CI['amplitude'])
-                    mesor_CI.append(rhythm_params_CI['mesor'])
-                    acrophase_CI.append(rhythm_params_CI['acrophase'])
-                    """
-                                   
+                                                      
                     if plot and plot_margins:
                         if color and color != '#000000':
-                            plt.plot(X_test, Y_test_CI, color=color, alpha=0.05)
+                            plt.plot(X_plot, Y_test_CI, color=color, alpha=0.05)
                         else:
-                            plt.plot(X_test, Y_test_CI, color='#888888', alpha=0.05)
-                
-                """
-                # if report_CI!!!
-                # added
-                report_CI = True
-                if report_CI:
-                    mean_amp = rhythm_params['amplitude']
-                    amp_l = mean_amp-np.nanmin(amplitude_CI)
-                    amp_u = np.nanmax(amplitude_CI) - mean_amp
-                    se_amp = max(amp_l, amp_u)/1.96
-                    rhythm_params['amplitude_CI'] = [mean_amp - 1.96*se_amp, mean_amp + 1.96*se_amp]
-                    rhythm_params['amplitude_CI_p'] = 2 * norm.cdf(-np.abs(mean_amp/se_amp))
-                """
-
-                """
-                mean_amp = np.mean(amplitude_CI) 
-                se_amp = stats.sem(amplitude_CI)
-                #rhythm_params['amplitude_bootstrap'] = np.mean(amplitude_CI)               
-                rhythm_params['amplitude_CI'] = [mean_amp - 1.96*se_amp, mean_amp + 1.96*se_amp]
-                rhythm_params['amplitude_CI_p'] = 2 * norm.cdf(-np.abs(mean_amp/se_amp))
-                
-                mean_mes = np.mean(mesor_CI)
-                se_mes = stats.sem(mesor_CI)
-                #rhythm_params['mesor_bootstrap'] = np.mean(mesor_CI)    
-                rhythm_params['mesor_CI'] = [mean_mes - 1.96*se_mes, mean_mes + 1.96*se_mes]
-                rhythm_params['mesor_CI_p'] = 2 * norm.cdf(-np.abs(mean_mes/se_mes))
-
-                mean_acr = np.mean(acrophase_CI)
-                se_acr = stats.sem(acrophase_CI)
-                #rhythm_params['acrophase_bootstrap'] = np.mean(acrophase_CI)
-                rhythm_params['acrophase_CI'] = [mean_acr - 1.96*se_acr, mean_acr + 1.96*se_acr]
-                rhythm_params['acrophase_CI_p'] = 2 * norm.cdf(-np.abs(mean_acr/se_acr))
-                """
+                            plt.plot(X_plot, Y_test_CI, color='#888888', alpha=0.05)
+                            
   
-    if plot:
-        ###
-        if not color:
-            color = 'black'
-
-        if plot_measurements:        
-            if not hold:             
-                plt.plot(X,Y, 'ko', markersize=1, label = 'data', color=color)
-            else:
-                plt.plot(X,Y, 'ko', markersize=1, color=color)
-                
-        if not hold:
-            plt.plot(X_test, Y_test, 'k', label = 'fit', color=color)
-        else:
-            plt.plot(X_test, Y_test, 'k', label = name, color=color)
-        #if color and not plot_margins: 
-        #    plt.plot(X_test, Y_test, 'k', label = 'fit', color=color)
-        #else:
-        #    plt.plot(X_test, Y_test, 'k', label = 'fit')
-        
-        if plot_measurements:
-            if rescale_to_period:
-                X = X % period
-
-            if model_type == 'lin':               
-                plt.axis([min(min(X),0), max(X), 0.9*min(min(Y), min(Y_test)), 1.1*max(max(Y), max(Y_test))])
-            else:
-                plt.axis([min(min(X),0), max(X), 0.9*min(min(Y), min(Y_test)), 1.1*max(max(Y), max(Y_test))])
-        else:
-            plt.axis([min(X_test), period, min(Y_test)*0.9, max(Y_test)*1.1])
-        if model_type == 'lin':
-            if name: 
-                plt.title(name + ', p-value=' + "{0:.5f}".format(statistics['p']))
-            else:
-                plt.title('p-value=' + "{0:.5f}".format(statistics['p']))
-        else:
-            if name:
-                plt.title(name + ', p-value=' + '{0:.3f}'.format(statistics['p']) + ' (n='+str(statistics['count'])+ ')')            
-            else:
-                plt.title('p-value=' + '{0:.3f}'.format(statistics['p']) + ' (n='+str(statistics['count'])+ ')')
-        if x_label:
-            plt.xlabel(x_label)
-        else:
-            plt.xlabel('Time [h]')
-        
-        if y_label:
-            plt.ylabel(y_label)
-        elif model_type == 'lin':
-            plt.ylabel('Measurements')
-        else:
-            plt.ylabel('Count')
-        
         if not hold:
             if save_to:
                 plt.savefig(save_to+'.png')
@@ -1171,15 +1153,15 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                     plot_phases([phase], [amp], [name], period=per)#, plot_measurements=True, measurements=[X,Y])
 
     if bootstrap:
-        eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y,  model_type = model_type, rhythm_params=rhythm_params, bootstrap_size=bootstrap_size, bootstrap_type=bootstrap_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular)
+        eval_params_bootstrap(X, X_fit, X_test, X_fit_test, Y,  model_type = model_type, rhythm_params=rhythm_params, bootstrap_size=bootstrap_size, bootstrap_type=bootstrap_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, period=period)
         
     if params_CI:
-        eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param = samples_per_param_CI, max_samples = max_samples_CI, k=len(X), sampling_type=sampling_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular)
+        eval_params_CI(X_test, X_fit_test, results, rhythm_params, samples_per_param = samples_per_param_CI, max_samples = max_samples_CI, k=len(X), sampling_type=sampling_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, period=period)
 
     if return_model: 
-        return results, statistics, rhythm_params, X_test, Y_test, model
+        return results, statistics, rhythm_params, X_test, Y_fit_test, model
     else:    
-        return results, statistics, rhythm_params, X_test, Y_test
+        return results, statistics, rhythm_params, X_test, Y_fit_test
 
 
 """
@@ -1195,28 +1177,28 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
 """
 
 # rhythm params
-def evaluate_rhythm_params(X,Y, project_acrophase=True):
+def evaluate_rhythm_params(X,Y, project_acrophase=True, period=0):
     m = min(Y)
     M = max(Y)
     A = M - m
     MESOR = m + A/2
     AMPLITUDE = A/2
     
-    PERIOD = 0
     PHASE = 0
     
     locs, heights = signal.find_peaks(Y, height = M * 0.99)
     heights = heights['peak_heights'] 
     
-    if len(locs) >= 2:
-        PERIOD = X[locs[1]] - X[locs[0]]
-        PERIOD = int(round(PERIOD))
+    if not period:
+        if len(locs) >= 2:
+            period = X[locs[1]] - X[locs[0]]
+            period = int(round(period))
     
     if len(locs) >= 1:
        PHASE = X[locs[0]]
     
-    if PERIOD:
-        ACROPHASE = phase_to_radians(PHASE, PERIOD)
+    if period:
+        ACROPHASE = phase_to_radians(PHASE, period)
         if project_acrophase:
             ACROPHASE = project_acr(ACROPHASE)
     else:
@@ -1233,7 +1215,7 @@ def evaluate_rhythm_params(X,Y, project_acrophase=True):
     peaks = X[locs]
     heights = Y[locs]
     
-    idxs1 = peaks <= PERIOD
+    idxs1 = peaks <= period
     peaks = peaks[idxs1]
     heights = heights[idxs1]
 
@@ -1244,12 +1226,12 @@ def evaluate_rhythm_params(X,Y, project_acrophase=True):
     troughs = X[locs2]
     heights2 = Y[locs2]
 
-    idxs2 = troughs <= PERIOD
+    idxs2 = troughs <= period
     troughs = troughs[idxs2]
     heights2 = heights2[idxs2]
 
     # rhythm_params
-    return {'period':PERIOD, 'amplitude':AMPLITUDE, 'acrophase':ACROPHASE, 'mesor':MESOR, 'peaks': peaks, 'heights': heights, 'troughs': troughs, 'heights2': heights2}
+    return {'period':period, 'amplitude':AMPLITUDE, 'acrophase':ACROPHASE, 'mesor':MESOR, 'peaks': peaks, 'heights': heights, 'troughs': troughs, 'heights2': heights2}
     
 def calculate_statistics(X, Y, Y_fit, n_components, period, lin_comp = False):
     # statistics according to Cornelissen (eqs (8) - (9))
@@ -2037,9 +2019,7 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     else:
         Y_fit = results.predict(X_fit)
         p_overall = results.llr_pvalue
-        
-    
-    
+     
     
     X1 = X[H_i == 0]
     #Y_fit1 = Y_fit[H_i == 0]
@@ -2084,25 +2064,25 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     p_f = compare_models(RSS_small, RSS_full, DoF_small, DoF_full)
 
     
-    ### plot with higher density
-    
-    n_points = 1000
-    max_P = max(period1, period2)
-    X_full = np.linspace(min(min(X1),min(X2)), max(max_P, max(max(X1), max(X2))), n_points)
-    
-    X_fit_full = generate_independents_compare(X_full, X_full, n_components1 = n_components1, period1 = period1, n_components2 = n_components2, period2 = period2, lin_comp= lin_comp)
-    
-    H_i = X_fit_full[:,-1]
-    locs = H_i == 0
-
-    #Y_fit_full = results.predict(X_fit_full)
-    #plt.plot(X_full, Y_fit_full[0:n_points], 'k', label = test1)    
-    #plt.plot(X_full, Y_fit_full[n_points:], 'r', label = test2)    
-    
-    Y_fit_full1 = results.predict(X_fit_full[locs])
-    Y_fit_full2 = results.predict(X_fit_full[~locs])
-
     if plot:
+         ### plot with higher density   
+        n_points = 1000
+        max_P = max(period1, period2)
+        X_full = np.linspace(min(min(X1),min(X2)), max(max_P, max(max(X1), max(X2))), n_points)
+        
+        X_fit_full = generate_independents_compare(X_full, X_full, n_components1 = n_components1, period1 = period1, n_components2 = n_components2, period2 = period2, lin_comp= lin_comp)
+        
+        H_i = X_fit_full[:,-1]
+        locs = H_i == 0
+
+        #Y_fit_full = results.predict(X_fit_full)
+        #plt.plot(X_full, Y_fit_full[0:n_points], 'k', label = test1)    
+        #plt.plot(X_full, Y_fit_full[n_points:], 'r', label = test2)    
+        
+        Y_fit_full1 = results.predict(X_fit_full[locs])
+        Y_fit_full2 = results.predict(X_fit_full[~locs])
+
+        
         plt.plot(X_full, Y_fit_full1, 'k', label = test1)    
         plt.plot(X_full, Y_fit_full2, 'r', label = test2)    
         
@@ -2153,10 +2133,20 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
         pvalues = pvalues.values
     p_params = np.nanmin(pvalues[idx_params.astype(int)])
         
+    # eval rhythm parameters
+    n_points = 1000
+    max_P = max(2*period1, 2*period2)
+    X_full = np.linspace(0, max_P, n_points)
+    X_fit_full = generate_independents_compare(X_full, X_full, n_components1 = n_components1, period1 = period1, n_components2 = n_components2, period2 = period2, lin_comp= lin_comp)
+    H_i = X_fit_full[:,-1]
+    locs = H_i == 0
+
+    Y_fit_full1 = results.predict(X_fit_full[locs])
+    Y_fit_full2 = results.predict(X_fit_full[~locs])
 
     # rhythm_params
-    rhythm_params1 = evaluate_rhythm_params(X_full, Y_fit_full1)
-    rhythm_params2 = evaluate_rhythm_params(X_full, Y_fit_full2)
+    rhythm_params1 = evaluate_rhythm_params(X_full, Y_fit_full1, period=period1)
+    rhythm_params2 = evaluate_rhythm_params(X_full, Y_fit_full2, period=period2)
 
     rhythm_params = {'amplitude1': rhythm_params1['amplitude'],
                      'amplitude2': rhythm_params2['amplitude'],
@@ -2174,9 +2164,9 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     elif additional_analysis == "bootstrap1":
         compare_pair_bootstrap(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2=period2, rhythm_params=rhythm_params, bootstrap_size=bootstrap_size, bootstrap_type=bootstrap_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular)
     elif additional_analysis == "CI2":
-        eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params = rhythm_params, samples_per_param = samples_per_param_CI, max_samples = max_samples_CI, k = len(X), sampling_type=sampling_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular)
+        eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params = rhythm_params, samples_per_param = samples_per_param_CI, max_samples = max_samples_CI, k = len(X), sampling_type=sampling_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, period1=period1, period2=period2)
     elif additional_analysis == "bootstrap2":
-        eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, rhythm_params = rhythm_params, bootstrap_size = bootstrap_size, bootstrap_type = bootstrap_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular)    
+        eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, rhythm_params = rhythm_params, bootstrap_size = bootstrap_size, bootstrap_type = bootstrap_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, period1=period1, period2=period2)    
     elif additional_analysis == "":
         pass
     else:
@@ -3262,7 +3252,7 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
 
 # eval parameters using bootstrap
 # bootstrap type should be set to either std (CI = X+-1.96*STD(X)) or percentile (CI = [2.5th percentile, 97.5th percentile])
-def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rhythm_params, bootstrap_size=1000, bootstrap_type='std', t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase']):   
+def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rhythm_params, bootstrap_size=1000, bootstrap_type='std', t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], period=24):   
     params_bs = {}
     for param in parameters_to_analyse:
         params_bs[param] = np.zeros(bootstrap_size)
@@ -3293,7 +3283,7 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
 
         #Y_test_bs = results_bs.predict(X_fit_test)
         Y_eval_params_bs = results_bs.predict(X_fit_eval_params)
-        rhythm_params_bs = evaluate_rhythm_params(X_test, Y_eval_params_bs)
+        rhythm_params_bs = evaluate_rhythm_params(X_test, Y_eval_params_bs, period=period)
     
         for param in parameters_to_analyse:
             params_bs[param][i] = rhythm_params_bs[param]                 
@@ -3369,7 +3359,7 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
 
 # eval rhythmicity parameter differences using bootstrap in a combination with limorhyde
 # bootstrap type should be set to either std (CI = X+-1.96*STD(X)) or percentile (CI = [2.5th percentile, 97.5th percentile])
-def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, rhythm_params, bootstrap_size, bootstrap_type, t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase']):    
+def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, rhythm_params, bootstrap_size, bootstrap_type, t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], period1=24, period2=24):    
     params_bs = {}
     for param in parameters_to_analyse:
         params_bs[param] = np.zeros(bootstrap_size)
@@ -3400,8 +3390,8 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
         Y_fit_full1_bs = results_bs.predict(X_fit_full[locs])
         Y_fit_full2_bs = results_bs.predict(X_fit_full[~locs])
 
-        rhythm_params1_bs = evaluate_rhythm_params(X_full, Y_fit_full1_bs)
-        rhythm_params2_bs = evaluate_rhythm_params(X_full, Y_fit_full2_bs)
+        rhythm_params1_bs = evaluate_rhythm_params(X_full, Y_fit_full1_bs, period=period1)
+        rhythm_params2_bs = evaluate_rhythm_params(X_full, Y_fit_full2_bs, period=period2)
     
         for param in parameters_to_analyse:
             params_bs[param][i] = rhythm_params2_bs[param] - rhythm_params1_bs[param]
@@ -3563,7 +3553,7 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
 
 
 # sample the parameters from the confidence interval, builds a set of models and assesses the rhythmicity parameters confidence intervals   
-def eval_params_CI(X_test, X_fit_test, results, rhythm_params, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], samples_per_param=5, max_samples = 1000, t_test=True, k=0, sampling_type="LHS"):
+def eval_params_CI(X_test, X_fit_test, results, rhythm_params, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], samples_per_param=5, max_samples = 1000, t_test=True, k=0, sampling_type="LHS", period=24):
     res2 = copy.deepcopy(results)
     params = res2.params
     n_params=len(params)
@@ -3607,7 +3597,7 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, parameters_to_ana
         res2.initialize(results.model, p)            
         Y_test_CI = res2.predict(X_fit_test)
        
-        rhythm_params_CI = evaluate_rhythm_params(X_test, Y_test_CI)
+        rhythm_params_CI = evaluate_rhythm_params(X_test, Y_test_CI, period=period)
 
         for param in parameters_to_analyse:
             dev_tmp = mean_params[param] - rhythm_params_CI[param]
@@ -3645,7 +3635,7 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, parameters_to_ana
     return rhythm_params 
 
 # eval rhythmicity parameter differences using parameter confidence intervals
-def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], samples_per_param=5, max_samples=1000, t_test=True, k=0, sampling_type="LHS"):
+def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], samples_per_param=5, max_samples=1000, t_test=True, k=0, sampling_type="LHS", period1=24, period2=24):
 
     res2 = copy.deepcopy(results)
     params = res2.params
@@ -3691,8 +3681,8 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, parame
         Y_fit_CI1 = res2.predict(X_fit_full[locs])
         Y_fit_CI2 = res2.predict(X_fit_full[~locs])
 
-        rhythm_params1_CI = evaluate_rhythm_params(X_full, Y_fit_CI1)
-        rhythm_params2_CI = evaluate_rhythm_params(X_full, Y_fit_CI2)
+        rhythm_params1_CI = evaluate_rhythm_params(X_full, Y_fit_CI1, period=period1)
+        rhythm_params2_CI = evaluate_rhythm_params(X_full, Y_fit_CI2, period=period2)
 
         for param in parameters_to_analyse:            
             d_param = rhythm_params2_CI[param] - rhythm_params1_CI[param]
@@ -3732,7 +3722,7 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, parame
 
 
 # sample the parameters from the confidence interval, builds a set of models and assesses the rhythmicity parameters confidence intervals   
-def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], samples_per_param=5, max_samples = 1000, t_test = True, k=0, sampling_type="LHS"): 
+def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], samples_per_param=5, max_samples = 1000, t_test = True, k=0, sampling_type="LHS", period=24): 
     res2 = copy.deepcopy(results)
     params = res2.params    
     DoF = k-1
@@ -3775,7 +3765,7 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
         res2.initialize(results.model, p)            
         Y_test_CI = res2.predict(X_fit_eval_params)
     
-        rhythm_params_CI = evaluate_rhythm_params(X_test, Y_test_CI)
+        rhythm_params_CI = evaluate_rhythm_params(X_test, Y_test_CI, period=period)
 
         for param in parameters_to_analyse:
             dev_tmp = mean_params[param] - rhythm_params_CI[param]
