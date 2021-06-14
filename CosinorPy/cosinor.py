@@ -149,19 +149,73 @@ def periodogram(X, Y, per_type='per', sampling_f = '', logscale = False, name = 
     else:
         plt.show()
 
-def remove_lin_comp(X, Y, n_components = 1, period = 24):
+def remove_lin_comp_df(df, n_components = 0, period = 24, summary_file=""):
+    df2 = pd.DataFrame(columns=df.columns)
+
+    if summary_file:
+        df_fit = pd.DataFrame(columns=['test', 'k', 'CI', 'p', 'q'])
+
+    for test in df.test.unique():
+        x,y = df[df['test']==test].x,df[df['test']==test].y
+        x,y,fit = remove_lin_comp(x,y,n_components=n_components, period=period, return_fit=True)
+        df_tmp = pd.DataFrame(columns=df.columns)
+        df_tmp['x'] = x
+        df_tmp['y'] = y
+        df_tmp['test'] = test
+        df2 = df2.append(df_tmp, ignore_index=True)
+        if summary_file:
+            fit['test'] = test
+            df_fit=df_fit.append(fit, ignore_index=True)
+    if summary_file:
+        df_fit.q = multi.multipletests(df_fit.p, method = 'fdr_bh')[1]
+        if summary_file.endswith("csv"):
+            df_fit.to_csv(summary_file, index=False)
+        elif summary_file.endswith("xlsx"):
+            df_fit.to_excel(summary_file, index=False)
     
+    return df2
+    
+
+def remove_lin_comp(X, Y, n_components = 0, period = 24, return_fit=False):
+    
+    X = np.array(X)
+    Y = np.array(Y)
+
     X_fit = generate_independents(X, n_components = n_components, period = period, lin_comp = True)
     model = sm.OLS(Y, X_fit)
     results = model.fit()
-    
-        
+
+    CIs = results.conf_int()
+    if type(CIs) != np.ndarray:
+        CIs = CIs.values
+    CI = CIs[1]
+    #A = results.params[0]
+    k = results.params[1]
+
+
+    """      
     X_lin = np.zeros(X_fit.shape)
     X_lin[:,1] = X_fit[:,1]
     Y_lin = results.predict(X_lin)
     Y = Y-Y_lin
+    """
+    #Y_fit = results.predict(X_fir)
+    #Y = Y - Y_fit
+
     
     
+    #Y = Y - A - k*X
+    if CI[0] * CI[1] > 0: # if both CIs hve the same sign
+        Y = Y - k*X
+    
+    if return_fit:
+        fit = {}
+        fit['k'] = results.params[1]
+        fit['CI'] = CI
+        fit['p'] = results.pvalues[1]
+
+
+        return X,Y,fit    
     """
     X_fit = generate_independents(X, n_components = n_components, period = period, lin_comp = False)
     model = sm.OLS(Y, X_fit)
@@ -172,7 +226,7 @@ def remove_lin_comp(X, Y, n_components = 1, period = 24):
     return X, Y
     
 # prepare the independent variables
-def generate_independents(X, n_components = 3, period = 24, lin_comp = False):
+def generate_independents(X, n_components = 3, period = 24, lin_comp = False, remove_lin_comp = False):
     if n_components == 0:
         X_fit = X       
         lin_comp = True
@@ -188,14 +242,16 @@ def generate_independents(X, n_components = 3, period = 24, lin_comp = False):
             else:
                 X_fit = np.column_stack((X_fit, np.column_stack((A, B))))                
     if lin_comp and n_components:
-        X_fit = np.column_stack((X, X_fit))
+        X_fit = np.column_stack((X, X_fit))    
+        if remove_lin_comp:
+            X_fit[:,0] = 0  
     
     X_fit = sm.add_constant(X_fit, has_constant='add')
     
     return X_fit
 
 # prepare the independent variables for limorhyde
-def generate_independents_compare(X1, X2, n_components1 = 3, period1 = 24, n_components2 = 3, period2 = 24, lin_comp = False, non_rhythmic=False):
+def generate_independents_compare(X1, X2, n_components1 = 3, period1 = 24, n_components2 = 3, period2 = 24, lin_comp = False, non_rhythmic=False, remove_lin_comp=False):
     H1 = np.zeros(X1.size)
     H2 = np.ones(X2.size)
     
@@ -231,6 +287,9 @@ def generate_independents_compare(X1, X2, n_components1 = 3, period1 = 24, n_com
     if lin_comp:
         X_fit = np.column_stack((X_i, X_fit))
         X_fit = np.column_stack((X, X_fit))    
+        if remove_lin_comp:
+            X_fit[:,0] = 0
+            X_fit[:,1] = 0               
 
     X_fit = sm.add_constant(X_fit, has_constant='add')
 
@@ -717,8 +776,8 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
             X_plot = np.linspace(0, 1.1*period, 1000)
 
         X_plot_fits = generate_independents(X_plot, n_components = n_components, period = period, lin_comp = lin_comp)
-        if lin_comp:
-            X_plot_fits[:,1] = 0   
+        #if lin_comp:
+        #    X_plot_fits[:,1] = 0   
 
     """
     min_X = 1000
@@ -743,7 +802,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         """
 
         results, statistics, rhythm_params, X_test, Y_test, model = fit_me(x, y, n_components = n_components, period = period, plot = False, return_model = True, lin_comp=lin_comp, **kwargs)
-        X_fit_eval_params = generate_independents(X_test, n_components = n_components, period = period, lin_comp = lin_comp)
+        X_fit_eval_params = generate_independents(X_test, n_components = n_components, period = period, lin_comp = lin_comp, remove_lin_comp=True)
         if lin_comp:
             X_fit_eval_params[:,1] = 0    
 
@@ -816,7 +875,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
     X_fit = generate_independents(x, n_components = n_components, period = period, lin_comp = lin_comp)
     Y_fit = results.predict(X_fit)
     
-    Y_eval_params = results.predict(X_fit_eval_params)    
+    Y_eval_params = results.predict(X_fit_eval_params) 
     rhythm_params = evaluate_rhythm_params(X_test, Y_eval_params, period=period)
         
     if plot:      
@@ -897,6 +956,8 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         return params, statistics, statistics_params, rhythm_params, results
 
 def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = 'lin', alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = "", rescale_to_period=False, bootstrap=False, bootstrap_size=1000, bootstrap_type="std", params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type="LHS", parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase']):
+    #print(lin_comp)
+
     """
     ###
     # prepare the independent variables
@@ -996,10 +1057,19 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
     
     #Y_test = results.predict(X_fit_test)
     X_test = np.linspace(0, 2*period, 1000)
-    X_fit_test = generate_independents(X_test, n_components=n_components, period=period, lin_comp=lin_comp)
+    X_fit_test = generate_independents(X_test, n_components=n_components, period=period, lin_comp=lin_comp, remove_lin_comp = True)
     Y_fit_test = results.predict(X_fit_test)
     rhythm_params = evaluate_rhythm_params(X_test, Y_fit_test, period=period)
-    
+    if lin_comp:
+        rhythm_params['lin_comp'] = results.params[1]
+        CIs = results.conf_int()
+        if type(CIs) != np.ndarray:
+            rhythm_params['CI(lin_comp)'] = CIs.values[1]
+        else:
+            rhythm_params['CI(lin_comp)'] = CIs[1]
+        rhythm_params['p(lin_comp)'] = results.pvalues[1]
+        #print(rhythm_params['p(lin_comp)'])
+            
     """
     ###
     # plot
@@ -1178,6 +1248,9 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
 
 # rhythm params
 def evaluate_rhythm_params(X,Y, project_acrophase=True, period=0):
+    #plt.plot(X,Y)
+    #plt.show()
+
     m = min(Y)
     M = max(Y)
     A = M - m
@@ -1185,6 +1258,7 @@ def evaluate_rhythm_params(X,Y, project_acrophase=True, period=0):
     AMPLITUDE = A/2
     
     PHASE = 0
+    PHASE_LOC = 0
     
     locs, heights = signal.find_peaks(Y, height = M * 0.99)
     heights = heights['peak_heights'] 
@@ -1196,7 +1270,8 @@ def evaluate_rhythm_params(X,Y, project_acrophase=True, period=0):
     
     if len(locs) >= 1:
        PHASE = X[locs[0]]
-    
+       PHASE_LOC = locs[0]
+
     if period:
         ACROPHASE = phase_to_radians(PHASE, period)
         if project_acrophase:
@@ -1231,7 +1306,7 @@ def evaluate_rhythm_params(X,Y, project_acrophase=True, period=0):
     heights2 = heights2[idxs2]
 
     # rhythm_params
-    return {'period':period, 'amplitude':AMPLITUDE, 'acrophase':ACROPHASE, 'mesor':MESOR, 'peaks': peaks, 'heights': heights, 'troughs': troughs, 'heights2': heights2}
+    return {'period':period, 'amplitude':AMPLITUDE, 'acrophase':ACROPHASE, 'mesor':MESOR, 'peaks': peaks, 'heights': heights, 'troughs': troughs, 'heights2': heights2, 'max_loc': PHASE_LOC}
     
 def calculate_statistics(X, Y, Y_fit, n_components, period, lin_comp = False):
     # statistics according to Cornelissen (eqs (8) - (9))
@@ -1362,16 +1437,16 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
 
 # compare pairs using a given number of components and period
 # analysis - options (from best to worst) (ADDITIONAL ANALYSIS)
-# - CI1: independent analysis of confidence intervals of two models
 # - bootstrap1: independent bootstrap analysis
-# - CI2: analysis of confidence intervals of a merged model
+# - CI1: independent analysis of confidence intervals of two models
 # - bootstrap2: bootstrap analysis of a merged model
+# - CI2: analysis of confidence intervals of a merged model
 def compare_pairs_limo(df, pairs, n_components = 3, period = 24, folder = "", prefix = "", analysis = "", parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):
     
     if analysis not in ("", "CI1", "bootstrap1", "CI2", "bootstrap2"):
         print("Invalid option")
         return
-    
+
     columns = ['test', 'period',  'n_components', 'd_amplitude', 'd_acrophase', 'p', 'q', 'p params', 'q params', 'p(F test)', 'q(F test)']
     if analysis:
         for param in parameters_to_analyse:
@@ -1397,6 +1472,7 @@ def compare_pairs_limo(df, pairs, n_components = 3, period = 24, folder = "", pr
                 
                 #pvalues, params, results = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, lin_comp = lin_comp, model_type = model_type, alpha=alpha, save_to = save_to, plot_measurements=plot_measurements)
                 #p_overall, pvalues, params, _ = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to, **kwargs)
+                
                 p_overall, p_params, p_F, _, _, rhythm_params = compare_pair_df_extended(df, test1, test2, n_components = n_comps, period = per, save_to = save_to, additional_analysis = analysis, parameters_to_analyse=parameters_to_analyse, parameters_angular=parameters_angular, **kwargs)
                 
                 
@@ -1439,10 +1515,10 @@ def compare_pairs_limo(df, pairs, n_components = 3, period = 24, folder = "", pr
 # the same model: the same period and the same number of cosinor components
 #
 # analysis - options (from best to worst)
-# - CI1: independent analysis of confidence intervals of two models
 # - bootstrap1: independent bootstrap analysis
-# - CI2: analysis of confidence intervals of a merged model
+# - CI1: independent analysis of confidence intervals of two models
 # - bootstrap2: bootstrap analysis of a merged model
+# - CI2: analysis of confidence intervals of a merged model
 def compare_pairs_best_models_limo(df, df_best_models, pairs, folder = "", prefix = "", analysis = "", parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):
 
     if analysis not in ("", "CI1", "bootstrap1", "CI2", "bootstrap2"):
@@ -1450,7 +1526,9 @@ def compare_pairs_best_models_limo(df, df_best_models, pairs, folder = "", prefi
         return
 
     columns = ['test', 'period1',  'n_components1', 'period2',  'n_components2', 'd_amplitude', 'd_acrophase', 'p', 'q', 'p params', 'q params', 'p(F test)', 'q(F test)']
-    if analysis:
+
+
+    if analysis:     
         for param in parameters_to_analyse:
             if param not in ("amplitude", "acrophase"): # these two are already included
                 columns += [f'd_{param}']
@@ -1529,21 +1607,50 @@ def compare_pairs_best_models_limo(df, df_best_models, pairs, folder = "", prefi
 
 # compare pairs using a given number of components and period
 # analysis - options (from best to worst)
-# - CI: independent analysis of confidence intervals of two models
 # - bootstrap: independent bootstrap analysis
+# - CI: independent analysis of confidence intervals of two models
 # if you want to increase the speed specify df_results_extended in which for all analysed models confidence intervals for amplitude and acrophase are given - result of cosinor.analyse_models
-def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix = "", analysis = "CI", df_results_extended = pd.DataFrame(columns=["test"]), parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs): 
+def diff_p_t_test_from_CI(X1, X2, CI1, CI2, DoF, angular = False):
+    dX = X2 - X1
+    if angular:
+        dX = project_acr(dX)
+
+    t = abs(stats.t.ppf(0.05/2,df=DoF)) 
+    
+
+    dev1 = (CI1[1] - CI1[0])/2
+    dev2 = (CI2[1] - CI2[0])/2
+    
+    if angular:
+        dev1 = abs(project_acr(dev1))
+        dev2 = abs(project_acr(dev2))
+    else:
+        dev1 = abs(dev1)
+        dev2 = abs(dev2)
+    
+    dev = dev1+dev2
+    se = (dev1 + dev2)/t
+    
+    CI = [dX-dev, dX+dev]
+    T0 = dX/se
+    p_val = 2 * (1 - stats.t.cdf(abs(T0), DoF))
+
+    return dX, p_val, CI
+
+
+
+def compare_pairs(df, pairs, n_components = 3, period = 24, analysis = "bootstrap", df_results_extended = pd.DataFrame(columns=["test"]), parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], lin_comp = False, **kwargs): 
     
     if (analysis != "CI") and (analysis != "bootstrap"):
         print("Invalid option")
         return
 
     columns = ['test', 'period',  'n_components', 'd_amplitude', 'd_acrophase', 'p1', 'p2', 'q1', 'q2']
-    if analysis:
-        for param in parameters_to_analyse:
-            if param not in ("amplitude", "acrophase"): # these two are already included
-                columns += [f'd_{param}']
-            columns += [f'CI(d_{param})', f'p(d_{param})', f'q(d_{param})']
+    
+    for param in parameters_to_analyse:
+        if param not in ("amplitude", "acrophase"): # these two are already included
+            columns += [f'd_{param}']
+        columns += [f'CI(d_{param})', f'p(d_{param})', f'q(d_{param})']
     
     df_results = pd.DataFrame(columns = columns)
 
@@ -1578,9 +1685,9 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
                         pass
                 
                 if analysis == "CI":
-                    rhythm_params = compare_pair_CI(df, test1, test2, n_components = n_comps, period = per, single_params=single_params, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, **kwargs)                    
+                    rhythm_params = compare_pair_CI(df, test1, test2, n_components = n_comps, period = per, single_params=single_params, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, lin_comp = lin_comp, **kwargs)                    
                 elif analysis == "bootstrap":
-                    rhythm_params = compare_pair_bootstrap(df, test1, test2, n_components = n_comps, period = per, single_params=single_params, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, **kwargs)                    
+                    rhythm_params = compare_pair_bootstrap(df, test1, test2, n_components = n_comps, period = per, single_params=single_params, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, lin_comp = lin_comp, **kwargs)                    
 
                 for param in parameters_to_analyse:
                     d[f'd_{param}'] =  rhythm_params[f'd_{param}']
@@ -1591,6 +1698,12 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
                 d['p1'] = rhythm_params['statistics1']['p']
                 d['p2'] = rhythm_params['statistics2']['p']
                 
+                if lin_comp:
+                    rp1 = rhythm_params['rhythm_params1']
+                    rp2 = rhythm_params['rhythm_params2']
+                    d['d_lin_comp'], d['p(d_lin_comp)'], d['CI(d_lin_comp)'] = diff_p_t_test_from_CI(rp1['lin_comp'], rp2['lin_comp'], rp1['CI(lin_comp)'], rp2['CI(lin_comp)'], rhythm_params['DoF'])
+
+
                 df_results = df_results.append(d, ignore_index=True)
   
     df_results['q1'] = multi.multipletests(df_results['p1'], method = 'fdr_bh')[1]
@@ -1598,28 +1711,32 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, folder = "", prefix 
     
     for param in parameters_to_analyse:
         df_results[f'q(d_{param})'] = multi.multipletests(df_results[f'p(d_{param})'], method = 'fdr_bh')[1]        
-        
+
+    if lin_comp:
+        param = "lin_comp"
+        df_results[f'q(d_{param})'] = multi.multipletests(df_results[f'p(d_{param})'], method = 'fdr_bh')[1]        
+
     return df_results
 
 
 # compare pairs using the best models as stored in df_best_models
 # each member of a pair uses its own model
 # analysis - options (from best to worst)
-# - CI: independent analysis of confidence intervals of two models
 # - bootstrap: independent bootstrap analysis
+# - CI: independent analysis of confidence intervals of two models
 # if you want to increase the speed specify df_results_extended in which for all analysed models confidence intervals for amplitude and acrophase are given - result of cosinor.analyse_best_models
-def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "", analysis = "CI", df_results_extended = pd.DataFrame(columns=["test"]), parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):
+def compare_pairs_best_models(df, df_best_models, pairs, analysis = "bootstrap", df_results_extended = pd.DataFrame(columns=["test"]), parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], lin_comp=False,**kwargs):
     if (analysis != "CI") and (analysis != "bootstrap"):
         print("Invalid option")
         return
 
     columns = ['test', 'period1', 'n_components1', 'period2', 'n_components2', 'd_amplitude', 'd_acrophase', 'p1', 'p2', 'q1', 'q2']
-    
-    if analysis:
-        for param in parameters_to_analyse:
-            if param not in ("amplitude", "acrophase"): # these two are already included
-                columns += [f'd_{param}']
-            columns += [f'CI(d_{param})', f'p(d_{param})', f'q(d_{param})']
+     
+
+    for param in parameters_to_analyse:
+        if param not in ("amplitude", "acrophase"): # these two are already included
+            columns += [f'd_{param}']
+        columns += [f'CI(d_{param})', f'p(d_{param})', f'q(d_{param})']
     
     df_results = pd.DataFrame(columns = columns)
 
@@ -1659,9 +1776,9 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
 
         
         if analysis == "CI":
-            rhythm_params = compare_pair_CI(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, single_params = single_params, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular,  **kwargs)
+            rhythm_params = compare_pair_CI(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, single_params = single_params, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, lin_comp = lin_comp, **kwargs)
         elif analysis == "bootstrap":
-            rhythm_params = compare_pair_bootstrap(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, single_params = single_params, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular,  **kwargs)
+            rhythm_params = compare_pair_bootstrap(df, test1, test2, n_components = n_components1, period = period1, n_components2 = n_components2, period2 = period2, single_params = single_params, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, lin_comp = lin_comp, **kwargs)
 
         for param in parameters_to_analyse:
             d[f'd_{param}'] =  rhythm_params[f'd_{param}']
@@ -1671,6 +1788,12 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
 
         d['p1'] = rhythm_params['statistics1']['p']
         d['p2'] = rhythm_params['statistics2']['p']
+
+        if lin_comp:
+            rp1 = rhythm_params['rhythm_params1']
+            rp2 = rhythm_params['rhythm_params2']
+            d['d_lin_comp'], d['p(d_lin_comp)'], d['CI(d_lin_comp)'] = diff_p_t_test_from_CI(rp1['lin_comp'], rp2['lin_comp'], rp1['CI(lin_comp)'], rp2['CI(lin_comp)'], rhythm_params['DoF'])
+
         
         df_results = df_results.append(d, ignore_index=True)
 
@@ -1681,6 +1804,11 @@ def compare_pairs_best_models(df, df_best_models, pairs, folder = "", prefix = "
     for param in parameters_to_analyse:
         df_results[f'q(d_{param})'] = multi.multipletests(df_results[f'p(d_{param})'], method = 'fdr_bh')[1] 
     
+    if lin_comp:
+        param = "lin_comp"
+        df_results[f'q(d_{param})'] = multi.multipletests(df_results[f'p(d_{param})'], method = 'fdr_bh')[1]        
+
+
     return df_results
 
 
@@ -1697,14 +1825,16 @@ def compare_pairs_population(df, pairs, n_components = 3, period = 24, folder = 
         return
     
     columns = ['test', 'period',  'n_components', 'd_amplitude', 'd_acrophase', 'p1', 'p2', 'q1', 'q2']
-    if analysis:
-        for param in parameters_to_analyse:
-            if param not in ("amplitude", "acrophase"): # these two are already included
-                columns += [f'd_{param}']
-            if analysis == "CI":
-                columns += [f'CI(d_{param})', f'p(d_{param})', f'q(d_{param})']
-            else:
-                columns += [f'p(d_{param})', f'q(d_{param})'] # permutation test does not assess the confidence intervals
+    
+
+ 
+    for param in parameters_to_analyse:
+        if param not in ("amplitude", "acrophase"): # these two are already included
+            columns += [f'd_{param}']
+        if analysis == "CI":
+            columns += [f'CI(d_{param})', f'p(d_{param})', f'q(d_{param})']
+        else:
+            columns += [f'p(d_{param})', f'q(d_{param})'] # permutation test does not assess the confidence intervals
 
     df_results = pd.DataFrame(columns = columns)
 
@@ -1791,14 +1921,15 @@ def compare_pairs_best_models_population(df, df_best_models, pairs, folder = "",
         return
 
     columns = ['test', 'period1', 'n_components1', 'period2', 'n_components2', 'd_amplitude', 'd_acrophase', 'p1', 'p2', 'q1', 'q2']
-    if analysis:
-        for param in parameters_to_analyse:
-            if param not in ("amplitude", "acrophase"): # these two are already included
-                columns += [f'd_{param}']
-            if analysis == "CI":
-                columns += [f'CI(d_{param})', f'p(d_{param})', f'q(d_{param})']
-            else:
-                columns += [f'p(d_{param})', f'q(d_{param})'] # permutation test does not assess the confidence intervals
+    
+    
+    for param in parameters_to_analyse:
+        if param not in ("amplitude", "acrophase"): # these two are already included
+            columns += [f'd_{param}']
+        if analysis == "CI":
+            columns += [f'CI(d_{param})', f'p(d_{param})', f'q(d_{param})']
+        else:
+            columns += [f'p(d_{param})', f'q(d_{param})'] # permutation test does not assess the confidence intervals
     
     df_results = pd.DataFrame(columns = columns)
 
@@ -1883,10 +2014,10 @@ def compare_pairs_best_models_population(df, df_best_models, pairs, folder = "",
 
 #def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot=True, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = '', bootstrap = False, bootstrap_independent = False, bootstrap_type="std", bootstrap_size=1000, params_CI = False, params_CI_independent = False, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type="LHS"):
 # additional analysis - options (from best to worst)
-# - CI1: independent analysis of confidence intervals of two models
 # - bootstrap1: independent bootstrap analysis
-# - CI2: analysis of confidence intervals of a merged model
+# - CI1: independent analysis of confidence intervals of two models
 # - bootstrap2: bootstrap analysis of a merged model
+# - CI2: analysis of confidence intervals of a merged model
 def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_components2 = None, period2 = None, lin_comp = False, model_type = 'lin', alpha = 0, save_to = '', non_rhythmic = False, plot=True, plot_measurements=True, plot_residuals=False, plot_margins=True, x_label = '', y_label = '', additional_analysis = "", bootstrap_type="std", bootstrap_size=1000, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type="LHS", parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase']):
        
     n_components1 = n_components
@@ -2137,7 +2268,7 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     n_points = 1000
     max_P = max(2*period1, 2*period2)
     X_full = np.linspace(0, max_P, n_points)
-    X_fit_full = generate_independents_compare(X_full, X_full, n_components1 = n_components1, period1 = period1, n_components2 = n_components2, period2 = period2, lin_comp= lin_comp)
+    X_fit_full = generate_independents_compare(X_full, X_full, n_components1 = n_components1, period1 = period1, n_components2 = n_components2, period2 = period2, lin_comp= lin_comp, remove_lin_comp=True)
     H_i = X_fit_full[:,-1]
     locs = H_i == 0
 
@@ -2147,6 +2278,7 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     # rhythm_params
     rhythm_params1 = evaluate_rhythm_params(X_full, Y_fit_full1, period=period1)
     rhythm_params2 = evaluate_rhythm_params(X_full, Y_fit_full2, period=period2)
+    
 
     rhythm_params = {'amplitude1': rhythm_params1['amplitude'],
                      'amplitude2': rhythm_params2['amplitude'],
@@ -2204,9 +2336,9 @@ def plot_df_models(df, df_models, folder ="", **kwargs):
 """
 # perform a more detailed analysis of the models that were identified to be the best, interesting... in previous analyses
 # analysis - options (from best to worst)
-# - CI: analysis of confidence intervals of regression coefficients
 # - bootstrap
-def analyse_models(df, n_components = 3, period = 24, plot = False, folder = "", analysis = "CI", parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):
+# - CI: analysis of confidence intervals of regression coefficients
+def analyse_models(df, n_components = 3, period = 24, plot = False, folder = "", analysis = "bootstrap", parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], lin_comp = False, **kwargs):
     params_CI = False
     bootstrap = False
     if analysis == "CI":
@@ -2218,10 +2350,17 @@ def analyse_models(df, n_components = 3, period = 24, plot = False, folder = "",
         return
     
     columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase']
-    for param in parameters_to_analyse:
+    
+    if not lin_comp:
+        parameters_to_analyse_ext = parameters_to_analyse
+    else:
+        parameters_to_analyse_ext = parameters_to_analyse + ['lin_comp']
+
+    for param in parameters_to_analyse_ext:
         if param not in ("amplitude", "acrophase"): # these two are already included
             columns += [f'{param}']
         columns += [f'CI({param})', f'p({param})', f'q({param})']
+            
 
     df_results_extended = pd.DataFrame(columns = columns)  
     
@@ -2243,7 +2382,7 @@ def analyse_models(df, n_components = 3, period = 24, plot = False, folder = "",
                 if plot and folder:
                     save_to = os.path.join(folder,test+'_compnts='+str(n_comps) +'_per=' + str(per))
                     
-                _, statistics, rhythm_params, _, _ = fit_me(X, Y, n_components = n_comps, period = per, name = test, save_to = save_to, plot=plot, bootstrap=bootstrap, params_CI = params_CI, **kwargs)
+                _, statistics, rhythm_params, _, _ = fit_me(X, Y, n_components = n_comps, period = per, name = test, save_to = save_to, plot=plot, bootstrap=bootstrap, params_CI = params_CI, parameters_to_analyse=parameters_to_analyse, parameters_angular=parameters_angular, lin_comp = lin_comp, **kwargs)
                 
                 #if sparse_output:
                 #    row = dict(row[1][['test', 'per', 'n_comps', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase', 'mesor']])
@@ -2258,7 +2397,7 @@ def analyse_models(df, n_components = 3, period = 24, plot = False, folder = "",
                     'amplitude': rhythm_params['amplitude'], 
                     'acrophase': rhythm_params['acrophase']}
                 
-                for param in parameters_to_analyse:
+                for param in parameters_to_analyse_ext:
                     row[f'{param}'] =  rhythm_params[f'{param}']
                     row[f'CI({param})'] = rhythm_params[f'CI({param})']
                     row[f'p({param})'] = rhythm_params[f'p({param})']
@@ -2269,16 +2408,16 @@ def analyse_models(df, n_components = 3, period = 24, plot = False, folder = "",
     df_results_extended['q'] = multi.multipletests(df_results_extended['p'], method = 'fdr_bh')[1]
     df_results_extended['q_reject'] = multi.multipletests(df_results_extended['p_reject'], method = 'fdr_bh')[1]    
     
-    for param in parameters_to_analyse:
+    for param in parameters_to_analyse_ext:
         df_results_extended[f'q({param})'] = multi.multipletests(df_results_extended[f'p({param})'], method = 'fdr_bh')[1]
 
     return df_results_extended    
 
 # perform a more detailed analysis of the models that were identified to be the best, interesting... in previous analyses
 # analysis - options (from best to worst)
-# - CI: analysis of confidence intervals of regression coefficients
 # - bootstrap
-def analyse_best_models(df, df_models, sparse_output = True, plot = False, folder = "", analysis = "CI", parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):
+# - CI: analysis of confidence intervals of regression coefficients
+def analyse_best_models(df, df_models, sparse_output = True, plot = False, folder = "", analysis = "bootstrap", parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], lin_comp = False, **kwargs):
     params_CI = False
     bootstrap = False
     if analysis == "CI":
@@ -2290,7 +2429,13 @@ def analyse_best_models(df, df_models, sparse_output = True, plot = False, folde
         return
     
     columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase']
-    for param in parameters_to_analyse:
+
+    if not lin_comp:
+        parameters_to_analyse_ext = parameters_to_analyse
+    else:
+        parameters_to_analyse_ext = parameters_to_analyse + ['lin_comp']
+
+    for param in parameters_to_analyse_ext:
         if param not in ("amplitude", "acrophase"): # these two are already included
             columns += [f'{param}']
         columns += [f'CI({param})', f'p({param})', f'q({param})']
@@ -2313,12 +2458,11 @@ def analyse_best_models(df, df_models, sparse_output = True, plot = False, folde
         if plot and folder:
             save_to = os.path.join(folder,test+'_compnts='+str(n_components) +'_per=' + str(period))
             
-        _, _, rhythm_params, _, _ = fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = save_to, plot=plot, bootstrap=bootstrap, params_CI = params_CI, **kwargs)
+        _, _, rhythm_params, _, _ = fit_me(X, Y, n_components = n_components, period = period, name = test, save_to = save_to, plot=plot, bootstrap=bootstrap, params_CI = params_CI, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, lin_comp = lin_comp, **kwargs)
         
-
         row = dict(row[1])
         
-        for param in parameters_to_analyse:
+        for param in parameters_to_analyse_ext:
             row[f'{param}'] =  rhythm_params[f'{param}']
             row[f'CI({param})'] = rhythm_params[f'CI({param})']
             row[f'p({param})'] = rhythm_params[f'p({param})']
@@ -2326,7 +2470,7 @@ def analyse_best_models(df, df_models, sparse_output = True, plot = False, folde
 
         df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
         
-    for param in parameters_to_analyse:
+    for param in parameters_to_analyse_ext:               
         df_results_extended[f'q({param})'] = multi.multipletests(df_results_extended[f'p({param})'], method = 'fdr_bh')[1]
 
     return df_results_extended    
@@ -2335,6 +2479,7 @@ def analyse_best_models(df, df_models, sparse_output = True, plot = False, folde
 # the only option supported is the CI anaylsis: analysis of confidence intervals of regression coefficients
 def analyse_models_population(df, n_components = 3, period = 24, plot=False, folder = "", prefix="",  parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):
     columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase']
+    
     for param in parameters_to_analyse:
         if param not in ("amplitude", "acrophase"): # these two are already included
             columns += [f'{param}']
@@ -2399,6 +2544,10 @@ def analyse_models_population(df, n_components = 3, period = 24, plot=False, fol
 # the only option supported is the CI anaylsis: analysis of confidence intervals of regression coefficients
 def analyse_best_models_population(df, df_models, sparse_output = True, plot=False, folder = "", prefix="", parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):
     columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase']
+    
+    if 'lin_comp' in kwargs and kwargs['lin_comp'] and 'lin_comp' not in parameters_to_analyse:
+        parameters_to_analyse += ['lin_comp']
+    
     for param in parameters_to_analyse:
         if param not in ("amplitude", "acrophase"): # these two are already included
             columns += [f'{param}']
@@ -3018,9 +3167,9 @@ def permutation_test_population(df, pairs, period = 24, n_components = 2, lin_co
         p1, amplitude1, acrophase1, mesor1 = statistics1['p'], rhythm_params1['amplitude'], rhythm_params1['acrophase'], rhythm_params1['mesor']
         p2, amplitude2, acrophase2, mesor2 = statistics2['p'], rhythm_params2['amplitude'], rhythm_params2['acrophase'], rhythm_params2['mesor']
 
-        if p1 > 0.05 or p2 > 0.05:
-            print(pair, "rhythmicity in one is not significant")
-            continue
+        #if p1 > 0.05 or p2 > 0.05:
+        #    print(pair, "rhythmicity in one is not significant")
+        #    continue
 
         d_amp = abs(amplitude1 - amplitude2)
         d_acr = abs(acrophase1 - acrophase2)
@@ -3180,9 +3329,9 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
         p1 = statistics1['p']
         p2 = statistics2['p']
 
-        if p1 > 0.05 or p2 > 0.05:
-            print(pair, ": rhythmicity in one is not significant", sep="")
-            continue
+        #if p1 > 0.05 or p2 > 0.05:
+        #    print(pair, ": rhythmicity in one is not significant", sep="")
+        #    continue
 
         mean_params1 = {}
         mean_params2 = {}
@@ -3252,7 +3401,7 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
 
 # eval parameters using bootstrap
 # bootstrap type should be set to either std (CI = X+-1.96*STD(X)) or percentile (CI = [2.5th percentile, 97.5th percentile])
-def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rhythm_params, bootstrap_size=1000, bootstrap_type='std', t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], period=24):   
+def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rhythm_params, bootstrap_size=1000, bootstrap_type='std', t_test=False, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], period=24):   
     params_bs = {}
     for param in parameters_to_analyse:
         params_bs[param] = np.zeros(bootstrap_size)
@@ -3288,8 +3437,14 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
         for param in parameters_to_analyse:
             params_bs[param][i] = rhythm_params_bs[param]                 
 
+    DoF = len(X) - len(results_bs.params)
+    rhythm_params['DoF'] = DoF
+
     if t_test:
-        DoF = len(X) - len(results_bs.params)
+        n_devs = abs(stats.t.ppf(0.05/2,df=DoF))  
+    else:
+        n_devs = 1.96
+
 
     #########################################################
     # calculate confidence intervals and bootstrap p-values #
@@ -3324,7 +3479,7 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
                 d_phase_l = project_acr(mean_phase - ci_l)
                 d_phase_u = project_acr(ci_h - mean_phase)
                 dev_phase = np.nanmax([np.abs(d_phase_l), np.abs(d_phase_u)])
-                se_params[param] = dev_phase/1.96        
+                se_params[param] = dev_phase/n_devs      
 
         else:                           
             mean_params[param] = np.nanmean(params_bs[param])
@@ -3338,15 +3493,15 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
                 ci_l = np.percentile(params_bs[param],2.5)
                 ci_h = np.percentile(params_bs[param],97.5)
                 dev = np.nanmax([np.abs(mean_params[param]-ci_l), np.abs(mean_params[param]-ci_h)])
-                se_params[param] = dev/1.96
+                se_params[param] = dev/n_devs
      
     # statistics
     for param in parameters_to_analyse:
         rhythm_params[f'{param}_bootstrap'] = mean_params[param]
         if param in parameters_angular: 
-            rhythm_params[f'CI({param})'] = get_acrophase_CI(mean_params[param], 1.96*se_params[param])
+            rhythm_params[f'CI({param})'] = get_acrophase_CI(mean_params[param], n_devs*se_params[param])
         else:
-            rhythm_params[f'CI({param})'] = [mean_params[param] - 1.96*se_params[param], mean_params[param] + 1.96*se_params[param]]
+            rhythm_params[f'CI({param})'] = [mean_params[param] - n_devs*se_params[param], mean_params[param] + n_devs*se_params[param]]
 
         if t_test:    
             rhythm_params[f'p({param})'] = get_p_t_test(mean_params[param], se_params[param], DoF)
@@ -3359,7 +3514,7 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
 
 # eval rhythmicity parameter differences using bootstrap in a combination with limorhyde
 # bootstrap type should be set to either std (CI = X+-1.96*STD(X)) or percentile (CI = [2.5th percentile, 97.5th percentile])
-def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, rhythm_params, bootstrap_size, bootstrap_type, t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], period1=24, period2=24):    
+def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, rhythm_params, bootstrap_size, bootstrap_type, t_test=False, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], period1=24, period2=24):    
     params_bs = {}
     for param in parameters_to_analyse:
         params_bs[param] = np.zeros(bootstrap_size)
@@ -3397,8 +3552,15 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
             params_bs[param][i] = rhythm_params2_bs[param] - rhythm_params1_bs[param]
             if param in parameters_angular:
                 params_bs[param][i] = params_bs[param][i]#project_acr(params_bs[param][i])
+    
+    DoF = len(X.values) - len(results_bs.params)
+    rhythm_params['DoF'] = DoF
+
     if t_test:
-        DoF = len(X.values) - len(results_bs.params)
+        n_devs = abs(stats.t.ppf(0.05/2,df=DoF))  
+    else:
+        n_devs = 1.96
+
         
     #########################################################
     # calculate confidence intervals and bootstrap p-values #
@@ -3433,7 +3595,7 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
                 d_phase_l = project_acr(mean_phase - ci_l)
                 d_phase_u = project_acr(ci_h - mean_phase)
                 dev_phase = np.nanmax([np.abs(d_phase_l), np.abs(d_phase_u)])
-                se_params[param] = dev_phase/1.96        
+                se_params[param] = dev_phase/n_devs      
         else:                           
             mean_params[param] = np.nanmean(params_bs[param])
             
@@ -3446,15 +3608,15 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
                 ci_l = np.percentile(params_bs[param],2.5)
                 ci_h = np.percentile(params_bs[param],97.5)
                 dev = np.nanmax([np.abs(mean_params[param]-ci_l), np.abs(mean_params[param]-ci_h)])
-                se_params[param] = dev/1.96
+                se_params[param] = dev/n_devs
     
     # statistics
     for param in parameters_to_analyse:
         rhythm_params[f'd_{param}_bootstrap'] = mean_params[param]
         if param in parameters_angular: 
-            rhythm_params[f'CI(d_{param})'] = get_acrophase_CI(mean_params[param], 1.96*se_params[param])
+            rhythm_params[f'CI(d_{param})'] = get_acrophase_CI(mean_params[param], n_devs*se_params[param])
         else:
-            rhythm_params[f'CI(d_{param})'] = [mean_params[param] - 1.96*se_params[param], mean_params[param] + 1.96*se_params[param]]
+            rhythm_params[f'CI(d_{param})'] = [mean_params[param] - n_devs*se_params[param], mean_params[param] + n_devs*se_params[param]]
 
         if t_test:    
             rhythm_params[f'p(d_{param})'] = get_p_t_test(mean_params[param], se_params[param], DoF)
@@ -3465,7 +3627,7 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
 
 
 # compare two pairs independently using bootstrap
-def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, bootstrap_size=1000, bootstrap_type="std", t_test = True, rhythm_params = {}, single_params = {}, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):    
+def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, bootstrap_size=1000, bootstrap_type="std", t_test = False, rhythm_params = {}, single_params = {}, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):    
 
     n_components1 = n_components
     period1 = period
@@ -3474,10 +3636,10 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
     if not period2:
         period2 = period1   
     
-    X1 = df[(df.test == test1)].x
-    Y1 = df[(df.test == test1)].y
-    X2 = df[(df.test == test2)].x
-    Y2 = df[(df.test == test2)].y
+    X1 = np.array(df[(df.test == test1)].x)
+    Y1 = np.array(df[(df.test == test1)].y)
+    X2 = np.array(df[(df.test == test2)].x)
+    Y2 = np.array(df[(df.test == test2)].y)
     
     if single_params:
         run_bootstrap = False
@@ -3497,9 +3659,9 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
     p1 = statistics1['p']
     p2 = statistics2['p']
 
-    if p1 > 0.05 or p2 > 0.05:
-        print("rhythmicity in one is not significant")
-        return
+    #if p1 > 0.05 or p2 > 0.05:
+    #    print("rhythmicity in one is not significant")
+    #    #return
 
     d_params = {}
     
@@ -3524,6 +3686,13 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
     k = len(X1) + len(X2)
     n_params = len(res1.params)+len(res2.params)
     DoF = k - n_params
+    rhythm_params['DoF'] = DoF
+
+    if t_test:
+        n_devs = abs(stats.t.ppf(0.05/2,df=DoF))  
+    else:
+        n_devs = 1.96
+
 
     # statistics
     for param in parameters_to_analyse:        
@@ -3533,15 +3702,15 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
         else:
             dev1 = abs(CI1[param][1] - CI1[param][0])/2
             dev2 = abs(CI2[param][1] - CI2[param][0])/2
-        se_param = (dev1 + dev2)/1.96
+        se_param = (dev1 + dev2)/n_devs
         d_param = d_params[param]
 
         rhythm_params[f'd_{param}'] = d_param
 
         if param in parameters_angular:
-            rhythm_params[f'CI(d_{param})'] =  get_acrophase_CI(d_param, 1.96*se_param)
+            rhythm_params[f'CI(d_{param})'] =  get_acrophase_CI(d_param, n_devs*se_param)
         else:
-            rhythm_params[f'CI(d_{param})'] = [d_param - 1.96*se_param, d_param + 1.96*se_param]        
+            rhythm_params[f'CI(d_{param})'] = [d_param - n_devs*se_param, d_param + n_devs*se_param]        
 
         if t_test:
             rhythm_params[f'p(d_{param})'] = get_p_t_test(d_param, se_param, DoF)
@@ -3550,14 +3719,83 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
 
     return rhythm_params
 
+"""
+def eval_from_Y_CI(X, Y, Y_l, Y_u, rhythm_params):
+    loc = rhythm_params['max_loc']
+    dev_params = {}
+    
+    m_min = min(Y_l)
+    m_max = min(Y_u)
+    M_min = max(Y_l)
+    M_max = max(Y_u)
+
+    amp_min = M_min - m_max
+    amp_max = M_max - m_min
+    dev_amp = abs(amp_max - amp_min)/2
+
+    mes_min = m_min + amp_min/2
+    mes_max = m_max + amp_max/2
+    dev_mes = abs(mes_max - mes_min)/2
+
+    eps = 0.01
+    idx = loc
+    #print(Y[loc])
+    #print("***")
+
+    plt.plot(X,Y)
+    plt.plot(X,Y_l)
+    plt.plot(X,Y_u)
+    plt.show()
+
+    found = True
+    while idx < len(Y):
+        #print(Y_u[idx])
+        if abs(Y_u[idx] - Y[loc]) <= eps:        
+            break        
+        idx += 1              
+    else:
+        #print("***")
+        idx = loc
+        while idx >=0:
+            #print(Y_u[idx])
+            if abs(Y_u[idx] - Y[loc]) <= eps:
+                break
+            idx -= 1
+        else:
+            found = False
+            dev_acr = np.pi
+
+    if found:
+        loc_max = idx
+        dev_phase = abs(X[loc_max] - X[loc])
+        dev_acr = abs(project_acr(phase_to_radians(dev_phase, rhythm_params['period'])))
+    
+    acr_min = rhythm_params['acrophase'] - dev_acr
+    acr_max = rhythm_params['acrophase'] + dev_acr
+
+    #print(acr_min, rhythm_params['acrophase'], acr_max)
+    #print(acrophase_to_hours(acr_min), acrophase_to_hours(rhythm_params['acrophase']), acrophase_to_hours(acr_max))
+
+    rhythm_params['CI(amplitude)'] = [amp_min, amp_max]
+    rhythm_params['CI(acrophase)'] = [acr_min, acr_max]
+    rhythm_params['CI(mesor)'] = [mes_min, mes_max]
+
+    dev_params['mesor'] = dev_mes
+    dev_params['amplitude'] = dev_amp
+    dev_params['acrophase'] = dev_acr
+
+    return dev_params  
+""" 
 
 
 # sample the parameters from the confidence interval, builds a set of models and assesses the rhythmicity parameters confidence intervals   
 def eval_params_CI(X_test, X_fit_test, results, rhythm_params, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], samples_per_param=5, max_samples = 1000, t_test=True, k=0, sampling_type="LHS", period=24):
+      
     res2 = copy.deepcopy(results)
     params = res2.params
     n_params=len(params)
     DoF = k - n_params
+    rhythm_params['DoF'] = DoF
 
     CIs = results.conf_int()
     if type(CIs) != np.ndarray:
@@ -3575,6 +3813,7 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, parameters_to_ana
             mean_params[param] = project_acr(mean_params[param])
         dev_params[param] = 0.0
    
+    
     if not sampling_type:
         n_param_samples = P.shape[1]**P.shape[0] 
         N = min(max_samples, n_param_samples)
@@ -3593,10 +3832,10 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, parameters_to_ana
             p = lazy_prod(idx, P)
         else: # if sampling_type is defined (e.g., LHS)
             p = params_samples[i]
-        
+    
         res2.initialize(results.model, p)            
-        Y_test_CI = res2.predict(X_fit_test)
-       
+        Y_test_CI = res2.predict(X_fit_test)      
+    
         rhythm_params_CI = evaluate_rhythm_params(X_test, Y_test_CI, period=period)
 
         for param in parameters_to_analyse:
@@ -3612,14 +3851,19 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, parameters_to_ana
 
             if dev_tmp > dev_params[param]:
                 dev_params[param] = dev_tmp
-    
-    # statistics
-    for param in parameters_to_analyse:
-        if param in parameters_angular:
-            rhythm_params[f'CI({param})'] = get_acrophase_CI(mean_params[param], dev_params[param])
-        else:
-            rhythm_params[f'CI({param})'] = [mean_params[param] - dev_params[param], mean_params[param] + dev_params[param]]
         
+        for param in parameters_to_analyse:
+            if param in parameters_angular:
+                rhythm_params[f'CI({param})'] = get_acrophase_CI(mean_params[param], dev_params[param])
+            else:
+                rhythm_params[f'CI({param})'] = [mean_params[param] - dev_params[param], mean_params[param] + dev_params[param]]
+    """
+    else:
+        _, Y_l, Y_u = wls_prediction_std(results, exog=X_fit_test, alpha=0.05)
+        Y = results.predict(X_fit_test)
+        dev_params = eval_from_Y_CI(X_test, Y, Y_l, Y_u, rhythm_params)           
+    """
+
     if t_test:
         t = abs(stats.t.ppf(0.05/2,df=DoF))  
     else:
@@ -3641,6 +3885,7 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, parame
     params = res2.params
     n_params = len(params)
     DoF = k-n_params
+    rhythm_params['DoF'] = DoF
     CIs = results.conf_int()
     if type(CIs) != np.ndarray:
         CIs = CIs.values
@@ -3726,6 +3971,7 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
     res2 = copy.deepcopy(results)
     params = res2.params    
     DoF = k-1
+    rhythm_params['DoF'] = DoF
     CIs = statistics_params['CI']
     CIs = list(zip(*CIs))
                 
@@ -3834,9 +4080,9 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
     p1 = statistics1['p']
     p2 = statistics2['p']
 
-    if p1 > 0.05 or p2 > 0.05:
-        print("rhythmicity in one is not significant")
-        return
+    #if p1 > 0.05 or p2 > 0.05:
+    #    print("rhythmicity in one is not significant")
+    #    #return
 
     d_params = {}
     
@@ -3860,6 +4106,7 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
     # DoF
     k = len(df_pop1.test.unique()) + len(df_pop2.test.unique()) 
     DoF = k - 1
+    rhythm_params['DoF'] = DoF
 
     # statistics
     if t_test:
@@ -3894,7 +4141,7 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
 
 # compare two pairs independently
 def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], samples_per_param_CI=5, max_samples_CI = 1000, t_test = True, sampling_type="LHS", rhythm_params = {}, single_params = {}, **kwargs):    
-
+    
     n_components1 = n_components
     period1 = period
     if not n_components2:
@@ -3924,9 +4171,9 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
     p1 = statistics1['p']
     p2 = statistics2['p']
 
-    if p1 > 0.05 or p2 > 0.05:
-        print("rhythmicity in one is not significant")
-        return
+    #if p1 > 0.05 or p2 > 0.05:
+    #    print("rhythmicity in one is not significant")
+    #    #return
 
     d_params = {}
     for param in parameters_to_analyse:        
@@ -3950,12 +4197,14 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
     k = len(X1) + len(X2)
     n_params = len(res1.params)+len(res2.params)
     DoF = k - n_params
+    rhythm_params['DoF'] = DoF
     
     # statistics
     if t_test:
         t = abs(stats.t.ppf(0.05/2,df=DoF))  
     else:
         t = 1.96
+
     
     for param in parameters_to_analyse:        
         if param in parameters_angular:

@@ -13,7 +13,7 @@ import re
     individual: separate the multiple iterations of the same measurement (for lumicycle)
 """
     
-def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=True, remove_outliers=False):
+def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=True, remove_outliers=True):
     names = []
      
         

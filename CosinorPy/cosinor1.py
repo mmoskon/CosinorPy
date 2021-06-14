@@ -676,7 +676,7 @@ def population_test_cosinor(pop1, pop2):
             
 
 def fit_group(df, period = 24, save_folder='', plot_on=True):
-    df_cosinor1_fits = pd.DataFrame(columns = ['test', 'p', 'q', 'amplitude', 'p(amplitude)', 'q(amplitude)', 'CI(amplitude)', 'acrophase', 'p(acrophase)','q(acrophase)', 'CI(acrophase)'], dtype=float)
+    df_cosinor1_fits = pd.DataFrame(columns = ['test', 'period','p', 'q', 'amplitude', 'p(amplitude)', 'q(amplitude)', 'CI(amplitude)', 'acrophase', 'p(acrophase)','q(acrophase)', 'CI(acrophase)'], dtype=float)
     
     if (type(period) == int) or (type(period)==float):
         period = [period] 
@@ -686,7 +686,7 @@ def fit_group(df, period = 24, save_folder='', plot_on=True):
         for per in period:
             if save_folder:
                 #fit_results, amp, acr, statistics = fit_cosinor(x, y, per, test=test, save_to=save_folder+"\\"+test+"_"+str(per)+".pdf",  plot_on = plot_on)
-                fit_results, amp, acr, statistics = fit_cosinor(x, y, per, test=test, save_to=os.path.join(save_folder,test+"_"+str(per)+".pdf"),  plot_on = plot_on)
+                fit_results, amp, acr, statistics = fit_cosinor(x, y, per, test=test, save_to=os.path.join(save_folder,test+"_"+str(per)),  plot_on = plot_on)
             else:
                 fit_results, amp, acr, statistics = fit_cosinor(x, y, per, test=test, plot_on = plot_on)
             #if acr <0:
@@ -726,9 +726,11 @@ def fit_cosinor(X, Y, period, test='', save_to = '', plot_on = True):
     
     return fit_results, amp, acr, statistics
 
+# perform a comparison using a joint model
 def test_cosinor_pairs(df, pairs, period = 24, folder = '', prefix='', plot_measurements=True, legend=True, df_best_models = -1):
     
     df_results = pd.DataFrame(columns = ['test',
+                                         'period',
                                          'p', 
                                          'q', 
                                          'amplitude1', 
