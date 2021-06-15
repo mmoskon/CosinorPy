@@ -354,7 +354,9 @@ def population_test_cosinor_pairs_independent(df, pairs, period=24, period2=None
         
         k1 = len(df_pop1.test.unique())
         k2 = len(df_pop2.test.unique())
-        DoF = k1 + k2 - 1
+        DoF1 = k1 - 1
+        DoF2 = k2 - 1
+        DoF = k1 + k2 - 2
         t = abs(stats.t.ppf(0.05/2,df=DoF))   
 
         res1 = population_fit_cosinor(df_pop1, period = period1, plot_on = False)      
@@ -363,10 +365,10 @@ def population_test_cosinor_pairs_independent(df, pairs, period=24, period2=None
         #amplitude ('amp')
         param = 'amp'
         amp1, amp2 = res1['means'][-2], res2['means'][-2]
-        dev1 = abs(res1['confint'][param][1] - res1['confint'][param][0])/2
-        dev2 = abs(res2['confint'][param][1] - res2['confint'][param][0])/2
-        dev = dev1+dev2
-        se = (dev1 + dev2)/t
+        CI1 = res1['confint'][param][0], res1['confint'][param][1]
+        CI2 = res2['confint'][param][0], res2['confint'][param][1]
+        se = cosinor.get_se_diff_from_CIs(CI1, CI2, DoF1, DoF2, t_test = True, angular=False, CI_type = "se", n1 = k1, n2 = k2, DoF = DoF, biased=True) 
+        dev = se * t
         d_amp = amp2 - amp1
         CI_amp = [d_amp-dev, d_amp+dev]
         T0 = d_amp/se
@@ -376,12 +378,10 @@ def population_test_cosinor_pairs_independent(df, pairs, period=24, period2=None
         #acrophase ('acr')
         param = 'acr'
         acr1, acr2 = res1['means'][-1], res2['means'][-1]
-        dev1 = (res1['confint'][param][1] - res1['confint'][param][0])/2
-        dev2 = (res2['confint'][param][1] - res2['confint'][param][0])/2
-        dev1 = abs(cosinor.project_acr(dev1))
-        dev2 = abs(cosinor.project_acr(dev2))
-        dev = dev1+dev2
-        se = (dev1 + dev2)/t
+        CI1 = res1['confint'][param][0], res1['confint'][param][1]
+        CI2 = res2['confint'][param][0], res2['confint'][param][1]
+        se = cosinor.get_se_diff_from_CIs(CI1, CI2, DoF1, DoF2, t_test = True, angular=True, CI_type = "se", n1 = k1, n2 = k2, DoF = DoF, biased=True) 
+        dev = se * t
         d_acr = cosinor.project_acr(acr2-acr1)
         CI_acr = [d_acr - dev, d_acr + dev]
         T0 = d_acr/se
@@ -860,30 +860,28 @@ def test_cosinor_pairs_independent(df, pairs, period = 24, period2 = None, df_be
         fit_results2, amp2, acr2, stats2 = fit_cosinor(X2, Y2, period = period2, plot_on=False)
 
         k = len(X1) + len(X2)
+        k1 = len(X1)
+        k2 = len(X2)
         DoF = k - (len(fit_results1.params) + len(fit_results2.params))
+        DoF1 = k1 - len(fit_results1.params)
+        DoF2 = k2 - len(fit_results2.params)
         t = abs(stats.t.ppf(0.05/2,df=DoF))   
 
         d_amp = amp2-amp1
         d_acr = cosinor.project_acr(acr2-acr1)
 
-        amp1_l, amp1_u = stats1['CI'][0][-2], stats1['CI'][1][-2]
-        amp2_l, amp2_u = stats2['CI'][0][-2], stats2['CI'][1][-2]
-        dev_amp1 = abs(amp1_u - amp1_l)/2
-        dev_amp2 = abs(amp2_u - amp2_l)/2
-        dev_amp = dev_amp1 + dev_amp2
-        se_amp = (dev_amp1 + dev_amp2)/t
+        CI_amp1 = stats1['CI'][0][-2], stats1['CI'][1][-2]
+        CI_amp2 = stats2['CI'][0][-2], stats2['CI'][1][-2]
+        se_amp = cosinor.get_se_diff_from_CIs(CI_amp1, CI_amp2, DoF1, DoF2, t_test = True, angular=False, CI_type = "se", n1 = k1, n2 = k2, DoF = DoF, biased=True) 
+        dev_amp = t*se_amp
         T0 = d_amp/se_amp
         p_val_amp = 2 * (1 - stats.t.cdf(abs(T0), DoF))
         CI_amp = [d_amp-dev_amp, d_amp+dev_amp]
 
-        acr1_l, acr1_u = stats1['CI'][0][-1], stats1['CI'][1][-1]
-        acr2_l, acr2_u = stats2['CI'][0][-1], stats2['CI'][1][-1]
-        dev_acr1 = (acr1_u - acr1_l)/2
-        dev_acr2 = (acr2_u - acr2_l)/2
-        dev_acr1 = abs(cosinor.project_acr(dev_acr1))
-        dev_acr2 = abs(cosinor.project_acr(dev_acr2))
-        dev_acr = dev_acr1 + dev_acr2
-        se_acr = (dev_acr1 + dev_acr2)/t  
+        CI_acr1 = stats1['CI'][0][-1], stats1['CI'][1][-1]
+        CI_acr2 = stats2['CI'][0][-1], stats2['CI'][1][-1]
+        se_acr = cosinor.get_se_diff_from_CIs(CI_acr1, CI_acr2, DoF1, DoF2, t_test = True, angular=True, CI_type = "se", n1 = k1, n2 = k2, DoF = DoF, biased=True) 
+        dev_acr = se_acr*t
         T0 = d_acr/se_acr
         p_val_acr = 2 * (1 - stats.t.cdf(abs(T0), DoF))
         CI_acr = [d_acr - dev_acr, d_acr + dev_acr]

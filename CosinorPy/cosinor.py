@@ -3401,7 +3401,7 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
 
 # eval parameters using bootstrap
 # bootstrap type should be set to either std (CI = X+-1.96*STD(X)) or percentile (CI = [2.5th percentile, 97.5th percentile])
-def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rhythm_params, bootstrap_size=1000, bootstrap_type='std', t_test=False, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], period=24):   
+def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rhythm_params, bootstrap_size=1000, bootstrap_type='std', t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], period=24):   
     params_bs = {}
     for param in parameters_to_analyse:
         params_bs[param] = np.zeros(bootstrap_size)
@@ -3437,7 +3437,8 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
         for param in parameters_to_analyse:
             params_bs[param][i] = rhythm_params_bs[param]                 
 
-    DoF = len(X) - len(results_bs.params)
+    #DoF = len(X) - len(results_bs.params)
+    DoF = bootstrap_size - len(results_bs.params)
     rhythm_params['DoF'] = DoF
 
     if t_test:
@@ -3466,6 +3467,7 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
             mean_params[param] = mean_phase
             if bootstrap_type == "se":
                 se_params[param] = std_phase/(len(phases)-1)**0.5
+                #se_params[param] = std_phase/(len(phases))**0.5
             elif bootstrap_type == "std":
                 se_params[param] = std_phase
             elif bootstrap_type == "percentile":
@@ -3485,7 +3487,7 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
             mean_params[param] = np.nanmean(params_bs[param])
             
             if bootstrap_type == "se":
-                se_params[param] = stats.sem(params_bs[param], nan_policy='omit')
+                se_params[param] = stats.sem(params_bs[param], nan_policy='omit')                
             elif bootstrap_type == "std":
                 se_params[param] = np.nanstd(params_bs[param])
             elif bootstrap_type == "percentile":
@@ -3495,6 +3497,7 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
                 dev = np.nanmax([np.abs(mean_params[param]-ci_l), np.abs(mean_params[param]-ci_h)])
                 se_params[param] = dev/n_devs
      
+    
     # statistics
     for param in parameters_to_analyse:
         rhythm_params[f'{param}_bootstrap'] = mean_params[param]
@@ -3514,7 +3517,7 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
 
 # eval rhythmicity parameter differences using bootstrap in a combination with limorhyde
 # bootstrap type should be set to either std (CI = X+-1.96*STD(X)) or percentile (CI = [2.5th percentile, 97.5th percentile])
-def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, rhythm_params, bootstrap_size, bootstrap_type, t_test=False, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], period1=24, period2=24):    
+def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs, rhythm_params, bootstrap_size, bootstrap_type, t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], period1=24, period2=24):    
     params_bs = {}
     for param in parameters_to_analyse:
         params_bs[param] = np.zeros(bootstrap_size)
@@ -3553,7 +3556,8 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
             if param in parameters_angular:
                 params_bs[param][i] = params_bs[param][i]#project_acr(params_bs[param][i])
     
-    DoF = len(X.values) - len(results_bs.params)
+    #DoF = len(X.values) - len(results_bs.params)
+    DoF = bootstrap_size - len(results_bs.params)
     rhythm_params['DoF'] = DoF
 
     if t_test:
@@ -3627,7 +3631,7 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
 
 
 # compare two pairs independently using bootstrap
-def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, bootstrap_size=1000, bootstrap_type="std", t_test = False, rhythm_params = {}, single_params = {}, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):    
+def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, bootstrap_size=1000, bootstrap_type="std", t_test = True, rhythm_params = {}, single_params = {}, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):    
 
     n_components1 = n_components
     period1 = period
@@ -3683,26 +3687,25 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
             CI2[param] = single_params['test2'][f'CI({param})']
 
     # DoF
-    k = len(X1) + len(X2)
-    n_params = len(res1.params)+len(res2.params)
-    DoF = k - n_params
+    #k = len(X1) + len(X2)
+    n_params1 = len(res1.params)
+    n_params2 = len(res2.params)
+    n_params = n_params1 + n_params2
+    DoF = 2*bootstrap_size - n_params
     rhythm_params['DoF'] = DoF
+
+    DoF1 = bootstrap_size - n_params1
+    DoF2 = bootstrap_size - n_params2
 
     if t_test:
         n_devs = abs(stats.t.ppf(0.05/2,df=DoF))  
     else:
         n_devs = 1.96
 
-
     # statistics
     for param in parameters_to_analyse:        
-        if param in parameters_angular:
-            dev1 = abs(project_acr(CI1[param][1] - CI1[param][0]))/2
-            dev2 = abs(project_acr(CI2[param][1] - CI2[param][0]))/2
-        else:
-            dev1 = abs(CI1[param][1] - CI1[param][0])/2
-            dev2 = abs(CI2[param][1] - CI2[param][0])/2
-        se_param = (dev1 + dev2)/n_devs
+        angular = True if param in parameters_angular else False
+        se_param = get_se_diff_from_CIs(CI1[param], CI2[param], DoF1, DoF2, t_test = t_test, angular=angular, CI_type = bootstrap_type, n1 = bootstrap_size, n2 = bootstrap_size, DoF = DoF) 
         d_param = d_params[param]
 
         rhythm_params[f'd_{param}'] = d_param
@@ -3878,7 +3881,7 @@ def eval_params_CI(X_test, X_fit_test, results, rhythm_params, parameters_to_ana
   
     return rhythm_params 
 
-# eval rhythmicity parameter differences using parameter confidence intervals
+# eval rhythmicity parameter differences using parameter confidence intervals and limorhyde
 def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], samples_per_param=5, max_samples=1000, t_test=True, k=0, sampling_type="LHS", period1=24, period2=24):
 
     res2 = copy.deepcopy(results)
@@ -4104,24 +4107,23 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
         
 
     # DoF
+    k1 = len(df_pop1.test.unique())
+    k2 = len(df_pop2.test.unique()) 
     k = len(df_pop1.test.unique()) + len(df_pop2.test.unique()) 
-    DoF = k - 1
+    DoF = k - 2
+    DoF1 = k1 - 1
+    DoF2 = k2 - 1
     rhythm_params['DoF'] = DoF
 
     # statistics
     if t_test:
-        t = abs(stats.t.ppf(0.05/2,df=DoF))  
+        t = abs(stats.t.ppf(0.05/2,df=DoF)) 
     else:
         t = 1.96
 
     for param in parameters_to_analyse:        
-        if param in parameters_angular:
-            dev1 = abs(project_acr(CI1[param][1] - CI1[param][0]))/2
-            dev2 = abs(project_acr(CI2[param][1] - CI2[param][0]))/2
-        else:
-            dev1 = abs(CI1[param][1] - CI1[param][0])/2
-            dev2 = abs(CI2[param][1] - CI2[param][0])/2
-        se_param = (dev1 + dev2)/t
+        angular = True if param in parameters_angular else False
+        se_param = get_se_diff_from_CIs(CI1[param], CI2[param], DoF1, DoF2, t_test = t_test, angular=angular, CI_type = "se", n1 = k1, n2 = k2, DoF = DoF) 
         d_param = d_params[param]
 
         rhythm_params[f'd_{param}'] = d_param
@@ -4168,8 +4170,8 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
     rhythm_params['statistics1'] = statistics1
     rhythm_params['statistics2'] = statistics2
 
-    p1 = statistics1['p']
-    p2 = statistics2['p']
+    #p1 = statistics1['p']
+    #p2 = statistics2['p']
 
     #if p1 > 0.05 or p2 > 0.05:
     #    print("rhythmicity in one is not significant")
@@ -4194,26 +4196,26 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
      
 
     # DoF
+    k1 = len(X1)
+    k2 = len(X2)
     k = len(X1) + len(X2)
     n_params = len(res1.params)+len(res2.params)
+    n_params1 = len(res1.params)
+    n_params2 = len(res2.params)
     DoF = k - n_params
+    DoF1 = k1 - n_params1
+    DoF2 = k2 - n_params2
     rhythm_params['DoF'] = DoF
     
     # statistics
     if t_test:
-        t = abs(stats.t.ppf(0.05/2,df=DoF))  
+        t = abs(stats.t.ppf(0.05/2,df=DoF))          
     else:
         t = 1.96
 
-    
     for param in parameters_to_analyse:        
-        if param in parameters_angular:
-            dev1 = abs(project_acr(CI1[param][1] - CI1[param][0]))/2
-            dev2 = abs(project_acr(CI2[param][1] - CI2[param][0]))/2
-        else:
-            dev1 = abs(CI1[param][1] - CI1[param][0])/2
-            dev2 = abs(CI2[param][1] - CI2[param][0])/2
-        se_param = (dev1 + dev2)/t
+        angular = True if param in parameters_angular else False
+        se_param = get_se_diff_from_CIs(CI1[param], CI2[param], DoF1, DoF2, t_test = t_test, angular=angular, CI_type = "se", n1 = k1, n2 = k2, DoF = DoF) 
         d_param = d_params[param]
 
         rhythm_params[f'd_{param}'] = d_param
@@ -4308,18 +4310,52 @@ def generate_samples(sampling_type, intervals, size):
 def get_acrophase_CI(mean_acr, dev_acr):
     return [mean_acr-np.abs(dev_acr), mean_acr+np.abs(dev_acr)]
 
-def get_CI_dev_diff(mean1, CI1, mean2, CI2, acr = False):
-    dev1 = np.abs(CI1[1] - mean1)/2 + np.abs(mean1 - CI1[0])/2
-    dev2 = np.abs(CI2[1] - mean2)/2 + np.abs(mean2 - CI2[0])/2
+# get standard errors of difference from CIs of two variables
+# https://calcworkshop.com/confidence-interval/difference-in-means/    
+def get_se_diff_from_CIs(CI1, CI2, DoF1, DoF2, t_test = True, angular=False, pooled = True, CI_type = "std", n1=0, n2=0, DoF=0, biased=False):
+    if angular:
+        dev1 = abs(project_acr(CI1[1] - CI1[0]))/2
+        dev2 = abs(project_acr(CI2[1] - CI2[0]))/2
+    else:
+        dev1 = abs(CI1[1] - CI1[0])/2
+        dev2 = abs(CI2[1] - CI2[0])/2
     
-    dev = dev1 + dev2
-    diff = mean2 - mean1
-    if acr:
-        diff = project_acr(diff)
-    
-    CI = [diff - dev, diff + dev]
+    if t_test:
+        t1 = abs(stats.t.ppf(0.05/2,df=DoF1))
+        t2 = abs(stats.t.ppf(0.05/2,df=DoF2))  
+    else:
+        t1 = 1.96
+        t2 = 1.96
 
-    return CI, dev
+    se1 = dev1/t1
+    se2 = dev2/t2
+
+    var1, var2 = se1**2, se2**2
+    se = (var1 + var2)**0.5  
+
+    if CI_type == "se" and pooled:
+        if not DoF:
+            DoF = DoF1 + DoF2
+
+        if biased:
+            var1 = var1 * (n1)
+            var2 = var2 * (n2)
+        else:
+            var1 = var1 * (n1 + 1)
+            var2 = var2 * (n2 + 1)
+
+        F = var1/var2 if var1 > var2 else var2/var1
+        t = abs(stats.t.ppf(0.05,df=DoF))
+        # pooled variance        
+        if F <= t:
+            if biased:                
+                sp = (((n1-1) * var1 + (n2-1) * var2)/(n1 + n2 - 2))**0.5                
+                se = sp * (((1/n1) + (1/n2))**0.5)
+            else:
+                sp = (((n1-2) * var1 + (n2-2) * var2)/(n1 + n2 - 4))**0.5
+                se = sp * (((1/(n1-1)) + (1/(n2-1)))**0.5)
+            
+    return se
 
 # z-test for parameter significance
 def get_p_z_test(X, se_X):
