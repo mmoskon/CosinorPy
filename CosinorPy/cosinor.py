@@ -4275,7 +4275,11 @@ def phase_to_radians(phase, period=24):
 
 # convert phase angles in radians to time units
 def acrophase_to_hours(acrophase, period=24):
-    return -period * acrophase/(2*np.pi)
+    acrophase = project_acr(acrophase)
+    hours = -period * acrophase/(2*np.pi)
+    if hours < 0:
+        hours += 24 
+    return hours
 
 # project acrophase to the interval [-pi, pi]
 def project_acr(acr):
