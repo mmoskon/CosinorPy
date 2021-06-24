@@ -19,7 +19,6 @@ from statsmodels.sandbox.regression.predstd import wls_prediction_std
 
 import os
 
-
 def calculate_statistics_curve_fit_parameters(popt, pcov, DoF, parameters):
     # Compute standard errors of parameter estimates
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
