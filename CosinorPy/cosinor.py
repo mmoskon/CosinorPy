@@ -830,12 +830,12 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
 
         if type(params) == int:
             params = results.params
-            if plot and plot_margins and model_type == 'lin':
+            if plot and plot_margins:
                 #_, lowers, uppers = wls_prediction_std(results, exog=X_fit_eval_params, alpha=0.05)     
                 Y_plot_fits_all = Y_plot_fits
         else:
             params = np.vstack([params, results.params])
-            if plot and plot_margins and model_type == 'lin':
+            if plot and plot_margins:
                 #_, l, u = wls_prediction_std(results, exog=X_fit_eval_params, alpha=0.05)    
                 #lowers = np.vstack([lowers, l])
                 #uppers = np.vstack([uppers, u])
@@ -904,18 +904,17 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         
 
     if plot and plot_margins:
-        if model_type == 'lin':
-            if k == 1:
-                _, lower, upper = wls_prediction_std(results, exog=X_plot_fits, alpha=0.05)        
-            else:
-                #lower = np.mean(lowers, axis=0)
-                #upper = np.mean(uppers, axis=0)
-                var_Y = np.var(Y_plot_fits_all, axis=0, ddof = k-1)
-                sd_Y = var_Y**0.5
-                lower = Y_plot_fits - ((t*sd_Y)/((k-1)**0.5))
-                upper = Y_plot_fits + ((t*sd_Y)/((k-1)**0.5))
-            plt.fill_between(X_plot, lower, upper, color=color, alpha=0.1)                   
-    
+        if k == 1:
+            _, lower, upper = wls_prediction_std(results, exog=X_plot_fits, alpha=0.05)        
+        else:
+            #lower = np.mean(lowers, axis=0)
+            #upper = np.mean(uppers, axis=0)
+            var_Y = np.var(Y_plot_fits_all, axis=0, ddof = k-1)
+            sd_Y = var_Y**0.5
+            lower = Y_plot_fits - ((t*sd_Y)/((k-1)**0.5))
+            upper = Y_plot_fits + ((t*sd_Y)/((k-1)**0.5))
+        plt.fill_between(X_plot, lower, upper, color=color, alpha=0.1)                   
+
     if plot: 
         if plot_measurements:
             if model_type == 'lin':
@@ -1375,53 +1374,6 @@ def calculate_statistics(X, Y, Y_fit, n_components, period, lin_comp = False):
     
     return {'p':p, 'p_reject':p_reject, 'SNR':SNR, 'RSS': RSS, 'resid_SE': resid_SE, 'ME': ME}
 
-def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
-    # statistics according to Cornelissen (eqs (8) - (9))
-    MSS = sum((Y_fit - Y.mean())**2)
-    RSS = sum((Y - Y_fit)**2)
-    N = Y.size
-
-    F = (MSS/(n_params - 1)) / (RSS/(N - n_params)) 
-    p = 1 - stats.f.cdf(F, n_params - 1, N - n_params)
-    
-    X_periodic = np.round_(X % period,2)                                    
-    
-    X_unique = np.unique(X_periodic)
-    n_T = len(X_unique)
-    
-    SSPE = 0
-    for x in X_unique:
-        Y_i_avg = np.mean(Y[X_periodic == x])
-        SSPE += sum((Y[X_periodic == x] - Y_i_avg)**2)
-    SSLOF = RSS-SSPE
-    #print('RSS: ', RSS)
-    #print('SSPE: ', SSPE)
-    #print('SSLOF: ', SSLOF)
-    F = (SSLOF/(n_T-n_params))/(SSPE/(N-n_T))
-    p_reject = 1 - stats.f.cdf(F, n_T-n_params, N-n_T)
-    
-    
-    # Another measure that describes goodnes of fit
-    # How well does the curve describe the data?
-    # signal to noise ratio
-    # fitted curve: signal
-    # noise: 
-    stdev_data = np.std(Y, ddof = 1)
-    stdev_fit = np.std(Y_fit, ddof = 1)
-    SNR = stdev_fit / stdev_data
-    
-    
-    # Standard Error of residuals, margin of error
-    # https://stats.stackexchange.com/questions/57746/what-is-residual-standard-error
-    DoF = N - n_params
-    resid_SE = np.sqrt(RSS/DoF)
-    # https://scientificallysound.org/2017/05/16/independent-t-test-python/
-    # https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/hypothesis-testing/margin-of-error/
-    critical_value = stats.t.ppf(1-0.025, DoF)
-    ME = critical_value * resid_SE
-    
-    
-    return {'p':p, 'p_reject':p_reject, 'SNR':SNR, 'RSS': RSS, 'resid_SE': resid_SE, 'ME': ME}
 
 """
 *********************
@@ -2830,7 +2782,6 @@ def ct_test(count, poiss_results):
     return alpha       
 
 
-
 def compare_ANOVA(df, pairs, n_components = 3, period = 24):
     # https://pythonfordatascience.org/anova-python/
     # http://www.statistik.si/storitve/statisticne-analize-testi/anova-analiza-variance/
@@ -2873,261 +2824,11 @@ def compare_ANOVA2(df, pairs):
 	
     return multi.multipletests(P, method = 'fdr_bh')[1]
 	
-def test_phase(X1, Y1, X2, Y2, phase, period = 0, test1 = '', test2 = ''):
-    X2 -= phase
-    if period:
-        X1 %= period
-        X2 %= period
-    
-
-
-def amp_phase_fit(predictor, Amp, Per, Phase, Base, dAmp, dPhase, dBase):
-    X = predictor[0]
-    H = predictor[1]
-    return (Amp + H*dAmp)*np.cos((2*np.pi*X/Per) + Phase + H * dPhase) + Base + H*dBase
-
-def phase_fit(predictor, Amp, Per, Phase, Base, dPhase, dBase):
-    X = predictor[0]
-    H = predictor[1]
-    return Amp*np.cos((2*np.pi*X/Per) + Phase + H * dPhase) + Base + H*dBase
-    
-def amp_fit(predictor, Amp, Per, Phase, Base, dAmp, dBase):
-    X = predictor[0]
-    H = predictor[1]
-    return (Amp + H*dAmp)*np.cos((2*np.pi*X)/Per + Phase) + Base + H*dBase
-
-def per_fit(predictor, Amp, Per, Phase, Base, dPer, dBase):
-    X = predictor[0]
-    H = predictor[1]
-    return Amp*np.cos((2 * np.pi *X)/(Per+ H*dPer) + Phase) + Base + H*dBase
-
-def all_fit(predictor, Amp, Per, Phase, Base, dAmp, dPer, dPhase, dBase):
-    X = predictor[0]
-    H = predictor[1]
-    return (Amp + H*dAmp) * np.cos((2 * np.pi *X)/(Per + H*dPer)  + Phase + H * dPhase) + Base + H*dBase
-
-def compare_phase_pairs(df, pairs, min_per = 18, max_per = 36, folder = '', prefix='', plot_residuals=False):
-    df_results = pd.DataFrame()
-
-    for test1, test2 in pairs: 
-        if folder:
-            save_to = os.path.join(folder, prefix + test1 + '-' + test2)
-        else:
-            save_to = ''
-        
-        X1, Y1 = np.array(df[df.test == test1].x), np.array(df[df.test == test1].y)
-        X2, Y2 = np.array(df[df.test == test2].x), np.array(df[df.test == test2].y)
-        
-        statistics, d = compare_nonlinear(X1, Y1, X2, Y2, test1 = test1, test2 = test2, min_per = min_per, max_per=max_per, compare_phase = True, compare_period = False, compare_amplitude = False, save_to = save_to, plot_residuals=plot_residuals)
-        
-        d['test'] = test1 + ' vs. ' + test2
-        d['p'] = statistics['p']
-        d['p_reject'] = statistics['p_reject']
-        d['ME'] = statistics['ME']
-        d['resid_SE'] = statistics['resid_SE']
-      
-        df_results = df_results.append(d, ignore_index=True)
-
-    for v in d:
-        if v.startswith('p'):
-            if v == "p_reject":
-                q = "q_reject"
-            elif v == "p":
-                q = "q"
-            else:
-                q = v[2:].replace(")","")
-                q = "q("+str(q)+")"
-            
-            df_results[q] = multi.multipletests(df_results[v], method = '')[1]
-    
- 
-    columns = df_results.columns
-    columns = columns.sort_values()
-    columns = np.delete(columns, np.where((columns == 'test')|(columns == 'p')|(columns == 'q')|(columns == 'p_reject')|(columns == 'q_reject')))
-    columns = ['test', 'p', 'q', 'p_reject', 'q_reject'] + list(columns)
-    
-    df_results = df_results.reindex(columns, axis=1)
-    
-    return df_results
-
-    #return multi.multipletests(P, method = 'fdr_bh')[1]
-
-
-def compare_nonlinear_pairs(df, pairs, min_per = 18, max_per = 36, folder = '', prefix='', plot_residuals=False):
-    df_results = pd.DataFrame()
-
-    for test1, test2 in pairs: 
-        if folder:            
-            save_to = os.path.join(folder, prefix + test1 + '-' + test2)
-        else:
-            save_to = ''
-        
-        X1, Y1 = np.array(df[df.test == test1].x), np.array(df[df.test == test1].y)
-        X2, Y2 = np.array(df[df.test == test2].x), np.array(df[df.test == test2].y)
-        
-        statistics, d = compare_nonlinear(X1, Y1, X2, Y2, test1 = test1, test2 = test2, min_per = min_per, max_per=max_per, compare_phase = True, compare_period = False, compare_amplitude = True, save_to = save_to, plot_residuals=plot_residuals)
-        
-        d['test'] = test1 + ' vs. ' + test2
-        d['p'] = statistics['p']
-        d['p_reject'] = statistics['p_reject']
-        d['ME'] = statistics['ME']
-        d['resid_SE'] = statistics['resid_SE']
-     
-        df_results = df_results.append(d, ignore_index=True)
-  
-    for v in d:
-        if v.startswith('p'):
-            if v == "p_reject":
-                q = "q_reject"
-            elif v == "p":
-                q = "q"
-            else:
-                q = v[2:].replace(")","")
-                q = "q("+str(q)+")"
-            
-            df_results[q] = multi.multipletests(df_results[v], method = 'fdr_bh')[1]
-    
- 
-    columns = df_results.columns
-    columns = columns.sort_values()
-    columns = np.delete(columns, np.where((columns == 'test')|(columns == 'p')|(columns == 'q')|(columns == 'p_reject')|(columns == 'q_reject')))
-    columns = ['test', 'p', 'q', 'p_reject', 'q_reject'] + list(columns)
-    
-    df_results = df_results.reindex(columns, axis=1)
-    
-    return df_results
-
-    #return multi.multipletests(P, method = 'fdr_bh')[1]
-
-
-def compare_nonlinear(X1, Y1, X2, Y2, test1 = '', test2 = '', min_per = 18, max_per=36, compare_phase = False, compare_period = False, compare_amplitude = False, save_to = '', plot_residuals=False):
-    H1 = np.zeros(X1.size)
-    H2 = np.ones(X2.size)
-    
-    Y = np.concatenate((Y1, Y2))    
-    
-    X = np.concatenate((X1, X2))    
-    H = np.concatenate((H1, H2))
-    
-    predictor = np.array([X,H])
-    
-    X_full = np.linspace(min(min(X1), min(X2)), max(max(X1), max(X2)), 100)
-    H1 = np.zeros(X_full.size)
-    H2 = np.ones(X_full.size)
-    
-    minimum_bounds = {'Amp':0, 
-                      'Per':min_per, 
-                      'Phase':0, 
-                      'Base':0, 
-                      'dAmp':0, 
-                      'dPer':0, 
-                      'dPhase':-np.pi, 
-                      'dBase':0}
-    maximum_bounds = {'Amp':max(Y), 
-                      'Per':max_per, 
-                      'Phase':2*np.pi, 
-                      'Base':max(Y), 
-                      'dAmp':max(Y), 
-                      'dPer':max_per/2, 
-                      'dPhase':np.pi, 
-                      'dBase':max(Y)}
-    
-    if compare_phase and compare_amplitude:
-        parameters = ['Amp', 'Per', 'Phase', 'Base', 'dAmp', 'dPhase', 'dBase']        
-        min_bounds = [minimum_bounds[name] for name in parameters]
-        max_bounds = [maximum_bounds[name] for name in parameters]               
-        popt, pcov = curve_fit(amp_phase_fit, predictor, Y, bounds=(min_bounds, max_bounds))        
-        
-        Y1_full = amp_phase_fit(np.array([X_full, H1]), *popt)
-        Y2_full = amp_phase_fit(np.array([X_full, H2]), *popt)    
-        Y_fit = amp_phase_fit(np.array([X, H]), *popt)              
-    elif compare_phase:
-        parameters = ['Amp', 'Per', 'Phase', 'Base', 'dPhase', 'dBase']
-        min_bounds = [minimum_bounds[name] for name in parameters]
-        max_bounds = [maximum_bounds[name] for name in parameters]   
-        popt, pcov = curve_fit(phase_fit, predictor, Y, bounds=(min_bounds, max_bounds))
-        Y1_full = phase_fit(np.array([X_full, H1]), *popt)
-        Y2_full = phase_fit(np.array([X_full, H2]), *popt)    
-        Y_fit = phase_fit(np.array([X, H]), *popt)
-    elif compare_period:
-        parameters = ['Amp', 'Per', 'Phase', 'Base', 'dPer', 'dBase']
-        min_bounds = [minimum_bounds[name] for name in parameters]
-        max_bounds = [maximum_bounds[name] for name in parameters]   
-        popt, pcov = curve_fit(per_fit, predictor, Y, bounds=(min_bounds, max_bounds))
-        Y1_full = per_fit(np.array([X_full, H1]), *popt)
-        Y2_full = per_fit(np.array([X_full, H2]), *popt)    
-        Y_fit = per_fit(np.array([X, H]), *popt)
-    elif compare_amplitude:
-        parameters = ['Amp', 'Per', 'Phase', 'Base', 'dAmp', 'dBase']
-        min_bounds = [minimum_bounds[name] for name in parameters]
-        max_bounds = [maximum_bounds[name] for name in parameters]   
-        popt, pcov = curve_fit(amp_fit, predictor, Y, bounds=(min_bounds, max_bounds))
-        Y1_full = amp_fit(np.array([X_full, H1]), *popt)
-        Y2_full = amp_fit(np.array([X_full, H2]), *popt)    
-        Y_fit = amp_fit(np.array([X, H]), *popt)
-    else:
-        parameters = ['Amp', 'Per', 'Phase', 'Base', 'dAmp', 'dPer', 'dPhase', 'dBase']
-        min_bounds = [minimum_bounds[name] for name in parameters]
-        max_bounds = [maximum_bounds[name] for name in parameters]   
-        popt, pcov = curve_fit(all_fit, predictor, Y, bounds=(min_bounds, max_bounds))
-        Y1_full = all_fit(np.array([X_full, H1]), *popt)
-        Y2_full = all_fit(np.array([X_full, H2]), *popt)    
-        Y_fit = all_fit(np.array([X, H]), *popt)
-    
-    statistics = calculate_statistics_nonlinear(X, Y, Y_fit, len(popt), popt[1])    
-    
-    # Compute standard errors of parameter estimates
-    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
-    # http://reliawiki.com/index.php/Multiple_Linear_Regression_Analysis
-    perr = np.sqrt(np.diag(pcov))
-    DoF = len(Y) - len(popt)
-    p=np.zeros(len(popt))
-    for i in np.arange(len(perr)):
-        T0 = popt[i]/perr[i]
-        p[i] = 2 * (1 - stats.t.cdf(abs(T0), DoF))
-    
-    p_dict = {}
-    for param, val, p_val in zip(parameters, popt, p):
-        p_dict[param] = val
-        p_dict["p("+param+")"] = p_val
-    
-    
-    
-    plt.plot(X1, Y1, 'ko', markersize=1, label = test1)
-    plt.plot(X2, Y2, 'ro', markersize=1, label = test2)
-   
-    #Y_fit1 = Y_fit[H == 0]
-    #Y_fit2 = Y_fit[H == 1]
-    
-    plt.plot(X_full, Y1_full, 'k', label = 'fit '+test1)    
-    plt.plot(X_full, Y2_full, 'r', label = 'fit '+test2)    
-      
-    plt.title(test1 + ' vs. ' + test2)
-    plt.xlabel('time [h]')
-    plt.ylabel('measurements')
-    plt.legend()
-    
-    if save_to:
-        plt.savefig(save_to+'.png')
-        plt.savefig(save_to+'.pdf')
-        plt.close()
-    else:
-        plt.show()
-    
-    if plot_residuals:
-        
-        resid = Y-Y_fit
-        sm.qqplot(resid)
-        plt.title(test1 + ' vs. ' + test2)
-        save_to_resid = save_to + '_resid' 
-        if save_to:
-            plt.savefig(save_to_resid)
-            plt.close()
-        else:
-            plt.show()
-    
-    
-    return statistics, p_dict
+#def test_phase(X1, Y1, X2, Y2, phase, period = 0, test1 = '', test2 = ''):
+#    X2 -= phase
+#    if period:
+#        X1 %= period
+#        X2 %= period
     
 
 
