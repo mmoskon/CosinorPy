@@ -19,6 +19,90 @@ from statsmodels.sandbox.regression.predstd import wls_prediction_std
 
 import os
 
+#####################
+# FITTING FUNCTIONS #
+#####################
+
+# basic fit
+def cosinor_basic(predictor, A, B, acrophase, period):
+    X = predictor
+    return A + B * np.cos(2*np.pi*X/period + acrophase)
+
+def cosinor_basic2(predictor, A, B, acrophase, B2, acrophase2, period):
+    X = predictor
+    return A + B * (np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2))
+
+def cosinor_basic3(predictor, A, B, acrophase, B2, acrophase2, B3, acrophase3, period):
+    X = predictor
+    return A + B * (np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2) + B3 * np.cos(2*np.pi*X/(period/3) + acrophase3))
+
+def cosinor_basic4(predictor, A, B, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4, period):
+    X = predictor
+    return A + B * (np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2) + B3 * np.cos(2*np.pi*X/(period/3) + acrophase3) + B4 * np.cos(2*np.pi*X/(period/4) + acrophase4))
+
+# lin comp
+def cosinor_lin_comp(predictor, A, B, C, acrophase, period):
+    X = predictor
+    return A + B * np.cos(2*np.pi*X/period + acrophase) + C * X 
+
+
+# generalised models
+
+# A ... MESOR
+# B ... amplitude
+# C ... amplification coefficient: 
+#  C > 0 ... oscillations are amplified with time
+#  C < 0 ... oscillations are damped with time
+#  C = 0 ... sustained oscillations
+# D ... linear component
+# Phi ... acrophase
+# Per ... period
+def generalized_cosinor(predictor, A, B, C, D, acrophase, period):
+    X = predictor
+    return A + B * (1 + C*X) * np.cos(2*np.pi*X/period + acrophase) + D * X 
+
+def generalized_cosinor2(predictor, A, B, C, D, acrophase, B2, acrophase2, period):
+    X = predictor
+    return A + B * (1 + C*X) * (np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2)) + D * X 
+
+def generalized_cosinor3(predictor, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, period):
+    X = predictor
+    return A + B * (1 + C*X) * (np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2) + B3 * np.cos(2*np.pi*X/(period/3) + acrophase3)) + D * X 
+
+def generalized_cosinor4(predictor, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4, period):
+    X = predictor
+    return A + B * (1 + C*X) * (np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2) + B3 * np.cos(2*np.pi*X/(period/3) + acrophase3) + B4 * np.cos(2*np.pi*X/(period/4) + acrophase4)) + D * X 
+
+
+# the model below is not ok because we cannot assess the significance of amplitude being different than zero directly
+def generalized_cosinor_exp(predictor, A, B, C, D, acrophase, period):
+    X = predictor
+    return A + B * (1 + np.exp(C*X)) * np.cos(2*np.pi*X/period + acrophase) + D * X 
+    # opcije: 
+    #  ... + np.exp(D*X)
+    #  ... + np.log(D*X)
+
+  
+def generalized_cosinor_compare(predictor, A, B, C, D, acrophase, A0, B0, C0, D0, acrophase0, period):
+    X = predictor[0]
+    H = predictor[1]
+    return (A + H*A0) + (B + H*B0) * (1 + (C + H*C0)*X) * np.cos(2*np.pi*X/period + (acrophase + H*acrophase0)) + (D + H*D0) * X 
+
+def generalized_cosinor_compare_exp(predictor, A, B, C, D, acrophase, A0, B0, C0, D0, acrophase0, period):
+    X = predictor[0]
+    H = predictor[1]
+    return (A + H*A0) + (B + H*B0) * (1 + np.exp((C + H*C0)*X)) * np.cos(2*np.pi*X/period + (acrophase + H*acrophase0)) + (D + H*D0) * X 
+
+
+
+############################
+# end of FITTING FUNCTIONS #
+############################
+
+#########################################
+# STATISTICS AND RHYTHMICITY PARAMETERS #
+#########################################
+
 def calculate_statistics_curve_fit_parameters(popt, pcov, DoF, parameters):
     # Compute standard errors of parameter estimates
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
@@ -103,9 +187,15 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
     
     return {'p':p, 'p_reject':p_reject, 'SNR':SNR, 'RSS': RSS, 'resid_SE': resid_SE, 'ME': ME}
 
-def cosinor_basic(predictor, A, B, acrophase, period):
-    X = predictor
-    return A + B * np.cos(2*np.pi*X/period + acrophase)
+
+################################################
+# end of STATISTICS AND RHYTHMICITY PARAMETERS #
+################################################
+
+
+##############
+# REGRESSION #
+##############
 
 def fit_cosinor_basic(X,Y, period=24, min_per = 12, max_per=36, plot=False, plot_margins=True):
     min_bounds = {'A':0, 
@@ -133,9 +223,7 @@ def fit_cosinor_basic(X,Y, period=24, min_per = 12, max_per=36, plot=False, plot
         popt, pcov = curve_fit(lambda x, A, B, acrophase: cosinor_basic(x, A, B, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds))
     else:
         popt, pcov = curve_fit(cosinor_basic, predictor, Y, bounds=(min_bounds, max_bounds))
-        
-
-    
+   
     DoF = Y.size - len(popt)
 
     if not period:
@@ -165,32 +253,102 @@ def fit_cosinor_basic(X,Y, period=24, min_per = 12, max_per=36, plot=False, plot
 
 
 
-def cosinor_lin_comp(predictor, A, B, C, acrophase, period):
-    X = predictor
-    return A + B * np.cos(2*np.pi*X/period + acrophase) + C * X 
+def fit_cosinor_basic_n_comp(X,Y, period=24, n_components = 1, min_per = 12, max_per=36, plot=False, plot_margins=True):
+    min_bounds = {'A':0, 
+                      'B':0,
+                      'B2':0,
+                      'B3':0,
+                      'B4':0,
+                      'acrophase':-np.pi,
+                      'acrophase2':-np.pi,
+                      'acrophase3':-np.pi,
+                      'acrophase4':-np.pi}
+                      
+    max_bounds = {'A':max(Y), 
+                      'B':max(Y), 
+                      'B2':max(Y),
+                      'B3':max(Y),
+                      'B4':max(Y),
+                      'acrophase':np.pi,
+                      'acrophase2':np.pi,
+                      'acrophase3':np.pi,
+                      'acrophase4':np.pi}
+    if not period:
+        min_bounds['period'] =  min_per
+        max_bounds['period'] =  max_per
+
+    parameters = ['A', 'B', 'acrophase']
+    for i in range(2, n_components + 1):
+        parameters += [f"B{i}", f"acrophase{i}"]
+
+    if not period:
+        parameters += ['period']
+
+    predictor = X
+    min_bounds = [min_bounds[name] for name in parameters]
+    max_bounds = [max_bounds[name] for name in parameters]  
+
+    if n_components == 1:
+        fitting_func = cosinor_basic       
+    elif n_components == 2:
+        fitting_func = cosinor_basic2
+    elif n_components == 3:
+        fitting_func = cosinor_basic3
+    elif n_components == 4:
+        fitting_func = cosinor_basic4
+    else:
+        print("Invalid option!")
+        return
 
 
 
-# A ... MESOR
-# B ... amplitude
-# C ... amplification coefficient: 
-#  C > 0 ... oscillations are amplified with time
-#  C < 0 ... oscillations are damped with time
-#  C = 0 ... sustained oscillations
-# D ... linear component
-# Phi ... acrophase
-# Per ... period
-def generalized_cosinor(predictor, A, B, C, D, acrophase, period):
-    X = predictor
-    return A + B * (1 + C*X) * np.cos(2*np.pi*X/period + acrophase) + D * X 
+    if period:
+        if n_components == 1:
+            popt, pcov = curve_fit(lambda x, A, B, acrophase: fitting_func(x, A, B, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds))
+        elif n_components == 2:
+            popt, pcov = curve_fit(lambda x, A, B, acrophase, B2, acrophase2: fitting_func(x, A, B, acrophase, B2, acrophase2, period), predictor, Y, bounds=(min_bounds, max_bounds))
+        elif n_components == 3:
+            popt, pcov = curve_fit(lambda x, A, B, acrophase, B2, acrophase2, B3, acrophase3: fitting_func(x, A, B, acrophase, B2, acrophase2, B3, acrophase3, period), predictor, Y, bounds=(min_bounds, max_bounds))
+        elif n_components == 4:
+            popt, pcov = curve_fit(lambda x, A, B, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4: fitting_func(x, A, B, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4, period), predictor, Y, bounds=(min_bounds, max_bounds))
+    else:
+        popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds))
 
-# the model below is not ok because we cannot assess the significance of amplitude being different than zero directly
-def generalized_cosinor_exp(predictor, A, B, C, D, acrophase, period):
-    X = predictor
-    return A + B * (1 + np.exp(C*X)) * np.cos(2*np.pi*X/period + acrophase) + D * X 
-    # opcije: 
-    #  ... + np.exp(D*X)
-    #  ... + np.log(D*X)
+  
+    
+    DoF = Y.size - len(popt)
+
+    if not period:
+        period = popt[-1]
+        popt_ext = list(popt)
+    else:
+        popt_ext = list(popt) + [period]
+
+    Y_fit = fitting_func(predictor, *popt_ext)
+    statistics = calculate_statistics_nonlinear(X, Y, Y_fit, len(popt), period)
+    statistics_params = calculate_statistics_curve_fit_parameters(popt, pcov, DoF, parameters)
+
+    if plot:
+        X_plot = np.linspace(min(X), max(X), 1000)
+        Y_plot = fitting_func(X_plot, *popt_ext)
+        plt.plot(X_plot, Y_plot, label='fit', color="black")
+        plt.plot(X, Y, 'o', markersize=1, label='measurements', color="black")
+        if plot_margins:
+            lower = Y_plot - statistics['ME']
+            upper = Y_plot + statistics['ME']
+            plt.fill_between(X_plot, lower, upper, color="black", alpha=0.1)
+
+        plt.legend()
+        plt.show()
+
+    # evaluate rhythm params
+    X_eval = np.linspace(0, 2*period, 1000)
+    Y_eval = fitting_func(X_eval, *popt_ext)
+    rhythm_params = cosinor.evaluate_rhythm_params(X_eval, Y_eval, period=period)
+
+    # returns
+    return popt_ext, statistics, statistics_params, rhythm_params   
+
 
 # if period:
 #   popt,pcov = curve_fit(lambda x, A, B, C, D, phi: generalized_cosinor(x, A, B, C, D, phi, PER), x, y, bounds)
@@ -263,6 +421,251 @@ def fit_generalized_cosinor(X,Y, period=24, min_per = 12, max_per=36, plot=False
         plt.show()
 
     return popt_ext, statistics, statistics_params   
+
+def fit_generalized_cosinor_n_comp(X,Y, period=24, n_components = 1, min_per = 12, max_per=36, plot=False, plot_margins=True, exp=False):
+
+    #if not exp:
+    #    fitting_func = generalized_cosinor
+    #else:
+    #    fitting_func = generalized_cosinor_exp
+
+    min_bounds = {'A':0, 
+                      'B':0,
+                      'C':-10,
+                      'D':-10,
+                      'B2':0,
+                      'B3':0,
+                      'B4':0,
+                      'acrophase':-np.pi,
+                      'acrophase2':-np.pi,
+                      'acrophase3':-np.pi,
+                      'acrophase4':-np.pi}                 
+                      
+    max_bounds = {'A':max(Y), 
+                      'B':max(Y), 
+                      'C':10,
+                      'D':10,
+                      'B2':max(Y),
+                      'B3':max(Y),
+                      'B4':max(Y),
+                      'acrophase':np.pi,
+                      'acrophase2':np.pi,
+                      'acrophase3':np.pi,
+                      'acrophase4':np.pi}
+    if not period:
+        min_bounds['period'] =  min_per
+        max_bounds['period'] =  max_per
+
+
+    parameters = ['A', 'B', 'C', 'D', 'acrophase']
+    
+    for i in range(2, n_components + 1):
+        parameters += [f"B{i}", f"acrophase{i}"]
+
+    if not period:
+        parameters += ['period']
+
+
+    predictor = X
+    min_bounds = [min_bounds[name] for name in parameters]
+    max_bounds = [max_bounds[name] for name in parameters]  
+   
+    if n_components == 1:
+        fitting_func = generalized_cosinor       
+    elif n_components == 2:
+        fitting_func = generalized_cosinor2
+    elif n_components == 3:
+        fitting_func = generalized_cosinor3
+    elif n_components == 4:
+        fitting_func = generalized_cosinor4
+    else:
+        print("Invalid option!")
+        return
+
+    # parameters = ['A', 'B', 'acrophase', 'period']
+    p0, _, _, _ = fit_cosinor_basic_n_comp(X,Y, period = period, n_components=n_components)
+    p0 = p0[:2] + [0,0] + p0[2:]
+
+    if period:
+        if n_components == 1:
+            popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase: fitting_func(x, A, B, C, D, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0[:-1])
+        elif n_components == 2:
+            popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, B2, acrophase2: fitting_func(x, A, B, C, D, acrophase, B2, acrophase2, period), predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0[:-1])
+        elif n_components == 3:
+            popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3: fitting_func(x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, period), predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0[:-1])
+        elif n_components == 4:
+            popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4: fitting_func(x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4, period), predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0[:-1])        
+    else:
+        popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0)
+    
+    
+    DoF = Y.size - len(popt)
+
+    if not period:
+        period = popt[-1]
+        popt_ext = popt
+    else:
+        popt_ext = list(popt) + [period]
+
+    Y_fit = fitting_func(predictor, *popt_ext)
+    statistics = calculate_statistics_nonlinear(X, Y, Y_fit, len(popt), period)
+    statistics_params = calculate_statistics_curve_fit_parameters(popt, pcov, DoF, parameters)
+
+    if plot:
+        X_plot = np.linspace(min(X), max(X), 1000)
+        Y_plot = fitting_func(X_plot, *popt_ext)
+        plt.plot(X_plot, Y_plot, label='fit', color="black")
+        plt.plot(X, Y, 'o', markersize=1, label='measurements', color="black")
+        if plot_margins:
+            lower = Y_plot - statistics['ME']
+            upper = Y_plot + statistics['ME']
+            plt.fill_between(X_plot, lower, upper, color="black", alpha=0.1)
+        plt.legend()
+        plt.show()
+
+    # evaluate rhythm params
+    popt_eval = popt_ext.copy()
+    popt_eval[2] = 0 #set C to 0
+    popt_eval[3] = 0 #set D to 0
+    X_eval = np.linspace(0, 2*period, 1000)
+    Y_eval = fitting_func(X_eval, *popt_eval)
+    rhythm_params = cosinor.evaluate_rhythm_params(X_eval, Y_eval, period=period)
+
+    # returns
+    return popt_ext, statistics, statistics_params, rhythm_params   
+
+def eval_params_bootstrap(X,Y, n_components = 1, period = 24, rhythm_params = {}, bootstrap_size=1000, bootstrap_type="std", t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):       
+    # generate and evaluate bootstrap samples
+    params_bs = {}
+    for param in parameters_to_analyse:
+        params_bs[param] = np.zeros(bootstrap_size)
+    
+    idxs = np.arange(len(X))
+
+    if not rhythm_params:
+        _, _, _, rhythm_params = fit_generalized_cosinor_n_comp(X, Y, period=period, n_components = n_components, plot=False, **kwargs)
+
+    for i in range(bootstrap_size):        
+        idxs_bs = np.random.choice(idxs, len(idxs), replace=True)
+        Y_bs, X_bs = Y[idxs_bs], X[idxs_bs]
+
+        popt_ext_bs, _, _, rhythm_params_bs = fit_generalized_cosinor_n_comp(X_bs, Y_bs, period=period, n_components = n_components, plot=False, **kwargs)
+        
+        for param in parameters_to_analyse:
+            params_bs[param][i] = rhythm_params_bs[param]
+
+    n_params = len(popt_ext_bs)
+    if period:
+        n_params -= 1
+
+    # analyse bootstrap samples
+    DoF = bootstrap_size - n_params    
+    rhythm_params['DoF'] = DoF
+
+    for param in parameters_to_analyse:
+        if param in parameters_angular:
+            angular = True
+        else:
+            angular = False
+    
+        sample_bs = params_bs[param]
+        mean, p_val, CI = cosinor.bootstrap_statistics(sample_bs, angular=angular, bootstrap_type = bootstrap_type, t_test= t_test, n_params=n_params)
+
+        rhythm_params[f'{param}_bootstrap'] = mean
+        rhythm_params[f'CI({param})'] = CI
+        rhythm_params[f'p({param})'] = p_val
+    
+    return rhythm_params
+
+
+def compare_pairs_bootstrap(X1, Y1, X2, Y2, n_components= 1, n_components2 = None, period = 24, period2 = 24, rhythm_params = {}, rhythm_params1 = {}, rhythm_params2 = {}, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], bootstrap_size = 1000, t_test=True, **kwargs):       
+    n_components1 = n_components
+    if not n_components2:
+        n_components2 = n_components1
+
+    period1 = period
+
+    if not rhythm_params1:
+        rhythm_params1 = eval_params_bootstrap(X1, Y1, n_components1, period1, parameters_to_analyse=parameters_to_analyse, parameters_angular=parameters_angular, bootstrap_size=bootstrap_size, t_test = t_test, **kwargs)
+
+    if not rhythm_params2:
+        rhythm_params2 = eval_params_bootstrap(X2, Y2, n_components2, period2, parameters_to_analyse=parameters_to_analyse, parameters_angular=parameters_angular, bootstrap_size=bootstrap_size, t_test = t_test, **kwargs)
+    
+
+    n1 = bootstrap_size
+    n2 = bootstrap_size
+    n = n1 + n2
+    n_params1 = 3 + n_components1*2
+    if not period1:
+        n_params1 += 1
+    n_params2 = 3 + n_components2*2
+    if not period2:
+        n_params2 += 1
+
+    n_params = n_params1 + n_params2
+    DoF1 = n1 - n_params1
+    DoF2 = n2 - n_params2
+    DoF = n - n_params
+    n_devs = abs(stats.t.ppf(0.05/2,df=DoF))
+
+    d_params = {}
+    p_values = {}
+    CIs = {}
+    for param in parameters_to_analyse:
+        d_param = rhythm_params2[param] - rhythm_params1[param]   
+        if param in parameters_angular:
+            d_param = cosinor.project_acr(d_param)
+            angular = True
+        else:
+            angular = False
+        
+        CI1 = rhythm_params1[f'CI({param})']
+        CI2 = rhythm_params2[f'CI({param})']
+
+        se_param = cosinor.get_se_diff_from_CIs(CI1, CI2, DoF1, DoF2, t_test = t_test, angular=angular, CI_type = 'se', n1 = n1, n2 = n2, DoF = DoF) 
+        CI_param =  [d_param - n_devs*se_param, d_param + n_devs*se_param] 
+        p_value = cosinor.get_p_t_test(d_param, se_param, DoF)
+
+        d_params[f'd_{param}'] = d_param
+        CIs[f'd_{param}'] = CI_param
+        p_values[f'd_{param}'] = p_value
+
+    return {'params': d_params, 'CIs': CIs, 'p_values': p_values}
+    
+
+
+
+    return rhythm_params
+
+def get_best_model(X, Y, period=24, n_components = [1,2,3], **kwargs):
+    
+    popt_ext1, statistics1, statistics_params1, rhythm_params1 = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_components[0], plot=False, **kwargs)
+    RSS1 = statistics1['RSS']
+    n_params1 = len(popt_ext1)
+    if period:
+        n_params1 -= 1
+    DoF1 = len(X) - n_params1
+    best_comps = n_components[0]
+
+    for n_comps in n_components[1:]:
+        popt_ext2, statistics2, statistics_params2, rhythm_params2 = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_comps, plot=False, **kwargs)
+        RSS2 = statistics2['RSS']
+        n_params2 = len(popt_ext2)
+        if period:  
+            n_params2 -= 1
+        DoF2 = len(X) - n_params2
+
+        if cosinor.compare_models(RSS1, RSS2, DoF1, DoF2) < 0.05:
+            RSS1 = RSS2
+            DoF1 = DoF2
+            n_params1 = n_params2
+            popt_ext1, statistics1, statistics_params1, rhythm_params1 = popt_ext2, statistics2, statistics_params2, rhythm_params2
+            best_comps = n_comps
+
+
+    return best_comps, popt_ext1, statistics1, statistics_params1, rhythm_params1
+
+
 
 def population_fit_generalized_cosinor(df_pop, period=24, plot=False, plot_margins = True, plot_individuals=True, exp=False, **kwargs):
     if not exp:
@@ -352,17 +755,7 @@ def population_fit_generalized_cosinor(df_pop, period=24, plot=False, plot_margi
 
     return p_dict
 
-   
-def generalized_cosinor_compare(predictor, A, B, C, D, acrophase, A0, B0, C0, D0, acrophase0, period):
-    X = predictor[0]
-    H = predictor[1]
-    return (A + H*A0) + (B + H*B0) * (1 + (C + H*C0)*X) * np.cos(2*np.pi*X/period + (acrophase + H*acrophase0)) + (D + H*D0) * X 
-
-def generalized_cosinor_compare_exp(predictor, A, B, C, D, acrophase, A0, B0, C0, D0, acrophase0, period):
-    X = predictor[0]
-    H = predictor[1]
-    return (A + H*A0) + (B + H*B0) * (1 + np.exp((C + H*C0)*X)) * np.cos(2*np.pi*X/period + (acrophase + H*acrophase0)) + (D + H*D0) * X 
-
+ 
 def fit_generalized_cosinor_compare(X1, Y1, X2, Y2, period=24, min_per = 12, max_per=36, plot=False, plot_margins=True, test1 = "test1", test2 = "test2", exp=False):
     if not exp:
         fitting_func = generalized_cosinor_compare
@@ -467,6 +860,15 @@ def fit_generalized_cosinor_compare(X1, Y1, X2, Y2, period=24, min_per = 12, max
 
     return popt_ext, statistics, statistics_params 
 
+
+#####################
+# end of REGRESSION #
+#####################
+
+########################
+# COMPARATIVE ANALYSIS #
+########################
+
 def population_fit_generalized_cosinor_compare_independent(df, pop1, pop2, period=24, period2 = 24, **kwargs):#, min_per = 12, max_per=36, plot=False, plot_margins=True, test1 = "test1", test2 = "test2", exp=False):
    
     period1 = period
@@ -568,7 +970,9 @@ def fit_generalized_cosinor_compare_independent(X1, Y1, X2, Y2, period=24, perio
 
     return {'params': d_params, 'CIs': CIs, 'p_values': p_values}
 
-
+###############################
+# end of COMPARATIVE ANALYSIS #
+###############################
 
 
 ###################################
