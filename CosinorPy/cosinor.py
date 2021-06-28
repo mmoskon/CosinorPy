@@ -3102,12 +3102,12 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
 
 # eval parameters using bootstrap
 # bootstrap type should be set to either std (CI = X+-1.96*STD(X)) or percentile (CI = [2.5th percentile, 97.5th percentile])
-def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rhythm_params, bootstrap_size=1000, bootstrap_type='std', t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], period=24):   
+def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rhythm_params, bootstrap_size=1000, bootstrap_type='std', t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], period=24):       
+    # generate and evaluate bootstrap samples
     params_bs = {}
     for param in parameters_to_analyse:
         params_bs[param] = np.zeros(bootstrap_size)
     
-
     idxs = np.arange(len(X))
 
     for i in range(bootstrap_size):
@@ -3138,83 +3138,27 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
         for param in parameters_to_analyse:
             params_bs[param][i] = rhythm_params_bs[param]                 
 
-    #DoF = len(X) - len(results_bs.params)
+    
+    # analyse bootstrap samples
     DoF = bootstrap_size - len(results_bs.params)
+    n_params = len(results_bs.params)
     rhythm_params['DoF'] = DoF
 
-    if t_test:
-        n_devs = abs(stats.t.ppf(0.05/2,df=DoF))  
-    else:
-        n_devs = 1.96
-
-
-    #########################################################
-    # calculate confidence intervals and bootstrap p-values #
-    #########################################################
-
-    # SE or STD?
-    # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1255808/
-    # https://ocw.mit.edu/courses/mathematics/18-05-introduction-to-probability-and-statistics-spring-2014/readings/MIT18_05S14_Reading24.pdf
-    mean_params = {}
-    se_params = {}
     for param in parameters_to_analyse:
         if param in parameters_angular:
-
-            phases = params_bs[param]
-            phases = phases[~np.isnan(phases)]    
-            mean_phase = project_acr(circmean(phases, high = 0, low = -2*np.pi))
-            std_phase = circstd(phases, high = 0, low = -2*np.pi)
-
-            mean_params[param] = mean_phase
-            if bootstrap_type == "se":
-                se_params[param] = std_phase/(len(phases)-1)**0.5
-                #se_params[param] = std_phase/(len(phases))**0.5
-            elif bootstrap_type == "std":
-                se_params[param] = std_phase
-            elif bootstrap_type == "percentile":
-                # percentiles are used for the calculation of standard error. Confidence intervals are evaluated on the basis of the lower/upper percentile with the largest deviance from the mean
-                # https://math.stackexchange.com/questions/1756425/is-it-possible-to-calculate-the-xth-percentile-of-a-collection-of-wind-vectors
-                cos_phases = np.cos(phases)
-                cos_ci_l = np.percentile(cos_phases,2.5)
-                cos_ci_h = np.percentile(cos_phases,97.5)
-                ci_l = np.arccos(cos_ci_l)
-                ci_h = np.arccos(cos_ci_h)   
-                d_phase_l = project_acr(mean_phase - ci_l)
-                d_phase_u = project_acr(ci_h - mean_phase)
-                dev_phase = np.nanmax([np.abs(d_phase_l), np.abs(d_phase_u)])
-                se_params[param] = dev_phase/n_devs      
-
-        else:                           
-            mean_params[param] = np.nanmean(params_bs[param])
-            
-            if bootstrap_type == "se":
-                se_params[param] = stats.sem(params_bs[param], nan_policy='omit')                
-            elif bootstrap_type == "std":
-                se_params[param] = np.nanstd(params_bs[param])
-            elif bootstrap_type == "percentile":
-                # percentiles are used for the calculation of standard error. Confidence intervals are evaluated on the basis of the lower/upper percentile with the largest deviance from the mean
-                ci_l = np.percentile(params_bs[param],2.5)
-                ci_h = np.percentile(params_bs[param],97.5)
-                dev = np.nanmax([np.abs(mean_params[param]-ci_l), np.abs(mean_params[param]-ci_h)])
-                se_params[param] = dev/n_devs
-     
+            angular = True
+        else:
+            angular = False
     
-    # statistics
-    for param in parameters_to_analyse:
-        rhythm_params[f'{param}_bootstrap'] = mean_params[param]
-        if param in parameters_angular: 
-            rhythm_params[f'CI({param})'] = get_acrophase_CI(mean_params[param], n_devs*se_params[param])
-        else:
-            rhythm_params[f'CI({param})'] = [mean_params[param] - n_devs*se_params[param], mean_params[param] + n_devs*se_params[param]]
+        sample_bs = params_bs[param]
+        mean, p_val, CI = bootstrap_statistics(sample_bs, angular=angular, bootstrap_type = bootstrap_type, t_test= t_test, n_params=n_params)
 
-        if t_test:    
-            rhythm_params[f'p({param})'] = get_p_t_test(mean_params[param], se_params[param], DoF)
-        else:
-            rhythm_params[f'p({param})'] = get_p_z_test(mean_params[param], se_params[param])         
+        rhythm_params[f'{param}_bootstrap'] = mean
+        rhythm_params[f'CI({param})'] = CI
+        rhythm_params[f'p({param})'] = p_val
     
     return rhythm_params
-        
-        
+
 
 # eval rhythmicity parameter differences using bootstrap in a combination with limorhyde
 # bootstrap type should be set to either std (CI = X+-1.96*STD(X)) or percentile (CI = [2.5th percentile, 97.5th percentile])
@@ -3257,77 +3201,24 @@ def eval_params_diff_bootstrap(X, X_fit, X_full, X_fit_full, Y, model_type, locs
             if param in parameters_angular:
                 params_bs[param][i] = params_bs[param][i]#project_acr(params_bs[param][i])
     
-    #DoF = len(X.values) - len(results_bs.params)
+    # analyse bootstrap samples
     DoF = bootstrap_size - len(results_bs.params)
+    n_params = len(results_bs.params)
     rhythm_params['DoF'] = DoF
 
-    if t_test:
-        n_devs = abs(stats.t.ppf(0.05/2,df=DoF))  
-    else:
-        n_devs = 1.96
-
-        
-    #########################################################
-    # calculate confidence intervals and bootstrap p-values #
-    #########################################################
-
-    # SE or STD?
-    # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1255808/
-    # https://ocw.mit.edu/courses/mathematics/18-05-introduction-to-probability-and-statistics-spring-2014/readings/MIT18_05S14_Reading24.pdf
-    mean_params = {}
-    se_params = {}
     for param in parameters_to_analyse:
         if param in parameters_angular:
-
-            phases = params_bs[param]
-            phases = phases[~np.isnan(phases)]    
-            mean_phase = project_acr(circmean(phases, high = 0, low = -2*np.pi))
-            std_phase = circstd(phases, high = 0, low = -2*np.pi)
-
-            mean_params[param] = mean_phase
-            if bootstrap_type == "se":
-                se_params[param] = std_phase/(len(phases)-1)**0.5
-            elif bootstrap_type == "std":
-                se_params[param] = std_phase
-            elif bootstrap_type == "percentile":
-                # percentiles are used for the calculation of standard error. Confidence intervals are evaluated on the basis of the lower/upper percentile with the largest deviance from the mean
-                # https://math.stackexchange.com/questions/1756425/is-it-possible-to-calculate-the-xth-percentile-of-a-collection-of-wind-vectors
-                cos_phases = np.cos(phases)
-                cos_ci_l = np.percentile(cos_phases,2.5)
-                cos_ci_h = np.percentile(cos_phases,97.5)
-                ci_l = np.arccos(cos_ci_l)
-                ci_h = np.arccos(cos_ci_h)   
-                d_phase_l = project_acr(mean_phase - ci_l)
-                d_phase_u = project_acr(ci_h - mean_phase)
-                dev_phase = np.nanmax([np.abs(d_phase_l), np.abs(d_phase_u)])
-                se_params[param] = dev_phase/n_devs      
-        else:                           
-            mean_params[param] = np.nanmean(params_bs[param])
-            
-            if bootstrap_type == "se":
-                se_params[param] = stats.sem(params_bs[param], nan_policy='omit')
-            elif bootstrap_type == "std":
-                se_params[param] = np.nanstd(params_bs[param])
-            elif bootstrap_type == "percentile":
-                # percentiles are used for the calculation of standard error. Confidence intervals are evaluated on the basis of the lower/upper percentile with the largest deviance from the mean
-                ci_l = np.percentile(params_bs[param],2.5)
-                ci_h = np.percentile(params_bs[param],97.5)
-                dev = np.nanmax([np.abs(mean_params[param]-ci_l), np.abs(mean_params[param]-ci_h)])
-                se_params[param] = dev/n_devs
+            angular = True
+        else:
+            angular = False
     
-    # statistics
-    for param in parameters_to_analyse:
-        rhythm_params[f'd_{param}_bootstrap'] = mean_params[param]
-        if param in parameters_angular: 
-            rhythm_params[f'CI(d_{param})'] = get_acrophase_CI(mean_params[param], n_devs*se_params[param])
-        else:
-            rhythm_params[f'CI(d_{param})'] = [mean_params[param] - n_devs*se_params[param], mean_params[param] + n_devs*se_params[param]]
+        sample_bs = params_bs[param]
+        mean, p_val, CI = bootstrap_statistics(sample_bs, angular=angular, bootstrap_type = bootstrap_type, t_test= t_test, n_params=n_params)
 
-        if t_test:    
-            rhythm_params[f'p(d_{param})'] = get_p_t_test(mean_params[param], se_params[param], DoF)
-        else:
-            rhythm_params[f'p(d_{param})'] = get_p_z_test(mean_params[param], se_params[param])  
-        
+        rhythm_params[f'{param}_bootstrap'] = mean
+        rhythm_params[f'CI({param})'] = CI
+        rhythm_params[f'p({param})'] = p_val
+   
     return rhythm_params
 
 
@@ -4108,3 +3999,71 @@ def calculate_significance_level(N, **kwargs):
         dof2 = N - n_params
         alpha_F = 1 - stats.f.cdf(F, dof1, dof2)
         return alpha_F
+
+#########################################################
+# calculate confidence intervals and bootstrap p-values #
+#########################################################
+# return mean, p_val, CI
+def bootstrap_statistics(sample_bs, angular=False, bootstrap_type = "std", t_test=True, n_params=0):
+        
+    sample_bs = sample_bs[~np.isnan(sample_bs)]  
+
+    DoF = len(sample_bs) - n_params #bootstrap_size - len(results_bs.params)    
+    if t_test:
+        n_devs = abs(stats.t.ppf(0.05/2,df=DoF))  
+    else:
+        n_devs = 1.96
+
+
+    # SE or STD?
+    # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1255808/
+    # https://ocw.mit.edu/courses/mathematics/18-05-introduction-to-probability-and-statistics-spring-2014/readings/MIT18_05S14_Reading24.pdf
+    if angular:
+        mean = project_acr(circmean(sample_bs, high = 0, low = -2*np.pi))
+        std = circstd(sample_bs, high = 0, low = -2*np.pi)
+
+        if bootstrap_type == "se":
+            se = std/(len(sample_bs)-1)**0.5
+            #se_params[param] = std_phase/(len(phases))**0.5
+        elif bootstrap_type == "std":
+            se = std
+        elif bootstrap_type == "percentile":
+                # percentiles are used for the calculation of standard error. Confidence intervals are evaluated on the basis of the lower/upper percentile with the largest deviance from the mean
+                # https://math.stackexchange.com/questions/1756425/is-it-possible-to-calculate-the-xth-percentile-of-a-collection-of-wind-vectors
+                cos_phases = np.cos(sample_bs)
+                cos_ci_l = np.percentile(cos_phases,2.5)
+                cos_ci_h = np.percentile(cos_phases,97.5)
+                ci_l = np.arccos(cos_ci_l)
+                ci_h = np.arccos(cos_ci_h)   
+                d_phase_l = project_acr(mean - ci_l)
+                d_phase_u = project_acr(ci_h - mean)
+                dev_phase = np.nanmax([np.abs(d_phase_l), np.abs(d_phase_u)])
+                se = dev_phase/n_devs      
+    else:                           
+        mean = np.nanmean(sample_bs)
+
+        if bootstrap_type == "se":
+            se = stats.sem(sample_bs, nan_policy='omit')                
+        elif bootstrap_type == "std":
+            se = np.nanstd(sample_bs)
+        elif bootstrap_type == "percentile":
+            # percentiles are used for the calculation of standard error. Confidence intervals are evaluated on the basis of the lower/upper percentile with the largest deviance from the mean
+            ci_l = np.percentile(sample_bs,2.5)
+            ci_h = np.percentile(sample_bs,97.5)
+            dev = np.nanmax([np.abs(mean-ci_l), np.abs(mean-ci_h)])
+            se = dev/n_devs
+
+    if angular: 
+        CI = get_acrophase_CI(mean, n_devs*se)
+    else:
+        CI = [mean - n_devs*se, mean + n_devs*se]
+
+    if t_test:    
+        p_val = get_p_t_test(mean, se, DoF)
+    else:
+        p_val = get_p_z_test(mean, se)         
+    
+    return mean, p_val, CI
+        
+
+        
