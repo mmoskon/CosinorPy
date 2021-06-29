@@ -1,6 +1,7 @@
 from numpy.ma import add
 import pandas as pd
 import numpy as np
+np.seterr(divide='ignore')
 import scipy.signal as signal
 import scipy.stats as stats
 import matplotlib.pyplot as plt

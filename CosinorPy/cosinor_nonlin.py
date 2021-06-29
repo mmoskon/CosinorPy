@@ -2,6 +2,7 @@ from scipy.linalg.decomp import eigvals_banded
 from CosinorPy import cosinor
 
 import numpy as np
+np.seterr(divide='ignore')
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -578,7 +579,7 @@ def eval_params_bootstrap(X,Y, n_components = 1, period = 24, rhythm_params = {}
     return rhythm_params
 
 
-def compare_pairs_bootstrap(X1, Y1, X2, Y2, n_components= 1, n_components2 = None, period = 24, period2 = 24, rhythm_params = {}, rhythm_params1 = {}, rhythm_params2 = {}, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], bootstrap_size = 1000, t_test=True, **kwargs):       
+def compare_pairs_bootstrap(X1, Y1, X2, Y2, n_components= 1, n_components2 = None, period = 24, period2 = 24, rhythm_params1 = {}, rhythm_params2 = {}, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], bootstrap_size = 1000, t_test=True, **kwargs):       
     n_components1 = n_components
     if not n_components2:
         n_components2 = n_components1
@@ -631,40 +632,126 @@ def compare_pairs_bootstrap(X1, Y1, X2, Y2, n_components= 1, n_components2 = Non
         p_values[f'd_{param}'] = p_value
 
     return {'params': d_params, 'CIs': CIs, 'p_values': p_values}
+
+def population_fit_generalized_cosinor_n_comp(df_pop, period=24, n_components = 1, plot=False, plot_margins = True, plot_individuals=True, **kwargs):
+ 
+    parameters = ['A', 'B', 'C', 'D', 'acrophase']
     
+    for i in range(2, n_components + 1):
+        parameters += [f"B{i}", f"acrophase{i}"]
+
+    if not period:
+        parameters += ['period']
+
+    if n_components == 1:
+        fitting_func = generalized_cosinor       
+    elif n_components == 2:
+        fitting_func = generalized_cosinor2
+    elif n_components == 3:
+        fitting_func = generalized_cosinor3
+    elif n_components == 4:
+        fitting_func = generalized_cosinor4
+    else:
+        print("Invalid option!")
+        return
+
+    tests = df_pop.test.unique()
+    k = len(tests)
+
+    popts = []
+    if plot_margins:
+        Y_plot_all = []
+
+    min_X = np.min(df_pop.x.values)
+    max_X = np.max(df_pop.x.values)
+    if plot:
+        X_plot = np.linspace(min_X, max_X, 1000)
+
+    for test in tests:
+        X,Y = np.array(df_pop[df_pop.test == test].x), np.array(df_pop[df_pop.test == test].y)
+        popt, _, _, _ = fit_generalized_cosinor_n_comp(X,Y, period=period, n_components=n_components, plot=False, plot_margins=plot_margins, **kwargs)
+        popts.append(popt)
+        if plot:
+            plt.plot(X,Y,'o', color='black', markersize=1)    
+            if plot_individuals:
+                Y_plot = fitting_func(X_plot, *popt)         
+                plt.plot(X_plot,Y_plot,color='black', alpha=0.25)
+            if plot_margins:
+                Y_plot_all.append(Y_plot)
+            
+
+    params = np.array(popts)
+    # parameter statistics: means, variances, stadndard deviations, confidence intervals, p-values
+    #http://reliawiki.com/index.php/Multiple_Linear_Regression_Analysis
+    if k > 1:
+        means = np.mean(params, axis=0)
+        variances = np.sum((params-np.mean(params, axis=0))**2, axis = 0)/(k-1) # np.var(params, axis=0) # isto kot var z ddof=k-1
+        sd = variances**0.5
+
+        # different functions need to be used for the estimation of angular means and standard deviations
+        for i in range(n_components):
+            idx = 2*i+4            
+            phase = params[:, idx]               
+            means[idx] = cosinor.project_acr(circmean(phase))
+            sd[idx] = circstd(phase)
 
 
+        se = sd/((k-1)**0.5)
+        T0 = means/se
+        p_values = 2 * (1 - stats.t.cdf(abs(T0), k-1))
+        t = abs(stats.t.ppf(0.05/2,df=k-1))
+        lower_CI = means - ((t*sd)/((k-1)**0.5))
+        upper_CI = means + ((t*sd)/((k-1)**0.5))                
+    else:
+        means = params
+        sd = np.zeros(len(params))
+        sd[:] = np.nan
+        se = np.zeros(len(params))
+        se[:] = np.nan
+        lower_CI = means
+        upper_CI = means
+        p_values = np.zeros(len(params))
+        p_values[:] = np.nan
 
-    return rhythm_params
+    if plot: 
+        Y_plot = fitting_func(X_plot, *means)
+        plt.plot(X_plot, Y_plot, color="black")#, label=pop_name)
 
-def get_best_model(X, Y, period=24, n_components = [1,2,3], **kwargs):
+        if plot_margins:
+            Y_plot_all = np.array(Y_plot_all)
+            var_Y = np.var(Y_plot_all, axis=0, ddof = k-1)
+            sd_Y = var_Y**0.5
+            lower = Y_plot - ((t*sd_Y)/((k-1)**0.5))
+            upper = Y_plot + ((t*sd_Y)/((k-1)**0.5))
+            plt.fill_between(X_plot, lower, upper, color="black", alpha=0.1)  
+            
+        plt.show()
+
+    # evaluate rhythm params
+    popt_eval = means.copy()
+    popt_eval[2] = 0 #set C to 0
+    popt_eval[3] = 0 #set D to 0
+    X_eval = np.linspace(0, 2*period, 1000)
+    Y_eval = fitting_func(X_eval, *popt_eval)
+    rhythm_params = cosinor.evaluate_rhythm_params(X_eval, Y_eval, period=period)
+
+    CIs = list(zip(lower_CI, upper_CI))
+    #return {"params":means, "p_values": p_values, "CIs": CIs}
+
+    p_dict = {}
+    p_dict['params'] = {}
+    p_dict['p_values'] = {}
+    p_dict['CIs'] = {}
     
-    popt_ext1, statistics1, statistics_params1, rhythm_params1 = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_components[0], plot=False, **kwargs)
-    RSS1 = statistics1['RSS']
-    n_params1 = len(popt_ext1)
-    if period:
-        n_params1 -= 1
-    DoF1 = len(X) - n_params1
-    best_comps = n_components[0]
+    for param, val, p_val, CI in zip(parameters, means, p_values, CIs):
+        p_dict['params'][param] = val
+        p_dict['p_values'][param] = p_val
+        p_dict['CIs'][param] = list(CI)
 
-    for n_comps in n_components[1:]:
-        popt_ext2, statistics2, statistics_params2, rhythm_params2 = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_comps, plot=False, **kwargs)
-        RSS2 = statistics2['RSS']
-        n_params2 = len(popt_ext2)
-        if period:  
-            n_params2 -= 1
-        DoF2 = len(X) - n_params2
+    Y_fit =  fitting_func(X, *means)
+    p_dict['RSS'] = sum((Y - Y_fit)**2)
 
-        if cosinor.compare_models(RSS1, RSS2, DoF1, DoF2) < 0.05:
-            RSS1 = RSS2
-            DoF1 = DoF2
-            n_params1 = n_params2
-            popt_ext1, statistics1, statistics_params1, rhythm_params1 = popt_ext2, statistics2, statistics_params2, rhythm_params2
-            best_comps = n_comps
-
-
-    return best_comps, popt_ext1, statistics1, statistics_params1, rhythm_params1
-
+    return p_dict, rhythm_params
 
 
 def population_fit_generalized_cosinor(df_pop, period=24, plot=False, plot_margins = True, plot_individuals=True, exp=False, **kwargs):
@@ -673,7 +760,7 @@ def population_fit_generalized_cosinor(df_pop, period=24, plot=False, plot_margi
     else:
         fitting_func = generalized_cosinor_exp
 
-    if period: # if period is not specified
+    if period: # if period is specified
         parameters = ['A', 'B', 'C', 'D', 'acrophase']
     else:
         parameters = ['A', 'B', 'C', 'D', 'acrophase', 'period']
@@ -706,10 +793,16 @@ def population_fit_generalized_cosinor(df_pop, period=24, plot=False, plot_margi
     params = np.array(popts)
     # parameter statistics: means, variances, stadndard deviations, confidence intervals, p-values
     #http://reliawiki.com/index.php/Multiple_Linear_Regression_Analysis
-    if k > 1:
+    if k > 1:      
         means = np.mean(params, axis=0)
         variances = np.sum((params-np.mean(params, axis=0))**2, axis = 0)/(k-1) # np.var(params, axis=0) # isto kot var z ddof=k-1
         sd = variances**0.5
+       
+        # different functions need to be used for the estimation of angular means and standard deviations
+        phase = params[:, -2]        
+        means[-2] = cosinor.project_acr(circmean(phase))
+        sd[-2] = circstd(phase)
+     
         se = sd/((k-1)**0.5)
         T0 = means/se
         p_values = 2 * (1 - stats.t.cdf(abs(T0), k-1))
@@ -752,6 +845,9 @@ def population_fit_generalized_cosinor(df_pop, period=24, plot=False, plot_margi
         p_dict['params'][param] = val
         p_dict['p_values'][param] = p_val
         p_dict['CIs'][param] = list(CI)
+
+    Y_fit =  fitting_func(X, *means)
+    p_dict['RSS'] = sum((Y - Y_fit)**2)
 
     return p_dict
 
@@ -974,6 +1070,70 @@ def fit_generalized_cosinor_compare_independent(X1, Y1, X2, Y2, period=24, perio
 # end of COMPARATIVE ANALYSIS #
 ###############################
 
+###########
+# HELPERS #
+###########
+
+def get_best_model(X, Y, period=24, n_components = [1,2,3], **kwargs):
+    
+    popt_ext1, statistics1, statistics_params1, rhythm_params1 = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_components[0], plot=False, **kwargs)
+    RSS1 = statistics1['RSS']
+    n_params1 = len(popt_ext1)
+    if period:
+        n_params1 -= 1
+    DoF1 = len(X) - n_params1
+    best_comps = n_components[0]
+
+    for n_comps in n_components[1:]:
+        popt_ext2, statistics2, statistics_params2, rhythm_params2 = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_comps, plot=False, **kwargs)
+        RSS2 = statistics2['RSS']
+        n_params2 = len(popt_ext2)
+        if period:  
+            n_params2 -= 1
+        DoF2 = len(X) - n_params2
+
+        if cosinor.compare_models(RSS1, RSS2, DoF1, DoF2) < 0.05:
+            RSS1 = RSS2
+            DoF1 = DoF2
+            n_params1 = n_params2
+            popt_ext1, statistics1, statistics_params1, rhythm_params1 = popt_ext2, statistics2, statistics_params2, rhythm_params2
+            best_comps = n_comps
+
+
+    return best_comps, popt_ext1, statistics1, statistics_params1, rhythm_params1
+
+def get_best_model_population(df_pop, period=24, n_components = [1,2,3], **kwargs):
+    
+    n_points = len(df_pop.x.values)
+
+    p_dict1, rhythm_params1 = population_fit_generalized_cosinor_n_comp(df_pop, period = period, n_components=n_components[0], plot=False, **kwargs)
+    RSS1 = p_dict1['RSS']     
+    n_params1 = 3 + n_components[0]*2
+    if not period:
+        n_params1 += 1
+    DoF1 = n_points - n_params1
+    best_comps = n_components[0]
+
+    for n_comps in n_components[1:]:
+        p_dict2, rhythm_params2 = population_fit_generalized_cosinor_n_comp(df_pop, period = period, n_components=n_comps, plot=False, **kwargs)
+        RSS2 = p_dict2['RSS']
+        n_params2 = 3 + n_comps*2
+        if not period:
+            n_params2 += 1        
+        DoF2 = n_points - n_params2
+
+        if cosinor.compare_models(RSS1, RSS2, DoF1, DoF2) < 0.05:
+            RSS1 = RSS2
+            DoF1 = DoF2
+            n_params1 = n_params2
+            p_dict1, rhythm_params1 = p_dict2, rhythm_params2
+            best_comps = n_comps
+
+    return best_comps, p_dict1, rhythm_params1
+
+##################
+# end of HELPERS #
+##################
 
 ###################################
 ###################################

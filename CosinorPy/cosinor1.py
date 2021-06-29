@@ -1,5 +1,6 @@
 from CosinorPy import cosinor
 import numpy as np
+np.seterr(divide='ignore')
 import pandas as pd
 import statsmodels.formula.api as smf
 import matplotlib.pyplot as plt
