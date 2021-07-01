@@ -1,5 +1,9 @@
 # CosinorPy
 
+
+[![](https://img.shields.io/badge/doi-10.1186%2Fs12859--020--03830--w-brightgreen)](https://doi.org/10.1186/s12859-020-03830-w)
+
+
 CosinorPy presents a python package for cosinor based rhythmometry. It is composed of three modules:
 * [`file_parser`](docs/docs_file_parser.md): reading and writting xlsx or csv files and generating synthetic data
 
