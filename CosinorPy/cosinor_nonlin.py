@@ -31,15 +31,15 @@ def cosinor_basic(predictor, A, B, acrophase, period):
 
 def cosinor_basic2(predictor, A, B, acrophase, B2, acrophase2, period):
     X = predictor
-    return A + B * (np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2))
+    return A + B * np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2)
 
 def cosinor_basic3(predictor, A, B, acrophase, B2, acrophase2, B3, acrophase3, period):
     X = predictor
-    return A + B * (np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2) + B3 * np.cos(2*np.pi*X/(period/3) + acrophase3))
+    return A + B * np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2) + B3 * np.cos(2*np.pi*X/(period/3) + acrophase3)
 
 def cosinor_basic4(predictor, A, B, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4, period):
     X = predictor
-    return A + B * (np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2) + B3 * np.cos(2*np.pi*X/(period/3) + acrophase3) + B4 * np.cos(2*np.pi*X/(period/4) + acrophase4))
+    return A + B * np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2) + B3 * np.cos(2*np.pi*X/(period/3) + acrophase3) + B4 * np.cos(2*np.pi*X/(period/4) + acrophase4)
 
 # lin comp
 def cosinor_lin_comp(predictor, A, B, C, acrophase, period):
@@ -64,15 +64,15 @@ def generalized_cosinor(predictor, A, B, C, D, acrophase, period):
 
 def generalized_cosinor2(predictor, A, B, C, D, acrophase, B2, acrophase2, period):
     X = predictor
-    return A + B * (1 + C*X) * (np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2)) + D * X 
+    return A + (1 + C*X) * (B * np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2)) + D * X 
 
 def generalized_cosinor3(predictor, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, period):
     X = predictor
-    return A + B * (1 + C*X) * (np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2) + B3 * np.cos(2*np.pi*X/(period/3) + acrophase3)) + D * X 
+    return A + (1 + C*X) * (B * np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2) + B3 * np.cos(2*np.pi*X/(period/3) + acrophase3)) + D * X 
 
 def generalized_cosinor4(predictor, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4, period):
     X = predictor
-    return A + B * (1 + C*X) * (np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2) + B3 * np.cos(2*np.pi*X/(period/3) + acrophase3) + B4 * np.cos(2*np.pi*X/(period/4) + acrophase4)) + D * X 
+    return A + (1 + C*X) * (B * np.cos(2*np.pi*X/period + acrophase) + B2 * np.cos(2*np.pi*X/(period/2) + acrophase2) + B3 * np.cos(2*np.pi*X/(period/3) + acrophase3) + B4 * np.cos(2*np.pi*X/(period/4) + acrophase4)) + D * X 
 
 
 # the model below is not ok because we cannot assess the significance of amplitude being different than zero directly
@@ -577,7 +577,6 @@ def eval_params_bootstrap(X,Y, n_components = 1, period = 24, rhythm_params = {}
         rhythm_params[f'p({param})'] = p_val
     
     return rhythm_params
-
 
 def compare_pairs_bootstrap(X1, Y1, X2, Y2, n_components= 1, n_components2 = None, period = 24, period2 = 24, rhythm_params1 = {}, rhythm_params2 = {}, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], bootstrap_size = 1000, t_test=True, **kwargs):       
     n_components1 = n_components
