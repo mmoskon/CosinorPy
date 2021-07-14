@@ -590,7 +590,7 @@ def fit_generalized_cosinor_n_comp(X,Y, period=24, n_components = 1, min_per = 1
     # returns
     return popt_ext, statistics, statistics_params, rhythm_params   
 
-def population_fit_generalized_cosinor_n_comp(df_pop, period=24, n_components = 1, plot=False, plot_margins = True, plot_individuals=True, save_to = "", hold_on = False, color="black", **kwargs):
+def population_fit_generalized_cosinor_n_comp(df_pop, period=24, n_components = 1, plot=False, plot_margins = True, plot_individuals=True, save_to = "", hold_on = False, color="black", x_label="time [h]", y_label="measurements", **kwargs):
  
     parameters = ['A', 'B', 'C', 'D', 'acrophase']
     
@@ -683,6 +683,12 @@ def population_fit_generalized_cosinor_n_comp(df_pop, period=24, n_components = 
             plt.fill_between(X_plot, lower, upper, color=color, alpha=0.1)  
         
         if not hold_on:
+            plt.xlabel(x_label)
+            plt.ylabel(y_label)
+
+            test = tests[0].split("_")[0]
+            plt.title(test)
+
             if save_to:
                 plt.savefig(save_to+'.png')
                 plt.savefig(save_to+'.pdf')
