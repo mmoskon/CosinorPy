@@ -584,7 +584,6 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
             plt.plot(x,y,'o',markersize=1, alpha = 0.75, color=color)
     """
 
-
     name = "_".join(tests)
     #ax.set_title(name, va='bottom')
     if title:
@@ -1079,7 +1078,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
     if plot:
 
         if plot_measurements:
-            min_X = min(0,np.min(X))
+            min_X = np.min(X)
             max_X = np.max(X)
         else:
             min_X = 0
@@ -1263,11 +1262,16 @@ def evaluate_rhythm_params(X,Y, project_acrophase=True, period=0):
     locs, heights = signal.find_peaks(Y, height = M * 0.99)
     heights = heights['peak_heights'] 
     
-    if not period:
-        if len(locs) >= 2:
-            period = X[locs[1]] - X[locs[0]]
-            period = int(round(period))
+    if len(locs) >= 2:
+        period2 = X[locs[1]] - X[locs[0]]
+        period2 = int(round(period2))
+    else:
+        period2 = np.nan
     
+    if not period:
+        period = period2
+
+
     if len(locs) >= 1:
        PHASE = X[locs[0]]
        PHASE_LOC = locs[0]
@@ -1306,7 +1310,7 @@ def evaluate_rhythm_params(X,Y, project_acrophase=True, period=0):
     heights2 = heights2[idxs2]
 
     # rhythm_params
-    return {'period':period, 'amplitude':AMPLITUDE, 'acrophase':ACROPHASE, 'mesor':MESOR, 'peaks': peaks, 'heights': heights, 'troughs': troughs, 'heights2': heights2, 'max_loc': PHASE_LOC}
+    return {'period':period, 'amplitude':AMPLITUDE, 'acrophase':ACROPHASE, 'mesor':MESOR, 'peaks': peaks, 'heights': heights, 'troughs': troughs, 'heights2': heights2, 'max_loc': PHASE_LOC, 'period2':period2}
     
 def calculate_statistics(X, Y, Y_fit, n_components, period, lin_comp = False):
     # statistics according to Cornelissen (eqs (8) - (9))
@@ -1400,11 +1404,11 @@ def compare_pairs_limo(df, pairs, n_components = 3, period = 24, folder = "", pr
         print("Invalid option")
         return
 
-    columns = ['test', 'period',  'n_components', 'd_amplitude', 'd_acrophase', 'p', 'q', 'p params', 'q params', 'p(F test)', 'q(F test)']
+    columns = ['test', 'period',  'n_components', 'p', 'q', 'p params', 'q params', 'p(F test)', 'q(F test)']
     if analysis:
         for param in parameters_to_analyse:
-            if param not in ("amplitude", "acrophase"): # these two are already included
-                columns += [f'd_{param}']
+            #if param not in ("amplitude", "acrophase"): # these two are already included
+            columns += [f'd_{param}']
             columns += [f'CI(d_{param})', f'p(d_{param})', f'q(d_{param})']
     
     df_results = pd.DataFrame(columns = columns)
@@ -1478,13 +1482,13 @@ def compare_pairs_best_models_limo(df, df_best_models, pairs, folder = "", prefi
         print("Invalid option")
         return
 
-    columns = ['test', 'period1',  'n_components1', 'period2',  'n_components2', 'd_amplitude', 'd_acrophase', 'p', 'q', 'p params', 'q params', 'p(F test)', 'q(F test)']
+    columns = ['test', 'period1',  'n_components1', 'period2',  'n_components2', 'p', 'q', 'p params', 'q params', 'p(F test)', 'q(F test)']
 
 
     if analysis:     
         for param in parameters_to_analyse:
-            if param not in ("amplitude", "acrophase"): # these two are already included
-                columns += [f'd_{param}']
+            #if param not in ("amplitude", "acrophase"): # these two are already included
+            columns += [f'd_{param}']
             columns += [f'CI(d_{param})', f'p(d_{param})', f'q(d_{param})']
     
     df_results = pd.DataFrame(columns = columns)  
@@ -1598,11 +1602,11 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, analysis = "bootstra
         print("Invalid option")
         return
 
-    columns = ['test', 'period',  'n_components', 'd_amplitude', 'd_acrophase', 'p1', 'p2', 'q1', 'q2']
+    columns = ['test', 'period',  'n_components', 'p1', 'p2', 'q1', 'q2']
     
     for param in parameters_to_analyse:
-        if param not in ("amplitude", "acrophase"): # these two are already included
-            columns += [f'd_{param}']
+        #if param not in ("amplitude", "acrophase"): # these two are already included
+        columns += [f'd_{param}']
         columns += [f'CI(d_{param})', f'p(d_{param})', f'q(d_{param})']
     
     df_results = pd.DataFrame(columns = columns)
@@ -1678,17 +1682,17 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, analysis = "bootstra
 # - bootstrap: independent bootstrap analysis
 # - CI: independent analysis of confidence intervals of two models
 # if you want to increase the speed specify df_results_extended in which for all analysed models confidence intervals for amplitude and acrophase are given - result of cosinor.analyse_best_models
-def compare_pairs_best_models(df, df_best_models, pairs, analysis = "bootstrap", df_results_extended = pd.DataFrame(columns=["test"]), parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], lin_comp=False,**kwargs):
+def compare_pairs_best_models(df, df_best_models, pairs, analysis = "bootstrap", df_results_extended = pd.DataFrame(columns=["test"]), parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], lin_comp=False, **kwargs):
     if (analysis != "CI") and (analysis != "bootstrap"):
         print("Invalid option")
         return
 
-    columns = ['test', 'period1', 'n_components1', 'period2', 'n_components2', 'd_amplitude', 'd_acrophase', 'p1', 'p2', 'q1', 'q2']
+    columns = ['test', 'period1', 'n_components1', 'period2', 'n_components2', 'p1', 'p2', 'q1', 'q2']
      
 
     for param in parameters_to_analyse:
-        if param not in ("amplitude", "acrophase"): # these two are already included
-            columns += [f'd_{param}']
+        #if param not in ("amplitude", "acrophase"): # these two are already included
+        columns += [f'd_{param}']
         columns += [f'CI(d_{param})', f'p(d_{param})', f'q(d_{param})']
     
     df_results = pd.DataFrame(columns = columns)
@@ -1777,13 +1781,13 @@ def compare_pairs_population(df, pairs, n_components = 3, period = 24, folder = 
         print("Invalid option")
         return
     
-    columns = ['test', 'period',  'n_components', 'd_amplitude', 'd_acrophase', 'p1', 'p2', 'q1', 'q2']
+    columns = ['test', 'period',  'n_components', 'p1', 'p2', 'q1', 'q2']
     
 
  
     for param in parameters_to_analyse:
-        if param not in ("amplitude", "acrophase"): # these two are already included
-            columns += [f'd_{param}']
+        #if param not in ("amplitude", "acrophase"): # these two are already included
+        columns += [f'd_{param}']
         if analysis == "CI":
             columns += [f'CI(d_{param})', f'p(d_{param})', f'q(d_{param})']
         else:
@@ -1873,12 +1877,12 @@ def compare_pairs_best_models_population(df, df_best_models, pairs, folder = "",
         print("Invalid option")
         return
 
-    columns = ['test', 'period1', 'n_components1', 'period2', 'n_components2', 'd_amplitude', 'd_acrophase', 'p1', 'p2', 'q1', 'q2']
+    columns = ['test', 'period1', 'n_components1', 'period2', 'n_components2', 'p1', 'p2', 'q1', 'q2']
     
     
     for param in parameters_to_analyse:
-        if param not in ("amplitude", "acrophase"): # these two are already included
-            columns += [f'd_{param}']
+        #if param not in ("amplitude", "acrophase"): # these two are already included
+        columns += [f'd_{param}']
         if analysis == "CI":
             columns += [f'CI(d_{param})', f'p(d_{param})', f'q(d_{param})']
         else:
@@ -2302,7 +2306,7 @@ def analyse_models(df, n_components = 3, period = 24, plot = False, folder = "",
         print("Invalid option") 
         return
     
-    columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase']
+    columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject']#, 'amplitude', 'acrophase']
     
     if not lin_comp:
         parameters_to_analyse_ext = parameters_to_analyse
@@ -2310,8 +2314,8 @@ def analyse_models(df, n_components = 3, period = 24, plot = False, folder = "",
         parameters_to_analyse_ext = parameters_to_analyse + ['lin_comp']
 
     for param in parameters_to_analyse_ext:
-        if param not in ("amplitude", "acrophase"): # these two are already included
-            columns += [f'{param}']
+        #if param not in ("amplitude", "acrophase"): # these two are already included
+        columns += [f'{param}']
         columns += [f'CI({param})', f'p({param})', f'q({param})']
             
 
@@ -2381,16 +2385,15 @@ def analyse_best_models(df, df_models, sparse_output = True, plot = False, folde
         print("Invalid option") 
         return
     
-    columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase']
-
+    columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject']
     if not lin_comp:
         parameters_to_analyse_ext = parameters_to_analyse
     else:
         parameters_to_analyse_ext = parameters_to_analyse + ['lin_comp']
 
     for param in parameters_to_analyse_ext:
-        if param not in ("amplitude", "acrophase"): # these two are already included
-            columns += [f'{param}']
+        #if param not in ("amplitude", "acrophase"): # these two are already included
+        columns += [f'{param}']
         columns += [f'CI({param})', f'p({param})', f'q({param})']
 
     df_results_extended = pd.DataFrame(columns = columns)  
@@ -2431,11 +2434,11 @@ def analyse_best_models(df, df_models, sparse_output = True, plot = False, folde
 # perform a more detailed analysis of the models that were identified to be the best, interesting... in previous analyses
 # the only option supported is the CI anaylsis: analysis of confidence intervals of regression coefficients
 def analyse_models_population(df, n_components = 3, period = 24, plot=False, folder = "", prefix="",  parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):
-    columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase']
+    columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject']#, 'amplitude', 'acrophase']
     
     for param in parameters_to_analyse:
-        if param not in ("amplitude", "acrophase"): # these two are already included
-            columns += [f'{param}']
+        #if param not in ("amplitude", "acrophase"): # these two are already included
+        columns += [f'{param}']
         columns += [f'CI({param})', f'p({param})', f'q({param})']
 
     df_results_extended = pd.DataFrame(columns = columns) 
@@ -2496,14 +2499,14 @@ def analyse_models_population(df, n_components = 3, period = 24, plot=False, fol
 # perform a more detailed analysis of the models that were identified to be the best, interesting... in previous analyses
 # the only option supported is the CI anaylsis: analysis of confidence intervals of regression coefficients
 def analyse_best_models_population(df, df_models, sparse_output = True, plot=False, folder = "", prefix="", parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):
-    columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'acrophase']
+    columns = ['test', 'period', 'n_components', 'p', 'q', 'p_reject', 'q_reject']#, 'amplitude', 'acrophase']
     
     if 'lin_comp' in kwargs and kwargs['lin_comp'] and 'lin_comp' not in parameters_to_analyse:
         parameters_to_analyse += ['lin_comp']
     
     for param in parameters_to_analyse:
-        if param not in ("amplitude", "acrophase"): # these two are already included
-            columns += [f'{param}']
+        #if param not in ("amplitude", "acrophase"): # these two are already included
+        columns += [f'{param}']
         columns += [f'CI({param})', f'p({param})', f'q({param})']
 
     df_results_extended = pd.DataFrame(columns = columns) 
@@ -2523,7 +2526,7 @@ def analyse_best_models_population(df, df_models, sparse_output = True, plot=Fal
         if plot and folder:
             save_to=os.path.join(folder,prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per)) 
 
-        _, statistics, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, plot = plot, save_to = save_to, params_CI = True, **kwargs)  
+        _, _, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, plot = plot, save_to = save_to, params_CI = True, **kwargs)  
                         
         row = dict(row[1])
         
@@ -3119,6 +3122,14 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
         if model_type == 'lin':
             model_bs = sm.OLS(Y_bs, X_fit_bs)
             results_bs = model_bs.fit()
+            
+            ## https://python.hotexamples.com/examples/statsmodels.genmod.generalized_linear_model/GLM/fit_constrained/python-glm-fit_constrained-method-examples.html            
+            #model_bs = sm.GLM(Y_bs, X_fit_bs)
+            #constr = "const>-1"
+            #results_bs = model_bs.fit_constrained(constr)
+            
+
+
         elif model_type == 'poisson':
             #model_bs = sm.GLM(Y_bs, X_fit_bs, family=sm.families.Poisson())
             model_bs = statsmodels.discrete.discrete_model.Poisson(Y_bs, X_fit_bs)
@@ -3132,18 +3143,35 @@ def eval_params_bootstrap(X, X_fit, X_test, X_fit_eval_params, Y, model_type, rh
             model_bs = statsmodels.discrete.discrete_model.NegativeBinomialP(Y_bs, X_fit_bs, p=1)
             results_bs = model_bs.fit(disp=0)
 
-        #Y_test_bs = results_bs.predict(X_fit_test)
+        #Y_test_bs = results_bs.predict(X_fit_test)        
         Y_eval_params_bs = results_bs.predict(X_fit_eval_params)
         rhythm_params_bs = evaluate_rhythm_params(X_test, Y_eval_params_bs, period=period)
-    
-        for param in parameters_to_analyse:
-            params_bs[param][i] = rhythm_params_bs[param]                 
+            
+        
+        """
+        if rhythm_params_bs['amplitude'] > np.max(Y_eval_params_bs):
+            
+        
+            print(results_bs.summary())
 
-    
+            plt.plot(X[idxs_bs], Y_bs,'.')
+            plt.plot(X_test, Y_eval_params_bs)
+            plt.show()
+        """
+
+        # remove the fits that exhibit divergence
+        for param in parameters_to_analyse:
+            if (abs(rhythm_params_bs['amplitude']) > (np.max(Y)-np.min(Y))) or ((rhythm_params_bs['period2']) and (rhythm_params_bs['period2'] < rhythm_params_bs['period2'])):
+                params_bs[param][i] = np.nan                         
+            else:    
+                #plt.plot(X_test, Y_eval_params_bs, alpha=0.5)
+                params_bs[param][i] = rhythm_params_bs[param]                 
+
+    #plt.show()
     # analyse bootstrap samples
     DoF = bootstrap_size - len(results_bs.params)
     n_params = len(results_bs.params)
-    rhythm_params['DoF'] = DoF
+    rhythm_params['DoF'] = DoF    
 
     for param in parameters_to_analyse:
         if param in parameters_angular:

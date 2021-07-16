@@ -82,7 +82,7 @@ def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=T
             
     return df
 
-def generate_test_data(n_components=1, period = 24, amplitudes = 0, baseline = 0, lin_comp = 0, amplification = 0, phase = 0, min_time = 0, max_time = 48, time_step = 2, replicates = 1, independent = True, name="test", noise = 0):
+def generate_test_data(n_components=1, period = 24, amplitudes = 0, baseline = 0, lin_comp = 0, amplification = 0, phase = 0, min_time = 0, max_time = 48, time_step = 2, replicates = 1, independent = True, name="test", noise = 0, noise_simple = 1):
     df = pd.DataFrame(columns=['test','x','y'], dtype=float)
     x = np.arange(min_time, max_time+time_step, time_step)
 
@@ -114,7 +114,20 @@ def generate_test_data(n_components=1, period = 24, amplitudes = 0, baseline = 0
             test = name + "_rep" + str(i+1)
         mu = 0
         sigma = noise
-        y += np.random.normal(mu, sigma, y.shape) 
+            
+        if noise_simple:
+            y += np.random.normal(mu, sigma, y.shape) 
+        else:
+            # mutliplicative noise
+            # sigma from 0 to 1; 
+            # 0 ... no noise
+            # 1 ... maximal noise
+            """
+            mu = 1
+            sigma = noise            
+            y *= np.random.normal(mu, sigma, y.shape) 
+            """
+            y *= (1 + np.random.normal(mu, sigma, y.shape))
         
         df2 = pd.DataFrame(columns=['test','x','y'], dtype=float)
         df2['x'] = x

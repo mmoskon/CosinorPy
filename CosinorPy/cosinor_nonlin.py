@@ -20,6 +20,8 @@ from statsmodels.sandbox.regression.predstd import wls_prediction_std
 
 import os
 
+eps = 10**-10
+
 #####################
 # FITTING FUNCTIONS #
 #####################
@@ -147,8 +149,11 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
     RSS = sum((Y - Y_fit)**2)
     N = Y.size
 
-    F = (MSS/(n_params - 1)) / (RSS/(N - n_params)) 
-    p = 1 - stats.f.cdf(F, n_params - 1, N - n_params)
+    try:
+        F = (MSS/(n_params - 1)) / (RSS/(N - n_params)) 
+        p = 1 - stats.f.cdf(F, n_params - 1, N - n_params)
+    except:
+        p = 1
     
     X_periodic = np.round_(X % period,2)                                    
     
@@ -163,8 +168,12 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
     #print('RSS: ', RSS)
     #print('SSPE: ', SSPE)
     #print('SSLOF: ', SSLOF)
-    F = (SSLOF/(n_T-n_params))/(SSPE/(N-n_T))
-    p_reject = 1 - stats.f.cdf(F, n_T-n_params, N-n_T)
+    try:
+        F = (SSLOF/(n_T-n_params))/(SSPE/(N-n_T))
+        p_reject = 1 - stats.f.cdf(F, n_T-n_params, N-n_T)
+    except:
+        p_reject = 1
+    
     
     
     # Another measure that describes goodnes of fit
@@ -180,12 +189,17 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
     # Standard Error of residuals, margin of error
     # https://stats.stackexchange.com/questions/57746/what-is-residual-standard-error
     DoF = N - n_params
-    resid_SE = np.sqrt(RSS/DoF)
-    # https://scientificallysound.org/2017/05/16/independent-t-test-python/
-    # https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/hypothesis-testing/margin-of-error/
-    critical_value = stats.t.ppf(1-0.025, DoF)
-    ME = critical_value * resid_SE
-    
+    try:
+        resid_SE = np.sqrt(RSS/DoF)
+        # https://scientificallysound.org/2017/05/16/independent-t-test-python/
+        # https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/hypothesis-testing/margin-of-error/
+        critical_value = stats.t.ppf(1-0.025, DoF)
+        ME = critical_value * resid_SE
+    except:
+        resid_SE = np.nan
+        ME = np.nan
+
+
     
     return {'p':p, 'p_reject':p_reject, 'SNR':SNR, 'RSS': RSS, 'resid_SE': resid_SE, 'ME': ME}
 
@@ -194,13 +208,14 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
 # REGRESSION #
 ##############
 
-def fit_cosinor_basic(X,Y, period=24, min_per = 12, max_per=36, plot=False, plot_margins=True, save_to = ""):
-    min_bounds = {'A':0, 
+def fit_cosinor_basic(X,Y, period=24, min_per = 12, max_per=36, plot=False, plot_margins=True, save_to = "", **kwargs):
+    
+    min_bounds = {'A':min(0, min(Y)), 
                       'B':0,
                       'acrophase':-np.pi}                      
                       
     max_bounds = {'A':max(Y), 
-                      'B':max(Y), 
+                      'B':abs(max(Y)), 
                       'acrophase':np.pi}
     if not period:
         min_bounds['period'] =  min_per
@@ -217,9 +232,9 @@ def fit_cosinor_basic(X,Y, period=24, min_per = 12, max_per=36, plot=False, plot
     max_bounds = [max_bounds[name] for name in parameters]  
 
     if period:
-        popt, pcov = curve_fit(lambda x, A, B, acrophase: cosinor_basic(x, A, B, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), loss='cauchy')
+        popt, pcov = curve_fit(lambda x, A, B, acrophase: cosinor_basic(x, A, B, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
     else:
-        popt, pcov = curve_fit(cosinor_basic, predictor, Y, bounds=(min_bounds, max_bounds), loss='cauchy')
+        popt, pcov = curve_fit(cosinor_basic, predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
    
     DoF = Y.size - len(popt)
 
@@ -256,8 +271,8 @@ def fit_cosinor_basic(X,Y, period=24, min_per = 12, max_per=36, plot=False, plot
 
 
 
-def fit_cosinor_basic_n_comp(X,Y, period=24, n_components = 1, min_per = 12, max_per=36, plot=False, plot_margins=True, save_to = ""):
-    min_bounds = {'A':0, 
+def fit_cosinor_basic_n_comp(X,Y, period=24, n_components = 1, min_per = 12, max_per=36, plot=False, plot_margins=True, save_to = "", **kwargs):
+    min_bounds = {'A':min(0, min(Y)), 
                       'B':0,
                       'B2':0,
                       'B3':0,
@@ -267,11 +282,11 @@ def fit_cosinor_basic_n_comp(X,Y, period=24, n_components = 1, min_per = 12, max
                       'acrophase3':-np.pi,
                       'acrophase4':-np.pi}
                       
-    max_bounds = {'A':max(Y), 
-                      'B':max(Y), 
-                      'B2':max(Y),
-                      'B3':max(Y),
-                      'B4':max(Y),
+    max_bounds = {'A':abs(max(Y)), 
+                      'B':abs(max(Y)), 
+                      'B2':abs(max(Y)),
+                      'B3':abs(max(Y)),
+                      'B4':abs(max(Y)),
                       'acrophase':np.pi,
                       'acrophase2':np.pi,
                       'acrophase3':np.pi,
@@ -307,15 +322,15 @@ def fit_cosinor_basic_n_comp(X,Y, period=24, n_components = 1, min_per = 12, max
 
     if period:
         if n_components == 1:
-            popt, pcov = curve_fit(lambda x, A, B, acrophase: fitting_func(x, A, B, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), loss='cauchy')
+            popt, pcov = curve_fit(lambda x, A, B, acrophase: fitting_func(x, A, B, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
         elif n_components == 2:
-            popt, pcov = curve_fit(lambda x, A, B, acrophase, B2, acrophase2: fitting_func(x, A, B, acrophase, B2, acrophase2, period), predictor, Y, bounds=(min_bounds, max_bounds), loss='cauchy')
+            popt, pcov = curve_fit(lambda x, A, B, acrophase, B2, acrophase2: fitting_func(x, A, B, acrophase, B2, acrophase2, period), predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
         elif n_components == 3:
-            popt, pcov = curve_fit(lambda x, A, B, acrophase, B2, acrophase2, B3, acrophase3: fitting_func(x, A, B, acrophase, B2, acrophase2, B3, acrophase3, period), predictor, Y, bounds=(min_bounds, max_bounds), loss='cauchy')
+            popt, pcov = curve_fit(lambda x, A, B, acrophase, B2, acrophase2, B3, acrophase3: fitting_func(x, A, B, acrophase, B2, acrophase2, B3, acrophase3, period), predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
         elif n_components == 4:
-            popt, pcov = curve_fit(lambda x, A, B, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4: fitting_func(x, A, B, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4, period), predictor, Y, bounds=(min_bounds, max_bounds), loss='cauchy')
+            popt, pcov = curve_fit(lambda x, A, B, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4: fitting_func(x, A, B, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4, period), predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
     else:
-        popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), loss='cauchy')
+        popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
 
   
     
@@ -363,29 +378,32 @@ def fit_cosinor_basic_n_comp(X,Y, period=24, n_components = 1, min_per = 12, max
 #   popt,pcov = curve_fit(lambda x, A, B, C, D, phi: generalized_cosinor(x, A, B, C, D, phi, PER), x, y, bounds)
 # else:
 #   popt,pcov = curve_fit(generalized_cosinor, x, y, bounds)
-def fit_generalized_cosinor(X,Y, period=24, min_per = 12, max_per=36, plot=False, plot_margins=True, save_to = "", x_label="time [h]", y_label="measurements", test="", hold_on=False, color="black"):
+def fit_generalized_cosinor(X,Y, period=24, min_per = 12, max_per=36, plot=False, plot_margins=True, save_to = "", x_label="time [h]", y_label="measurements", test="", hold_on=False, color="black", lin_comp = True, amp_comp = True, **kwargs):
 
     #if not exp:
     fitting_func = generalized_cosinor
     #else:
     #    fitting_func = generalized_cosinor_exp
 
-    min_bounds = {'A':0, 
+    max_C = 1 if amp_comp else eps
+    max_D = 10 if lin_comp else eps
+     
+
+    min_bounds = {'A':min(0, min(Y)), 
                       'B':0,
-                      'C':-1,
-                      'D':-10,
+                      'C':-max_C,
+                      'D':-max_D,
                       'acrophase':-np.pi}                      
                       
-    max_bounds = {'A':max(Y), 
-                      'B':max(Y), 
-                      'C':1,
-                      'D':10,
+    max_bounds = {'A':abs(max(Y)), 
+                      'B':abs(max(Y)), 
+                      'C':max_C,
+                      'D':max_D,
                       'acrophase':np.pi}
     if not period:
         min_bounds['period'] =  min_per
         max_bounds['period'] =  max_per
-
-
+    
     if period: # if period is not specified
         parameters = ['A', 'B', 'C', 'D', 'acrophase']
     else:
@@ -395,15 +413,26 @@ def fit_generalized_cosinor(X,Y, period=24, min_per = 12, max_per=36, plot=False
     min_bounds = [min_bounds[name] for name in parameters]
     max_bounds = [max_bounds[name] for name in parameters]  
 
+   
     # parameters = ['A', 'B', 'acrophase', 'period']
-    p0, _, _ = fit_cosinor_basic(X,Y, period = period)
+    p0, _, _ = fit_cosinor_basic(X,Y, period = period) # p0, statistics0, statistics_param0
+    # if not generalized:
+    # add C and D to these parameters, set to 0, p-value to 1, confidence intervals to 0,0
+    #   return these parameters, plot...
+    
+
     p0 = p0[:2] + [0,0] + p0[2:]
 
     if period:
-        popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase: fitting_func(x, A, B, C, D, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0[:-1], loss='cauchy')
+        try:
+            popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase: fitting_func(x, A, B, C, D, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0[:-1], **kwargs)
+        except:
+            popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase: fitting_func(x, A, B, C, D, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
     else:
-        popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0, loss='cauchy')
-    
+        try:
+            popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0, **kwargs)
+        except:
+            popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
     
     DoF = Y.size - len(popt)
 
@@ -444,17 +473,21 @@ def fit_generalized_cosinor(X,Y, period=24, min_per = 12, max_per=36, plot=False
 
     return popt_ext, statistics, statistics_params   
 
-def fit_generalized_cosinor_n_comp(X,Y, period=24, n_components = 1, min_per = 12, max_per=36, plot=False, plot_margins=True, color = 'black', hold_on = False, save_to = "", x_label="time [h]", y_label="measurements", test=""):
+def fit_generalized_cosinor_n_comp(X,Y, period=24, n_components = 1, min_per = 12, max_per=36, plot=False, plot_margins=True, color = 'black', hold_on = False, save_to = "", x_label="time [h]", y_label="measurements", test="", lin_comp = True, amp_comp = True, **kwargs):
 
     #if not exp:
     #    fitting_func = generalized_cosinor
     #else:
     #    fitting_func = generalized_cosinor_exp
 
-    min_bounds = {'A':0, 
+    max_C = 1 if amp_comp else eps
+    max_D = 10 if lin_comp else eps
+
+
+    min_bounds = {'A':min(0, min(Y)), 
                       'B':0,
-                      'C':-1,
-                      'D':-10,
+                      'C':-max_C,
+                      'D':-max_D,
                       'B2':0,
                       'B3':0,
                       'B4':0,
@@ -463,13 +496,13 @@ def fit_generalized_cosinor_n_comp(X,Y, period=24, n_components = 1, min_per = 1
                       'acrophase3':-np.pi,
                       'acrophase4':-np.pi}                 
                       
-    max_bounds = {'A':max(Y), 
-                      'B':max(Y), 
-                      'C':1,
-                      'D':10,
-                      'B2':max(Y),
-                      'B3':max(Y),
-                      'B4':max(Y),
+    max_bounds = {'A':abs(max(Y)), 
+                      'B':abs(max(Y)), 
+                      'C':max_C,
+                      'D':max_D,
+                      'B2':abs(max(Y)),
+                      'B3':abs(max(Y)),
+                      'B4':abs(max(Y)),
                       'acrophase':np.pi,
                       'acrophase2':np.pi,
                       'acrophase3':np.pi,
@@ -505,38 +538,42 @@ def fit_generalized_cosinor_n_comp(X,Y, period=24, n_components = 1, min_per = 1
         return
 
     # parameters = ['A', 'B', 'acrophase', 'period']
-    p0, _, _, _ = fit_cosinor_basic_n_comp(X,Y, period = period, n_components=n_components, plot=False)
+    p0, _, _, _ = fit_cosinor_basic_n_comp(X,Y, period = period, n_components=n_components, plot=False) # p0, statistics0, statistics_param0
+    # if not generalized:
+    # add C and D to these parameters, set to 0, p-value to 1, confidence intervals to 0,0
+    #   return these parameters, plot...
     p0 = p0[:2] + [0,0] + p0[2:]
     
     try:
         if period:
             if n_components == 1:
                 try:                    
-                    popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase: fitting_func(x, A, B, C, D, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0[:-1], loss='cauchy')
+                    popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase: fitting_func(x, A, B, C, D, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0[:-1], **kwargs)
                 except:
-                    popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase: fitting_func(x, A, B, C, D, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), loss='cauchy')                
+                    popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase: fitting_func(x, A, B, C, D, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)                
             elif n_components == 2:
                 try:
-                    popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, B2, acrophase2: fitting_func(x, A, B, C, D, acrophase, B2, acrophase2, period), predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0[:-1], loss='cauchy')
+                    popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, B2, acrophase2: fitting_func(x, A, B, C, D, acrophase, B2, acrophase2, period), predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0[:-1], **kwargs)
                 except:
-                    popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, B2, acrophase2: fitting_func(x, A, B, C, D, acrophase, B2, acrophase2, period), predictor, Y, bounds=(min_bounds, max_bounds), loss='cauchy')
+                    popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, B2, acrophase2: fitting_func(x, A, B, C, D, acrophase, B2, acrophase2, period), predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
                 
             elif n_components == 3:
                 try:
-                    popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3: fitting_func(x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, period), predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0[:-1], loss='cauchy')
+                    popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3: fitting_func(x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, period), predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0[:-1], **kwargs)
                 except:
-                    popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3: fitting_func(x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, period), predictor, Y, bounds=(min_bounds, max_bounds), loss='cauchy')
+                    popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3: fitting_func(x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, period), predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
             elif n_components == 4:
                 try:
-                    popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4: fitting_func(x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4, period), predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0[:-1], loss='cauchy')        
+                    popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4: fitting_func(x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4, period), predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0[:-1], **kwargs)        
                 except:
-                    popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4: fitting_func(x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4, period), predictor, Y, bounds=(min_bounds, max_bounds), loss='cauchy')        
+                    popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4: fitting_func(x, A, B, C, D, acrophase, B2, acrophase2, B3, acrophase3, B4, acrophase4, period), predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)        
         else:
             try:
-                popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0, loss='cauchy')
+                popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0, **kwargs)
             except:
-                popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), loss='cauchy')
-    except:          
+                popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
+    except: 
+        print(f"Divergence error at {test} with {n_components} components!")         
         return
 
     
@@ -850,7 +887,7 @@ def population_fit_generalized_cosinor(df_pop, period=24, plot=False, plot_margi
     return p_dict
 
  
-def fit_generalized_cosinor_compare(X1, Y1, X2, Y2, period=24, min_per = 12, max_per=36, plot=False, plot_margins=True, save_to = "", test1 = "test1", test2 = "test2", x_label="time [h]", y_label="measurements"):
+def fit_generalized_cosinor_compare(X1, Y1, X2, Y2, period=24, min_per = 12, max_per=36, plot=False, plot_margins=True, save_to = "", test1 = "test1", test2 = "test2", x_label="time [h]", y_label="measurements", lin_comp=True, amp_comp = True, **kwargs):
     #if not exp:
     fitting_func = generalized_cosinor_compare
     #else:
@@ -864,26 +901,29 @@ def fit_generalized_cosinor_compare(X1, Y1, X2, Y2, period=24, min_per = 12, max
     H = np.concatenate((H1, H2))
     predictor = np.array([X,H])
 
-    min_bounds =   {'A':0, 
+    max_C = 1 if amp_comp else eps
+    max_D = 10 if lin_comp else eps
+
+    min_bounds =   {'A':min(0, min(Y)), 
                     'B':0,
-                    'C':-1,
-                    'D':-10,
+                    'C':-max_C,
+                    'D':-max_D,
                     'acrophase':-np.pi,
-                    'A0':-20, 
+                    'A0':min(-2*max(Y), 2*min(Y)), 
                     'B0':-20,
-                    'C0':-2,
-                    'D0':-20,
+                    'C0':-2*max_C,
+                    'D0':-2*max_D,
                     'acrophase0':-np.pi}                      
                       
-    max_bounds =   {'A':max(Y), 
-                    'B':max(Y), 
-                    'C':1,
-                    'D':10,
+    max_bounds =   {'A':abs(max(Y)), 
+                    'B':abs(max(Y)), 
+                    'C':max_C,
+                    'D':max_D,
                     'acrophase':np.pi,
-                    'A0':2*max(Y), 
-                    'B0':2*max(Y), 
-                    'C0':2,
-                    'D0':20,
+                    'A0':2*abs(max(Y)), 
+                    'B0':2*abs(max(Y)), 
+                    'C0':2*max_C,
+                    'D0':2*max_D,
                     'acrophase0':np.pi}
     
     if not period: # if period is not specified
@@ -916,9 +956,9 @@ def fit_generalized_cosinor_compare(X1, Y1, X2, Y2, period=24, min_per = 12, max
 
 
     if period:
-        popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, A0, B0, C0, D0, acrophase0: fitting_func(x, A, B, C, D, acrophase, A0, B0, C0, D0, acrophase0, period), predictor, Y, bounds=(min_bounds, max_bounds), p0=p0, loss='cauchy')
+        popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase, A0, B0, C0, D0, acrophase0: fitting_func(x, A, B, C, D, acrophase, A0, B0, C0, D0, acrophase0, period), predictor, Y, bounds=(min_bounds, max_bounds), p0=p0, **kwargs)
     else:
-        popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), p0=p0, loss='cauchy')
+        popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), p0=p0, **kwargs)
         
     DoF = Y.size - len(popt)
 
@@ -988,11 +1028,14 @@ def eval_params_n_comp_bootstrap(X,Y, n_components = 1, period = 24, rhythm_para
         idxs_bs = np.random.choice(idxs, len(idxs), replace=True)
         Y_bs, X_bs = Y[idxs_bs], X[idxs_bs]
 
-        popt_ext_bs, _, _, rhythm_params_bs = fit_generalized_cosinor_n_comp(X_bs, Y_bs, period=period, n_components = n_components, plot=False, **kwargs)
-        
-        for param in parameters_to_analyse:
-            params_bs[param][i] = rhythm_params_bs[param]
-
+        try:
+            popt_ext_bs, _, _, rhythm_params_bs = fit_generalized_cosinor_n_comp(X_bs, Y_bs, period=period, n_components = n_components, plot=False, **kwargs)
+            for param in parameters_to_analyse:
+                params_bs[param][i] = rhythm_params_bs[param]    
+        except:            
+            for param in parameters_to_analyse:
+                params_bs[param][i] = np.nan
+   
     n_params = len(popt_ext_bs)
     if period:
         n_params -= 1
@@ -1407,7 +1450,11 @@ def get_best_model(X, Y, period=24, n_components = [1,2,3], plot=False, plot_mar
     best_comps = n_components[0]
 
     for n_comps in n_components[1:]:
-        popt_ext2, statistics2, statistics_params2, rhythm_params2 = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_comps, plot=False, **kwargs)
+        try:
+            popt_ext2, statistics2, statistics_params2, rhythm_params2 = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_comps, plot=False, **kwargs)
+        except:
+            continue
+
         RSS2 = statistics2['RSS']
         n_params2 = len(popt_ext2)
         if period:  
@@ -1420,7 +1467,7 @@ def get_best_model(X, Y, period=24, n_components = [1,2,3], plot=False, plot_mar
             n_params1 = n_params2
             popt_ext1, statistics1, statistics_params1, rhythm_params1 = popt_ext2, statistics2, statistics_params2, rhythm_params2
             best_comps = n_comps
-
+        
     if plot:
         fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=best_comps, plot=True, plot_margins=plot_margins, save_to = save_to, **kwargs)
 
@@ -1441,7 +1488,10 @@ def get_best_model_population(df_pop, period=24, n_components = [1,2,3], plot=Fa
     best_comps = n_components[0]
 
     for n_comps in n_components[1:]:
-        statistics2, p_dict2, rhythm_params2 = population_fit_generalized_cosinor_n_comp(df_pop, period = period, n_components=n_comps, plot=False, **kwargs)
+        try:
+            statistics2, p_dict2, rhythm_params2 = population_fit_generalized_cosinor_n_comp(df_pop, period = period, n_components=n_comps, plot=False, **kwargs)
+        except:            
+            continue
         RSS2 = p_dict2['RSS']
         n_params2 = 3 + n_comps*2
         if not period:
@@ -1900,8 +1950,10 @@ def population_fit_generalized_cosinor_n_comp_group(df, period = 24, n_component
             save_to = ''    
 
         df_pop = df[df.test.str.startswith(test)]          
-
-        stats, stats_params, params = population_fit_generalized_cosinor_n_comp(df_pop, period=period, n_components = n_components, save_to = save_to, test=test, **kwargs)
+        try:
+            stats, stats_params, params = population_fit_generalized_cosinor_n_comp(df_pop, period=period, n_components = n_components, save_to = save_to, test=test, **kwargs)
+        except:
+            continue
 
         if period:
             per = period
