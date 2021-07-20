@@ -82,6 +82,25 @@ def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=T
             
     return df
 
+def generate_test_data_group(N, name_prefix = "", **kwargs):
+    df = pd.DataFrame(columns=['test','x','y'], dtype=float)
+    
+    if not name_prefix:
+        name_prefix = "test"
+
+
+    for i in range(N):
+        name = f"{name_prefix}_{i}"
+        df2 = generate_test_data(name=name, **kwargs)
+        df = df.append(df2, ignore_index=True)
+
+    return df
+
+
+
+
+
+
 def generate_test_data(n_components=1, period = 24, amplitudes = 0, baseline = 0, lin_comp = 0, amplification = 0, phase = 0, min_time = 0, max_time = 48, time_step = 2, replicates = 1, independent = True, name="test", noise = 0, noise_simple = 1):
     df = pd.DataFrame(columns=['test','x','y'], dtype=float)
     x = np.arange(min_time, max_time+time_step, time_step)
@@ -90,13 +109,17 @@ def generate_test_data(n_components=1, period = 24, amplitudes = 0, baseline = 0
         amplitudes = np.array([1,1/2,1/3,1/4])
    
     periods = np.array([period, period/2, period/3, period/4])
-
+   
+    if (type(phase) == int) or (type(phase)==float):
+        phases = np.array([phase, phase, phase, phase])
+    else:        
+        phases = np.array(phase)    
 
     for i in range(replicates):
         y = np.zeros(len(x))
         
         for j in range(n_components):
-            y += amplitudes[j] * np.cos((x/periods[j])*np.pi*2 + phase)
+            y += amplitudes[j] * np.cos((x/periods[j])*np.pi*2 + phases[j])
         
         # if amplification < 0: oscillations are damped with time
         # if amplification > 0: oscillations are amplified with time

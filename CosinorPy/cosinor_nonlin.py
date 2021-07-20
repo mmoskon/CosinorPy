@@ -574,9 +574,8 @@ def fit_generalized_cosinor_n_comp(X,Y, period=24, n_components = 1, min_per = 1
                 popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
     except: 
         print(f"Divergence error at {test} with {n_components} components!")         
-        return
+        return 
 
-    
     DoF = Y.size - len(popt)
 
     if not period:
@@ -1987,7 +1986,7 @@ def population_fit_generalized_cosinor_n_comp_group(df, period = 24, n_component
 def bootstrap_generalized_cosinor_n_comp_group_best(df, df_best_models, **kwargs):
 
 
-    columns = ['test', 'period', 'n_components', 
+    columns = ['test', 'period', 'n_components', 'p', 'q',
                'amplitude', 'p(amplitude)', 'q(amplitude)', 'CI(amplitude)', 
                'acrophase', 'p(acrophase)', 'q(acrophase)', 'CI(acrophase)',
                'amplification', 'p(amplification)', 'q(amplification)', 'CI(amplification)',
@@ -2008,13 +2007,13 @@ def bootstrap_generalized_cosinor_n_comp_group_best(df, df_best_models, **kwargs
         best_per = best.iloc[0].period
         amp = best.iloc[0].amplitude
         acr = best.iloc[0].acrophase
-        amplification, p_amplification, CI_amplification = best.iloc[0]['amplification'], best.iloc[0]['p(amplification)'], best.iloc[0]['CI(amplification)']
+        p, amplification, p_amplification, CI_amplification = best.iloc[0]['p'], best.iloc[0]['amplification'], best.iloc[0]['p(amplification)'], best.iloc[0]['CI(amplification)']
         lin_comp, p_lin_comp, CI_lin_comp = best.iloc[0]['lin_comp'], best.iloc[0]['p(lin_comp)'], best.iloc[0]['CI(lin_comp)']
 
         rhythm_params = eval_params_n_comp_bootstrap(X, Y, n_components=best_comps, period=best_per, **kwargs)
 
 
-        d = {'test': test, 'period': best_per, 'n_components': best_comps,
+        d = {'test': test, 'period': best_per, 'n_components': best_comps, 'p':p,
              'amplitude': amp, 'p(amplitude)':rhythm_params['p(amplitude)'], 'CI(amplitude)':rhythm_params['CI(amplitude)'],
              'acrophase': acr, 'p(acrophase)':rhythm_params['p(acrophase)'], 'CI(acrophase)':rhythm_params['CI(acrophase)'],
              'amplification':amplification, 'p(amplification)':p_amplification, 'CI(amplification)':CI_amplification,
@@ -2022,6 +2021,7 @@ def bootstrap_generalized_cosinor_n_comp_group_best(df, df_best_models, **kwargs
 
         df_results = df_results.append(d, ignore_index=True)    
 
+    df_results["q"] = multi.multipletests(df_results["p"], method = 'fdr_bh')[1]
     df_results["q(amplitude)"] = multi.multipletests(df_results["p(amplitude)"], method = 'fdr_bh')[1]
     df_results["q(amplification)"] = multi.multipletests(df_results["p(amplification)"], method = 'fdr_bh')[1]
     df_results["q(lin_comp)"] = multi.multipletests(df_results["p(lin_comp)"], method = 'fdr_bh')[1]
@@ -2032,7 +2032,7 @@ def bootstrap_generalized_cosinor_n_comp_group_best(df, df_best_models, **kwargs
 # bootstrap using the same number of componetns for all the models
 def bootstrap_generalized_cosinor_n_comp_group(df, period=24, n_components=3, **kwargs):
 
-    columns = ['test', 'period', 'n_components', 
+    columns = ['test', 'period', 'n_components', 'p', 'q', 
                'amplitude', 'p(amplitude)', 'q(amplitude)', 'CI(amplitude)', 
                'acrophase', 'p(acrophase)', 'q(acrophase)', 'CI(acrophase)',
                'amplification', 'p(amplification)', 'q(amplification)', 'CI(amplification)',
@@ -2046,13 +2046,14 @@ def bootstrap_generalized_cosinor_n_comp_group(df, period=24, n_components=3, **
         X = df[df.test == test].x
         Y = df[df.test == test].y
 
-        _, _, stats_params, rhythm_params = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_components)
+        _, statistics, stats_params, rhythm_params = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_components)
 
         if period:
             per = period
         else:
             per = stats_params['params']['period']
 
+        p = statistics['p']
         amp = rhythm_params['amplitude']
         acr = rhythm_params['acrophase']
         amplification, p_amplification, CI_amplification = stats_params['params']['C'], stats_params['p_values']['C'], stats_params['CIs']['C']    
@@ -2061,7 +2062,7 @@ def bootstrap_generalized_cosinor_n_comp_group(df, period=24, n_components=3, **
         rhythm_params = eval_params_n_comp_bootstrap(X, Y, n_components=n_components, period=per, **kwargs)
 
 
-        d = {'test': test, 'period': per, 'n_components': n_components,
+        d = {'test': test, 'period': per, 'n_components': n_components, 'p': p,
              'amplitude': amp, 'p(amplitude)':rhythm_params['p(amplitude)'], 'CI(amplitude)':rhythm_params['CI(amplitude)'],
              'acrophase': acr, 'p(acrophase)':rhythm_params['p(acrophase)'], 'CI(acrophase)':rhythm_params['CI(acrophase)'],
              'amplification':amplification, 'p(amplification)':p_amplification, 'CI(amplification)':CI_amplification,
@@ -2069,6 +2070,7 @@ def bootstrap_generalized_cosinor_n_comp_group(df, period=24, n_components=3, **
 
         df_results = df_results.append(d, ignore_index=True)    
 
+    df_results["q"] = multi.multipletests(df_results["p"], method = 'fdr_bh')[1]
     df_results["q(amplitude)"] = multi.multipletests(df_results["p(amplitude)"], method = 'fdr_bh')[1]
     df_results["q(amplification)"] = multi.multipletests(df_results["p(amplification)"], method = 'fdr_bh')[1]
     df_results["q(lin_comp)"] = multi.multipletests(df_results["p(lin_comp)"], method = 'fdr_bh')[1]
