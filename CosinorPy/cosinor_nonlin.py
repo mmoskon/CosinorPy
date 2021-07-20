@@ -475,6 +475,8 @@ def fit_generalized_cosinor(X,Y, period=24, min_per = 12, max_per=36, plot=False
 
 def fit_generalized_cosinor_n_comp(X,Y, period=24, n_components = 1, min_per = 12, max_per=36, plot=False, plot_margins=True, color = 'black', hold_on = False, save_to = "", x_label="time [h]", y_label="measurements", test="", lin_comp = True, amp_comp = True, **kwargs):
 
+   
+
     #if not exp:
     #    fitting_func = generalized_cosinor
     #else:
@@ -592,6 +594,7 @@ def fit_generalized_cosinor_n_comp(X,Y, period=24, n_components = 1, min_per = 1
         X_plot = np.linspace(min(X), max(X), 1000)
         Y_plot = fitting_func(X_plot, *popt_ext)
         plt.plot(X_plot, Y_plot, label='fit', color=color)
+        #plt.plot(X_plot, Y_plot, label='fit', alpha=0.25, color=color) #!!!
         if hold_on==False:
             plt.plot(X, Y, 'o', markersize=1, label='measurements', color=color)
         else:
@@ -622,6 +625,8 @@ def fit_generalized_cosinor_n_comp(X,Y, period=24, n_components = 1, min_per = 1
     X_eval = np.linspace(0, 2*period, 1000)
     Y_eval = fitting_func(X_eval, *popt_eval)
     rhythm_params = cosinor.evaluate_rhythm_params(X_eval, Y_eval, period=period)
+    rhythm_params['amplification'] = statistics_params['params']['C']
+    rhythm_params['lin_comp'] = statistics_params['params']['D']
 
     # returns
     return popt_ext, statistics, statistics_params, rhythm_params   
@@ -1009,7 +1014,7 @@ def fit_generalized_cosinor_compare(X1, Y1, X2, Y2, period=24, min_per = 12, max
 # EVALUATION OF PARAMS STATISTICS #
 ###################################
 
-def eval_params_n_comp_bootstrap(X,Y, n_components = 1, period = 24, rhythm_params = {}, bootstrap_size=1000, bootstrap_type="std", t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):       
+def eval_params_n_comp_bootstrap(X,Y, n_components = 1, period = 24, rhythm_params = {}, bootstrap_size=1000, bootstrap_type="std", t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor', 'amplification', 'lin_comp'], parameters_angular = ['acrophase'], **kwargs):       
     # generate and evaluate bootstrap samples
     params_bs = {}
     for param in parameters_to_analyse:
@@ -1029,12 +1034,16 @@ def eval_params_n_comp_bootstrap(X,Y, n_components = 1, period = 24, rhythm_para
 
         try:
             popt_ext_bs, _, _, rhythm_params_bs = fit_generalized_cosinor_n_comp(X_bs, Y_bs, period=period, n_components = n_components, plot=False, **kwargs)
+            #popt_ext_bs, _, _, rhythm_params_bs = fit_generalized_cosinor_n_comp(X_bs, Y_bs, period=period, n_components = n_components, plot=True, plot_margins=False, hold_on=True, **kwargs) #!!!
             for param in parameters_to_analyse:
                 params_bs[param][i] = rhythm_params_bs[param]    
         except:            
             for param in parameters_to_analyse:
                 params_bs[param][i] = np.nan
    
+    #plt.plot() #!!!
+    #plt.show() #!!!
+
     n_params = len(popt_ext_bs)
     if period:
         n_params -= 1
@@ -1225,7 +1234,7 @@ def population_compare_pairs_n_comp_basic(df_pop1, df_pop2, n_components= 1, n_c
 
     return {'params': d_params, 'CIs': CIs, 'p_values': p_values, 'rhythm_params': rhythm_params}
 
-def compare_pairs_n_comp_bootstrap(X1, Y1, X2, Y2, n_components= 1, n_components2 = None, period = 24, period2 = 24, rhythm_params1 = {}, rhythm_params2 = {}, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], bootstrap_size = 1000, t_test=True, **kwargs):       
+def compare_pairs_n_comp_bootstrap(X1, Y1, X2, Y2, n_components= 1, n_components2 = None, period = 24, period2 = 24, rhythm_params1 = {}, rhythm_params2 = {}, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor', 'amplification', 'lin_comp'], parameters_angular = ['acrophase'], bootstrap_size = 1000, t_test=True, **kwargs):       
     n_components1 = n_components
     if not n_components2:
         n_components2 = n_components1
@@ -2030,7 +2039,7 @@ def bootstrap_generalized_cosinor_n_comp_group_best(df, df_best_models, **kwargs
     return df_results
 
 # bootstrap using the same number of componetns for all the models
-def bootstrap_generalized_cosinor_n_comp_group(df, period=24, n_components=3, **kwargs):
+def bootstrap_generalized_cosinor_n_comp_group(df, period=24, n_components=3, amp_comp=True, lin_comp=True, **kwargs):
 
     columns = ['test', 'period', 'n_components', 'p', 'q', 
                'amplitude', 'p(amplitude)', 'q(amplitude)', 'CI(amplitude)', 
@@ -2046,7 +2055,7 @@ def bootstrap_generalized_cosinor_n_comp_group(df, period=24, n_components=3, **
         X = df[df.test == test].x
         Y = df[df.test == test].y
 
-        _, statistics, stats_params, rhythm_params = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_components)
+        _, statistics, stats_params, rhythm_params = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_components, amp_comp=amp_comp, lin_comp=lin_comp)
 
         if period:
             per = period
@@ -2059,7 +2068,7 @@ def bootstrap_generalized_cosinor_n_comp_group(df, period=24, n_components=3, **
         amplification, p_amplification, CI_amplification = stats_params['params']['C'], stats_params['p_values']['C'], stats_params['CIs']['C']    
         lin_comp, p_lin_comp, CI_lin_comp = stats_params['params']['D'], stats_params['p_values']['D'], stats_params['CIs']['D']
 
-        rhythm_params = eval_params_n_comp_bootstrap(X, Y, n_components=n_components, period=per, **kwargs)
+        rhythm_params = eval_params_n_comp_bootstrap(X, Y, n_components=n_components, period=per, amp_comp=amp_comp, lin_comp=lin_comp, **kwargs)
 
 
         d = {'test': test, 'period': per, 'n_components': n_components, 'p': p,
@@ -2082,7 +2091,7 @@ def bootstrap_generalized_cosinor_n_comp_group(df, period=24, n_components=3, **
 # df_boostrap_single: results of the basic bootstrap resutls. If this is not specified or if a certain measurement is missing in the results, bootstrap is ran on individual fits
 def compare_pairs_n_comp_bootstrap_group(df, pairs, df_best_models = None, df_bootstrap_single = None, period=24, n_components=3, folder ="", bootstrap_size=1000, bootstrap_type="std", t_test=True, **kwargs):
     
-    parameters_to_analyse = ['amplitude', 'acrophase']
+    parameters_to_analyse = ['amplitude', 'acrophase', 'amplification', 'lin_comp']
 
     columns = ['test', 'period1', 'period2', 'n_components1', 'n_components2', 'd_amplitude', 'p(d_amplitude)', 'q(d_amplitude)', 'CI(d_amplitude)', 'd_acrophase', 'p(d_acrophase)','q(d_acrophase)', 'CI(d_acrophase)', 'd_amplification', 'p(d_amplification)', 'q(d_amplification)', 'CI(d_amplification)','d_lin_comp', 'p(d_lin_comp)', 'q(d_lin_comp)', 'CI(d_lin_comp)']
     df_results = pd.DataFrame(columns=columns, dtype=float)
@@ -2119,10 +2128,7 @@ def compare_pairs_n_comp_bootstrap_group(df, pairs, df_best_models = None, df_bo
         if not period:
             period1 = stats_params['params']['period1']
             period2 = stats_params['params']['period2']
-
-        d_amplification, p_d_amplification, CI_d_amplification = stats_params['params']['d_C'], stats_params['p_values']['d_C'], stats_params['CIs']['d_C']    
-        d_lin_comp, p_d_lin_comp, CI_d_lin_comp = stats_params['params']['d_D'], stats_params['p_values']['d_D'], stats_params['CIs']['d_D']
-
+        
         if type(df_bootstrap_single) != pd.DataFrame:
             rhythm_params1 = {}
             rhythm_params2 = {}
@@ -2152,6 +2158,15 @@ def compare_pairs_n_comp_bootstrap_group(df, pairs, df_best_models = None, df_bo
         d_amplitude, p_d_amplitude, CI_d_amplitude = rhythm_params['params']['d_amplitude'], rhythm_params['p_values']['d_amplitude'], rhythm_params['CIs']['d_amplitude']
         d_acrophase, p_d_acrophase, CI_d_acrophase = rhythm_params['params']['d_acrophase'], rhythm_params['p_values']['d_acrophase'], rhythm_params['CIs']['d_acrophase']
 
+        if 'amplification' in parameters_to_analyse: # if bootstrap should be used for this parameter
+            d_amplification, p_d_amplification, CI_d_amplification = rhythm_params['params']['d_amplification'], rhythm_params['p_values']['d_amplification'], rhythm_params['CIs']['d_amplification']    
+        else:
+            d_amplification, p_d_amplification, CI_d_amplification = stats_params['params']['d_C'], stats_params['p_values']['d_C'], stats_params['CIs']['d_C']    
+
+        if 'lin_comp' in parameters_to_analyse: # if bootstrap should be used for this parameter
+            d_lin_comp, p_d_lin_comp, CI_d_lin_comp = rhythm_params['params']['d_lin_comp'], rhythm_params['p_values']['d_lin_comp'], rhythm_params['CIs']['d_lin_comp']
+        else:
+            d_lin_comp, p_d_lin_comp, CI_d_lin_comp = stats_params['params']['d_D'], stats_params['p_values']['d_D'], stats_params['CIs']['d_D']
 
 
         d = {'test':test1 + ' vs. ' + test2, 
