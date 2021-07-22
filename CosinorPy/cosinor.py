@@ -404,14 +404,14 @@ def get_best_models(df, df_models, n_components = [1,2,3], lin_comp = False, cri
 """
 
 
-def plot_data(df, names = [], folder = '', prefix = ''):
+def plot_data(df, names = [], folder = '', prefix = '', color='black'):
     if not names:
         names = np.unique(df.test) 
         
     for test in names:
         X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)  
         
-        plt.plot(X,Y,'.')
+        plt.plot(X,Y,'o', markersize=1, color=color)
         plt.title(test)
        
         #test = test.replace("$","")
@@ -428,14 +428,14 @@ def plot_data(df, names = [], folder = '', prefix = ''):
             plt.show()
     
     
-def plot_data_pairs(df, names, folder = '', prefix =''):
+def plot_data_pairs(df, names, folder = '', prefix ='', color1='black', color2='red'):
         
     for test1, test2 in names:
         X1, Y1 = np.array(df[df.test == test1].x), np.array(df[df.test == test1].y)  
         X2, Y2 = np.array(df[df.test == test2].x), np.array(df[df.test == test2].y)  
         
-        plt.plot(X1,Y1,'ko', markersize=1, label=test1)
-        plt.plot(X2,Y2,'ro', markersize=1, label=test2)
+        plt.plot(X1,Y1,'o', color=color1, markersize=1, label=test1)
+        plt.plot(X2,Y2,'o', color=color2, markersize=1, label=test2)
         plt.legend()
         plt.title(test1 + ' vs. ' + test2)
        
@@ -1115,6 +1115,10 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                 plt.axis([min_X, max_X, 0.9*min(min(Y), min(Y_plot)), 1.1*max(max(Y), max(Y_plot))])
         else:
             plt.axis([min_X, max_X, min(Y_plot)*0.9, max(Y_plot)*1.1])
+        
+        if name: 
+            plt.title(name)
+        """
         if model_type == 'lin':
             if name: 
                 plt.title(name + ', p-value=' + "{0:.5f}".format(statistics['p']))
@@ -1125,6 +1129,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                 plt.title(name + ', p-value=' + '{0:.3f}'.format(statistics['p']) + ' (n='+str(statistics['count'])+ ')')            
             else:
                 plt.title('p-value=' + '{0:.3f}'.format(statistics['p']) + ' (n='+str(statistics['count'])+ ')')
+        """
         if x_label:
             plt.xlabel(x_label)
         else:
@@ -1192,7 +1197,9 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
                         else:
                             plt.plot(X_plot, Y_test_CI, color='#888888', alpha=0.05)
                             
-  
+        
+
+
         if not hold:
             if save_to:
                 plt.savefig(save_to+'.png')
@@ -1248,18 +1255,19 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
 # rhythm params
 def evaluate_rhythm_params(X,Y, project_acrophase=True, period=0):
     #plt.plot(X,Y)
-    #plt.show()
+    #plt.show()    
 
     m = min(Y)
     M = max(Y)
     A = M - m
     MESOR = m + A/2
-    AMPLITUDE = A/2
+    AMPLITUDE = abs(A/2)
     
     PHASE = 0
     PHASE_LOC = 0
-    
-    locs, heights = signal.find_peaks(Y, height = M * 0.99)
+        
+    H = M - 0.01*M if M >= 0 else M + 0.01*M
+    locs, heights = signal.find_peaks(Y, height = H)
     heights = heights['peak_heights'] 
     
     if len(locs) >= 2:
@@ -1271,7 +1279,6 @@ def evaluate_rhythm_params(X,Y, project_acrophase=True, period=0):
     if not period:
         period = period2
 
-
     if len(locs) >= 1:
        PHASE = X[locs[0]]
        PHASE_LOC = locs[0]
@@ -1282,8 +1289,7 @@ def evaluate_rhythm_params(X,Y, project_acrophase=True, period=0):
             ACROPHASE = project_acr(ACROPHASE)
     else:
         ACROPHASE = np.nan
-
-
+  
 
     # peaks and heights
     #Y = Y[X < 24]

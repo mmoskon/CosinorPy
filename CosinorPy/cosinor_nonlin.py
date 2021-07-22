@@ -257,6 +257,8 @@ def fit_cosinor_basic(X,Y, period=24, min_per = 12, max_per=36, plot=False, plot
             lower = Y_plot - statistics['ME']
             upper = Y_plot + statistics['ME']
             plt.fill_between(X_plot, lower, upper, color="black", alpha=0.1)
+        
+        plt.axis([min(X), max(X), 0.9*min(min(Y), min(Y_plot)), 1.1*max(max(Y), max(Y_plot))])
 
         plt.legend()
         if save_to:
@@ -356,6 +358,8 @@ def fit_cosinor_basic_n_comp(X,Y, period=24, n_components = 1, min_per = 12, max
             upper = Y_plot + statistics['ME']
             plt.fill_between(X_plot, lower, upper, color="black", alpha=0.1)
 
+        plt.axis([min(X), max(X), 0.9*min(min(Y), min(Y_plot)), 1.1*max(max(Y), max(Y_plot))])
+
         plt.legend()
         if save_to:
             plt.savefig(save_to+'.png')
@@ -423,16 +427,21 @@ def fit_generalized_cosinor(X,Y, period=24, min_per = 12, max_per=36, plot=False
 
     p0 = p0[:2] + [0,0] + p0[2:]
 
-    if period:
-        try:
-            popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase: fitting_func(x, A, B, C, D, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0[:-1], **kwargs)
-        except:
-            popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase: fitting_func(x, A, B, C, D, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
-    else:
-        try:
-            popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0, **kwargs)
-        except:
-            popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
+
+    try:
+        if period:
+            try:
+                popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase: fitting_func(x, A, B, C, D, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0[:-1], **kwargs)
+            except:
+                popt, pcov = curve_fit(lambda x, A, B, C, D, acrophase: fitting_func(x, A, B, C, D, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)            
+        else:
+            try:
+                popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), p0 = p0, **kwargs)
+            except:
+                popt, pcov = curve_fit(fitting_func, predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
+    except:         
+        print(f"Divergence error at {test} with 1 components!")         
+        return 
     
     DoF = Y.size - len(popt)
 
@@ -458,10 +467,13 @@ def fit_generalized_cosinor(X,Y, period=24, min_per = 12, max_per=36, plot=False
             lower = Y_plot - statistics['ME']
             upper = Y_plot + statistics['ME']
             plt.fill_between(X_plot, lower, upper, color=color, alpha=0.1)
+        
+
         plt.legend()
         plt.xlabel(x_label)
         plt.ylabel(y_label)
         if not hold_on:
+            plt.axis([min(X), max(X), 0.9*min(min(Y), min(Y_plot)), 1.1*max(max(Y), max(Y_plot))])
             if test:
                 plt.title(test)
             if save_to:
@@ -593,8 +605,7 @@ def fit_generalized_cosinor_n_comp(X,Y, period=24, n_components = 1, min_per = 1
     if plot:
         X_plot = np.linspace(min(X), max(X), 1000)
         Y_plot = fitting_func(X_plot, *popt_ext)
-        plt.plot(X_plot, Y_plot, label='fit', color=color)
-        #plt.plot(X_plot, Y_plot, label='fit', alpha=0.25, color=color) #!!!
+        plt.plot(X_plot, Y_plot, label='fit', color=color)        
         if hold_on==False:
             plt.plot(X, Y, 'o', markersize=1, label='measurements', color=color)
         else:
@@ -602,15 +613,16 @@ def fit_generalized_cosinor_n_comp(X,Y, period=24, n_components = 1, min_per = 1
         if plot_margins:
             lower = Y_plot - statistics['ME']
             upper = Y_plot + statistics['ME']
-            plt.fill_between(X_plot, lower, upper, color=color, alpha=0.1)
-
-        
+            plt.fill_between(X_plot, lower, upper, color=color, alpha=0.1)        
         
         if hold_on == False:
             plt.xlabel(x_label)
             plt.ylabel(y_label)
             plt.title(test)
             plt.legend()
+
+            plt.axis([min(X), max(X), 0.9*min(min(Y), min(Y_plot)), 1.1*max(max(Y), max(Y_plot))])
+
             if save_to:
                 plt.savefig(save_to+'.png')
                 plt.savefig(save_to+'.pdf')
@@ -623,8 +635,9 @@ def fit_generalized_cosinor_n_comp(X,Y, period=24, n_components = 1, min_per = 1
     popt_eval[2] = 0 #set C to 0
     popt_eval[3] = 0 #set D to 0
     X_eval = np.linspace(0, 2*period, 1000)
-    Y_eval = fitting_func(X_eval, *popt_eval)
+    Y_eval = fitting_func(X_eval, *popt_eval)    
     rhythm_params = cosinor.evaluate_rhythm_params(X_eval, Y_eval, period=period)
+        
     rhythm_params['amplification'] = statistics_params['params']['C']
     rhythm_params['lin_comp'] = statistics_params['params']['D']
 
@@ -676,6 +689,8 @@ def population_fit_generalized_cosinor_n_comp(df_pop, period=24, n_components = 
                 plt.plot(X_plot,Y_plot,color=color, alpha=0.25, label="_nolegend_")
             if plot_margins:
                 Y_plot_all.append(Y_plot)
+
+            plt.axis([min(X), max(X), 0.9*min(min(Y), min(Y_plot)), 1.1*max(max(Y), max(Y_plot))])
             
 
     params = np.array(popts)
@@ -729,6 +744,8 @@ def population_fit_generalized_cosinor_n_comp(df_pop, period=24, n_components = 
 
             test = tests[0].split("_")[0]
             plt.title(test)
+
+            plt.axis([min(X), max(X), 0.9*min(min(Y), min(Y_plot)), 1.1*max(max(Y), max(Y_plot))])
 
             if save_to:
                 plt.savefig(save_to+'.png')
@@ -808,6 +825,8 @@ def population_fit_generalized_cosinor(df_pop, period=24, plot=False, plot_margi
             if plot_margins:
                 Y_plot_all.append(Y_plot)
             
+            plt.axis([min(X), max(X), 0.9*min(min(Y), min(Y_plot)), 1.1*max(max(Y), max(Y_plot))])
+            
 
     params = np.array(popts)
     # parameter statistics: means, variances, stadndard deviations, confidence intervals, p-values
@@ -850,6 +869,8 @@ def population_fit_generalized_cosinor(df_pop, period=24, plot=False, plot_margi
             lower = Y_plot - ((t*sd_Y)/((k-1)**0.5))
             upper = Y_plot + ((t*sd_Y)/((k-1)**0.5))
             plt.fill_between(X_plot, lower, upper, color=color, alpha=0.1)  
+
+        plt.axis([min(df_pop.x.values), max(df_pop.x.values), 0.9*min(min(df_pop.y.values), min(Y_plot)), 1.1*max(max(df_pop.y.values), max(Y_plot))])
 
         if hold_on == False:
             plt.xlabel(x_label)
@@ -995,6 +1016,8 @@ def fit_generalized_cosinor_compare(X1, Y1, X2, Y2, period=24, min_per = 12, max
 
         plt.legend()
 
+        plt.axis([min(X), max(X), 0.9*min(min(Y), min(min(Y_plot1), min(Y_plot2))), 1.1*max(max(Y), max(max(Y_plot1), max(Y_plot2)))])
+
         plt.xlabel(x_label)
         plt.ylabel(y_label)
         plt.title(f"{test1} vs. {test2}")
@@ -1014,7 +1037,7 @@ def fit_generalized_cosinor_compare(X1, Y1, X2, Y2, period=24, min_per = 12, max
 # EVALUATION OF PARAMS STATISTICS #
 ###################################
 
-def eval_params_n_comp_bootstrap(X,Y, n_components = 1, period = 24, rhythm_params = {}, bootstrap_size=1000, bootstrap_type="std", t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor', 'amplification', 'lin_comp'], parameters_angular = ['acrophase'], **kwargs):       
+def eval_params_n_comp_bootstrap(X,Y, n_components = 1, period = 24, rhythm_params = {}, bootstrap_size=1000, bootstrap_type="std", t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], **kwargs):       #parameters_to_analyse = ['amplitude', 'acrophase', 'mesor', 'amplification', 'lin_comp']
     # generate and evaluate bootstrap samples
     params_bs = {}
     for param in parameters_to_analyse:
@@ -1033,17 +1056,13 @@ def eval_params_n_comp_bootstrap(X,Y, n_components = 1, period = 24, rhythm_para
         Y_bs, X_bs = Y[idxs_bs], X[idxs_bs]
 
         try:
-            popt_ext_bs, _, _, rhythm_params_bs = fit_generalized_cosinor_n_comp(X_bs, Y_bs, period=period, n_components = n_components, plot=False, **kwargs)
-            #popt_ext_bs, _, _, rhythm_params_bs = fit_generalized_cosinor_n_comp(X_bs, Y_bs, period=period, n_components = n_components, plot=True, plot_margins=False, hold_on=True, **kwargs) #!!!
+            popt_ext_bs, _, _, rhythm_params_bs = fit_generalized_cosinor_n_comp(X_bs, Y_bs, period=period, n_components = n_components, plot=False, **kwargs)            
             for param in parameters_to_analyse:
                 params_bs[param][i] = rhythm_params_bs[param]    
         except:            
             for param in parameters_to_analyse:
                 params_bs[param][i] = np.nan
-   
-    #plt.plot() #!!!
-    #plt.show() #!!!
-
+       
     n_params = len(popt_ext_bs)
     if period:
         n_params -= 1
@@ -1086,6 +1105,9 @@ def compare_pairs_n_comp_basic(X1, Y1, X2, Y2, n_components= 1, n_components2 = 
         plt.xlabel(x_label)
         plt.ylabel(y_label)
         plt.title(f"{test1} vs. {test2}")
+
+        _, _, min_Y, max_Y = plt.axis()
+        plt.axis([min(min(X1), min(X2)), max(max(X1), max(X2)), min_Y, max_Y])
 
         if save_to:
             plt.savefig(save_to+'.png')
@@ -1234,7 +1256,7 @@ def population_compare_pairs_n_comp_basic(df_pop1, df_pop2, n_components= 1, n_c
 
     return {'params': d_params, 'CIs': CIs, 'p_values': p_values, 'rhythm_params': rhythm_params}
 
-def compare_pairs_n_comp_bootstrap(X1, Y1, X2, Y2, n_components= 1, n_components2 = None, period = 24, period2 = 24, rhythm_params1 = {}, rhythm_params2 = {}, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor', 'amplification', 'lin_comp'], parameters_angular = ['acrophase'], bootstrap_size = 1000, t_test=True, **kwargs):       
+def compare_pairs_n_comp_bootstrap(X1, Y1, X2, Y2, n_components= 1, n_components2 = None, period = 24, period2 = 24, rhythm_params1 = {}, rhythm_params2 = {}, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], bootstrap_size = 1000, t_test=True, **kwargs): #parameters_to_analyse = ['amplitude', 'acrophase', 'mesor', 'amplification', 'lin_comp']       
     n_components1 = n_components
     if not n_components2:
         n_components2 = n_components1
@@ -1433,6 +1455,10 @@ def fit_generalized_cosinor_compare_independent(X1, Y1, X2, Y2, period1=24, peri
         plt.ylabel(y_label)
         plt.title(f"{test1} vs. {test2}")
 
+        _, _, min_Y, max_Y = plt.axis()
+        plt.axis([min(min(X1), min(X2)), max(max(X1), max(X2)), min_Y, max_Y])
+
+
         if save_to:
             plt.savefig(save_to+'.png')
             plt.savefig(save_to+'.pdf')
@@ -1457,6 +1483,8 @@ def get_best_model(X, Y, period=24, n_components = [1,2,3], plot=False, plot_mar
     DoF1 = len(X) - n_params1
     best_comps = n_components[0]
 
+    #print(RSS1)
+
     for n_comps in n_components[1:]:
         try:
             popt_ext2, statistics2, statistics_params2, rhythm_params2 = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_comps, plot=False, **kwargs)
@@ -1464,6 +1492,7 @@ def get_best_model(X, Y, period=24, n_components = [1,2,3], plot=False, plot_mar
             continue
 
         RSS2 = statistics2['RSS']
+        #print(RSS2)
         n_params2 = len(popt_ext2)
         if period:  
             n_params2 -= 1
@@ -1534,7 +1563,7 @@ def get_best_model_population(df_pop, period=24, n_components = [1,2,3], plot=Fa
 # if the period is set to 0 it is evaluated in the regression process
 def fit_generalized_cosinor_group(df, period=24, folder="", **kwargs):
 
-    columns = ['test', 'period', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'p(amplitude)', 'q(amplitude)', 'CI(amplitude)', 'acrophase', 'p(acrophase)','q(acrophase)', 'CI(acrophase)', 'amplification', 'p(amplification)', 'q(amplification)', 'CI(amplification)','lin_comp', 'p(lin_comp)', 'q(lin_comp)', 'CI(lin_comp)']
+    columns = ['test', 'period', 'p', 'q', 'amplitude', 'p(amplitude)', 'q(amplitude)', 'CI(amplitude)', 'acrophase', 'p(acrophase)','q(acrophase)', 'CI(acrophase)', 'amplification', 'p(amplification)', 'q(amplification)', 'CI(amplification)','lin_comp', 'p(lin_comp)', 'q(lin_comp)', 'CI(lin_comp)']
     df_results = pd.DataFrame(columns=columns, dtype=float)
 
     tests = df.test.unique()
@@ -1547,10 +1576,14 @@ def fit_generalized_cosinor_group(df, period=24, folder="", **kwargs):
         else:
             save_to = ''
         
-        _, stats, stats_params = fit_generalized_cosinor(X, Y, period = period, save_to = save_to, test=test, **kwargs)
+        res = fit_generalized_cosinor(X, Y, period = period, save_to = save_to, test=test, **kwargs)         
+        try:
+            _, stats, stats_params = res
+        except:
+            continue
 
         p = stats['p']
-        p_reject = stats['p_reject']
+        #p_reject = stats['p_reject']
         if period:
             per = period
         else:
@@ -1564,7 +1597,7 @@ def fit_generalized_cosinor_group(df, period=24, folder="", **kwargs):
         lin_comp, p_lin_comp, CI_lin_comp = stats_params['params']['D'], stats_params['p_values']['D'], stats_params['CIs']['D']
         acrophase, p_acrophase, CI_acrophase = stats_params['params']['acrophase'], stats_params['p_values']['acrophase'], stats_params['CIs']['acrophase']
 
-        d = {'test':test, 'period':per, 'p':p, 'p_reject': p_reject,
+        d = {'test':test, 'period':per, 'p':p, #'p_reject': p_reject,
              'amplitude': amplitude, 'p(amplitude)':p_amplitude, 'CI(amplitude)':CI_amplitude,
              'amplification': amplification, 'p(amplification)':p_amplification, 'CI(amplification)':CI_amplification,
              'lin_comp': lin_comp, 'p(lin_comp)':p_lin_comp, 'CI(lin_comp)':CI_lin_comp,
@@ -1573,7 +1606,7 @@ def fit_generalized_cosinor_group(df, period=24, folder="", **kwargs):
         df_results = df_results.append(d, ignore_index=True)
 
     df_results["q"] = multi.multipletests(df_results["p"], method = 'fdr_bh')[1]
-    df_results["q_reject"] = multi.multipletests(df_results["p_reject"], method = 'fdr_bh')[1]
+    #df_results["q_reject"] = multi.multipletests(df_results["p_reject"], method = 'fdr_bh')[1]
     df_results["q(amplitude)"] = multi.multipletests(df_results["p(amplitude)"], method = 'fdr_bh')[1]
     df_results["q(amplification)"] = multi.multipletests(df_results["p(amplification)"], method = 'fdr_bh')[1]
     df_results["q(lin_comp)"] = multi.multipletests(df_results["p(lin_comp)"], method = 'fdr_bh')[1]
@@ -1582,7 +1615,7 @@ def fit_generalized_cosinor_group(df, period=24, folder="", **kwargs):
     return df_results
 
 def population_fit_generalized_cosinor_group(df, period=24, folder="", **kwargs):
-    columns = ['test', 'period', 'p', 'q', 'p_reject', 'q_reject', 'amplitude', 'p(amplitude)', 'q(amplitude)', 'CI(amplitude)', 'acrophase', 'p(acrophase)','q(acrophase)', 'CI(acrophase)', 'amplification', 'p(amplification)', 'q(amplification)', 'CI(amplification)','lin_comp', 'p(lin_comp)', 'q(lin_comp)', 'CI(lin_comp)']
+    columns = ['test', 'period', 'p', 'q', 'amplitude', 'p(amplitude)', 'q(amplitude)', 'CI(amplitude)', 'acrophase', 'p(acrophase)','q(acrophase)', 'CI(acrophase)', 'amplification', 'p(amplification)', 'q(amplification)', 'CI(amplification)','lin_comp', 'p(lin_comp)', 'q(lin_comp)', 'CI(lin_comp)']
     df_results = pd.DataFrame(columns=columns, dtype=float)
 
     tests = df.test.unique()
@@ -1597,9 +1630,9 @@ def population_fit_generalized_cosinor_group(df, period=24, folder="", **kwargs)
             save_to = ''
         
         stats_params = population_fit_generalized_cosinor(df_pop, period = period, save_to = save_to, test=test, **kwargs)
-
+        
         p = stats_params['statistics']['p']
-        p_reject = stats_params['statistics']['p_reject']
+        #p_reject = stats_params['statistics']['p_reject']
         if period:
             per = period
         else:
@@ -1611,7 +1644,7 @@ def population_fit_generalized_cosinor_group(df, period=24, folder="", **kwargs)
         lin_comp, p_lin_comp, CI_lin_comp = stats_params['params']['D'], stats_params['p_values']['D'], stats_params['CIs']['D']
         acrophase, p_acrophase, CI_acrophase = stats_params['params']['acrophase'], stats_params['p_values']['acrophase'], stats_params['CIs']['acrophase']
 
-        d = {'test':test, 'period':per, 'p':p, 'p_reject': p_reject,
+        d = {'test':test, 'period':per, 'p':p, #'p_reject': p_reject,
              'amplitude': amplitude, 'p(amplitude)':p_amplitude, 'CI(amplitude)':CI_amplitude,
              'amplification': amplification, 'p(amplification)':p_amplification, 'CI(amplification)':CI_amplification,
              'lin_comp': lin_comp, 'p(lin_comp)':p_lin_comp, 'CI(lin_comp)':CI_lin_comp,
@@ -1620,7 +1653,7 @@ def population_fit_generalized_cosinor_group(df, period=24, folder="", **kwargs)
         df_results = df_results.append(d, ignore_index=True)
 
     df_results["q"] = multi.multipletests(df_results["p"], method = 'fdr_bh')[1]
-    df_results["q_reject"] = multi.multipletests(df_results["p_reject"], method = 'fdr_bh')[1]
+    #df_results["q_reject"] = multi.multipletests(df_results["p_reject"], method = 'fdr_bh')[1]
     df_results["q(amplitude)"] = multi.multipletests(df_results["p(amplitude)"], method = 'fdr_bh')[1]
     df_results["q(amplification)"] = multi.multipletests(df_results["p(amplification)"], method = 'fdr_bh')[1]
     df_results["q(lin_comp)"] = multi.multipletests(df_results["p(lin_comp)"], method = 'fdr_bh')[1]
@@ -1631,7 +1664,7 @@ def population_fit_generalized_cosinor_group(df, period=24, folder="", **kwargs)
 # if the period is set to 0 it is evaluated in the regression process
 def fit_generalized_cosinor_compare_pairs_dependent(df, pairs, period=24, folder="", **kwargs):
 
-    columns = ['test', 'period', 'p', 'q', 'p_reject', 'q_reject', 'd_amplitude', 'p(d_amplitude)', 'q(d_amplitude)', 'CI(d_amplitude)', 'd_acrophase', 'p(d_acrophase)','q(d_acrophase)', 'CI(d_acrophase)', 'd_amplification', 'p(d_amplification)', 'q(d_amplification)', 'CI(d_amplification)','d_lin_comp', 'p(d_lin_comp)', 'q(d_lin_comp)', 'CI(d_lin_comp)']
+    columns = ['test', 'period', 'p', 'q', 'd_amplitude', 'p(d_amplitude)', 'q(d_amplitude)', 'CI(d_amplitude)', 'd_acrophase', 'p(d_acrophase)','q(d_acrophase)', 'CI(d_acrophase)', 'd_amplification', 'p(d_amplification)', 'q(d_amplification)', 'CI(d_amplification)','d_lin_comp', 'p(d_lin_comp)', 'q(d_lin_comp)', 'CI(d_lin_comp)']
     df_results = pd.DataFrame(columns=columns, dtype=float)
 
     for test1, test2 in pairs:    
@@ -1650,7 +1683,7 @@ def fit_generalized_cosinor_compare_pairs_dependent(df, pairs, period=24, folder
         _, stats, stats_params = fit_generalized_cosinor_compare(X1, Y1, X2, Y2, period=period, save_to = save_to, test1=test1, test2=test2, **kwargs)
 
         p = stats['p']
-        p_reject = stats['p_reject']
+        #p_reject = stats['p_reject']
         if period:
             per = period
         else:
@@ -1661,7 +1694,7 @@ def fit_generalized_cosinor_compare_pairs_dependent(df, pairs, period=24, folder
         d_lin_comp, p_d_lin_comp, CI_d_lin_comp = stats_params['params']['D0'], stats_params['p_values']['D0'], stats_params['CIs']['D0']
         d_acrophase, p_d_acrophase, CI_d_acrophase = stats_params['params']['acrophase0'], stats_params['p_values']['acrophase0'], stats_params['CIs']['acrophase0']
 
-        d = {'test':test1 + ' vs. ' + test2, 'period':per, 'p':p, 'p_reject': p_reject,
+        d = {'test':test1 + ' vs. ' + test2, 'period':per, 'p':p, #'p_reject': p_reject,
              'd_amplitude': d_amplitude, 'p(d_amplitude)':p_d_amplitude, 'CI(d_amplitude)':CI_d_amplitude,
              'd_amplification': d_amplification, 'p(d_amplification)':p_d_amplification, 'CI(d_amplification)':CI_d_amplification,
              'd_lin_comp': d_lin_comp, 'p(d_lin_comp)':p_d_lin_comp, 'CI(d_lin_comp)':CI_d_lin_comp,
@@ -1670,7 +1703,7 @@ def fit_generalized_cosinor_compare_pairs_dependent(df, pairs, period=24, folder
         df_results = df_results.append(d, ignore_index=True)
 
     df_results["q"] = multi.multipletests(df_results["p"], method = 'fdr_bh')[1]
-    df_results["q_reject"] = multi.multipletests(df_results["p_reject"], method = 'fdr_bh')[1]
+    #df_results["q_reject"] = multi.multipletests(df_results["p_reject"], method = 'fdr_bh')[1]
     df_results["q(d_amplitude)"] = multi.multipletests(df_results["p(d_amplitude)"], method = 'fdr_bh')[1]
     df_results["q(d_amplification)"] = multi.multipletests(df_results["p(d_amplification)"], method = 'fdr_bh')[1]
     df_results["q(d_lin_comp)"] = multi.multipletests(df_results["p(d_lin_comp)"], method = 'fdr_bh')[1]
@@ -1784,7 +1817,7 @@ def population_fit_generalized_cosinor_compare_pairs(df, pairs, period1=24, peri
 # if the period is set to 0 it is evaluated in the regression process
 def fit_generalized_cosinor_n_comp_group_best(df, period = 24, n_components = [1,2,3], folder = "", **kwargs):
     df_best_models = pd.DataFrame(columns = ['test', 'period', 'n_components', 
-                                         'p', 'q', 'p_reject', 'q_reject', 'RSS', 
+                                         'p', 'q', 'RSS', 
                                          'amplitude', 'acrophase', 'mesor', 
                                          'peaks', 'heights', 'troughs', 'heights2',
                                          'amplification', 'p(amplification)', 'q(amplification)', 
@@ -1809,13 +1842,14 @@ def fit_generalized_cosinor_n_comp_group_best(df, period = 24, n_components = [1
             per = stats_params['params']['period']
 
         n_comps = best_comps
-        p, p_reject, RSS = stats['p'], stats['p_reject'], stats['RSS']
+        #p, p_reject, RSS = stats['p'], stats['p_reject'], stats['RSS']
+        p, RSS = stats['p'], stats['RSS']
         amplitude, acrophase, mesor = params['amplitude'], params['acrophase'], params['mesor']
         peaks, heights, troughs, heights2, = params['peaks'], params['heights'], params['troughs'], params['heights2'],
         amplification, p_amplification, CI_amplification = stats_params['params']['C'], stats_params['p_values']['C'], stats_params['CIs']['C']    
         lin_comp, p_lin_comp, CI_lin_comp = stats_params['params']['D'], stats_params['p_values']['D'], stats_params['CIs']['D']
 
-        d = {'test':test, 'period':per, 'n_components': n_comps, 'p':p, 'p_reject':p_reject, 'RSS': RSS,
+        d = {'test':test, 'period':per, 'n_components': n_comps, 'p':p, 'RSS': RSS, #'p_reject':p_reject, 
              'amplitude': amplitude, 'acrophase':acrophase, 'mesor':mesor,
              'peaks':peaks, 'heights':heights, 'troughs':troughs, 'heights2':heights2,
              'amplification':amplification, 'p(amplification)':p_amplification, 'CI(amplification)':CI_amplification,
@@ -1824,7 +1858,7 @@ def fit_generalized_cosinor_n_comp_group_best(df, period = 24, n_components = [1
         df_best_models = df_best_models.append(d, ignore_index=True)
 
     df_best_models["q"] = multi.multipletests(df_best_models["p"], method = 'fdr_bh')[1]
-    df_best_models["q_reject"] = multi.multipletests(df_best_models["p_reject"], method = 'fdr_bh')[1]
+    #df_best_models["q_reject"] = multi.multipletests(df_best_models["p_reject"], method = 'fdr_bh')[1]
     df_best_models["q(amplification)"] = multi.multipletests(df_best_models["p(amplification)"], method = 'fdr_bh')[1]
     df_best_models["q(lin_comp)"] = multi.multipletests(df_best_models["p(lin_comp)"], method = 'fdr_bh')[1]
     
@@ -1834,7 +1868,7 @@ def fit_generalized_cosinor_n_comp_group_best(df, period = 24, n_components = [1
 # if the period is set to 0 it is evaluated in the regression process
 def population_fit_generalized_cosinor_n_comp_group_best(df, period = 24, n_components = [1,2,3], folder = "", **kwargs):
     df_best_models = pd.DataFrame(columns = ['test', 'period', 'n_components', 
-                                         'p', 'q', 'p_reject', 'q_reject', 'RSS', 
+                                         'p', 'q', 'RSS', 
                                          'amplitude', 'acrophase', 'mesor', 
                                          'peaks', 'heights', 'troughs', 'heights2',
                                          'amplification', 'p(amplification)', 'q(amplification)', 
@@ -1862,13 +1896,14 @@ def population_fit_generalized_cosinor_n_comp_group_best(df, period = 24, n_comp
             per = stats_params['params']['period']
 
         n_comps = best_comps
-        p, p_reject, RSS = stats['p'], stats['p_reject'], stats['RSS']
+        #p, p_reject, RSS = stats['p'], stats['p_reject'], stats['RSS']
+        p, RSS = stats['p'], stats['RSS']
         amplitude, acrophase, mesor = params['amplitude'], params['acrophase'], params['mesor']
         peaks, heights, troughs, heights2, = params['peaks'], params['heights'], params['troughs'], params['heights2'],
         amplification, p_amplification, CI_amplification = stats_params['params']['C'], stats_params['p_values']['C'], stats_params['CIs']['C']    
         lin_comp, p_lin_comp, CI_lin_comp = stats_params['params']['D'], stats_params['p_values']['D'], stats_params['CIs']['D']
 
-        d = {'test':test, 'period':per, 'n_components': n_comps, 'p':p, 'p_reject':p_reject, 'RSS': RSS,
+        d = {'test':test, 'period':per, 'n_components': n_comps, 'p':p, 'RSS': RSS, #'p_reject':p_reject, 
              'amplitude': amplitude, 'acrophase':acrophase, 'mesor':mesor,
              'peaks':peaks, 'heights':heights, 'troughs':troughs, 'heights2':heights2,
              'amplification':amplification, 'p(amplification)':p_amplification, 'CI(amplification)':CI_amplification,
@@ -1877,7 +1912,7 @@ def population_fit_generalized_cosinor_n_comp_group_best(df, period = 24, n_comp
         df_best_models = df_best_models.append(d, ignore_index=True)
 
     df_best_models["q"] = multi.multipletests(df_best_models["p"], method = 'fdr_bh')[1]
-    df_best_models["q_reject"] = multi.multipletests(df_best_models["p_reject"], method = 'fdr_bh')[1]
+    #df_best_models["q_reject"] = multi.multipletests(df_best_models["p_reject"], method = 'fdr_bh')[1]
     df_best_models["q(amplification)"] = multi.multipletests(df_best_models["p(amplification)"], method = 'fdr_bh')[1]
     df_best_models["q(lin_comp)"] = multi.multipletests(df_best_models["p(lin_comp)"], method = 'fdr_bh')[1]
     
@@ -1887,7 +1922,7 @@ def population_fit_generalized_cosinor_n_comp_group_best(df, period = 24, n_comp
 
 def fit_generalized_cosinor_n_comp_group(df, period = 24, n_components = 3, folder = "", **kwargs):
     df_results = pd.DataFrame(columns = ['test', 'period', 'n_components', 
-                                         'p', 'q', 'p_reject', 'q_reject', 'RSS', 
+                                         'p', 'q', 'RSS', 
                                          'amplitude', 'acrophase', 'mesor', 
                                          'peaks', 'heights', 'troughs', 'heights2',
                                          'amplification', 'p(amplification)', 'q(amplification)', 
@@ -1904,8 +1939,15 @@ def fit_generalized_cosinor_n_comp_group(df, period = 24, n_components = 3, fold
 
         X = df[df.test == test].x
         Y = df[df.test == test].y   
-        _, stats, stats_params, params = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_components, save_to=save_to, test=test, **kwargs)
                 
+        res = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_components, save_to=save_to, test=test, **kwargs)
+
+        try:
+            _, stats, stats_params, params = res
+        except:
+            continue
+        
+
         if period:
             per = period
         else:
@@ -1915,13 +1957,14 @@ def fit_generalized_cosinor_n_comp_group(df, period = 24, n_components = 3, fold
             
             
         n_comps = n_components
-        p, p_reject, RSS = stats['p'], stats['p_reject'], stats['RSS']
+        #p, p_reject, RSS = stats['p'], stats['p_reject'], stats['RSS']
+        p, RSS = stats['p'], stats['RSS']
         amplitude, acrophase, mesor = params['amplitude'], params['acrophase'], params['mesor']
         peaks, heights, troughs, heights2, = params['peaks'], params['heights'], params['troughs'], params['heights2'],
         amplification, p_amplification, CI_amplification = stats_params['params']['C'], stats_params['p_values']['C'], stats_params['CIs']['C']    
         lin_comp, p_lin_comp, CI_lin_comp = stats_params['params']['D'], stats_params['p_values']['D'], stats_params['CIs']['D']
 
-        d = {'test':test, 'period':per, 'n_components': n_comps, 'p':p, 'p_reject':p_reject, 'RSS': RSS,
+        d = {'test':test, 'period':per, 'n_components': n_comps, 'p':p, 'RSS': RSS, #'p_reject':p_reject, 
              'amplitude': amplitude, 'acrophase':acrophase, 'mesor':mesor,
              'peaks':peaks, 'heights':heights, 'troughs':troughs, 'heights2':heights2,
              'amplification':amplification, 'p(amplification)':p_amplification, 'CI(amplification)':CI_amplification,
@@ -1930,7 +1973,7 @@ def fit_generalized_cosinor_n_comp_group(df, period = 24, n_components = 3, fold
         df_results = df_results.append(d, ignore_index=True)
 
     df_results["q"] = multi.multipletests(df_results["p"], method = 'fdr_bh')[1]
-    df_results["q_reject"] = multi.multipletests(df_results["p_reject"], method = 'fdr_bh')[1]
+    #df_results["q_reject"] = multi.multipletests(df_results["p_reject"], method = 'fdr_bh')[1]
     df_results["q(amplification)"] = multi.multipletests(df_results["p(amplification)"], method = 'fdr_bh')[1]
     df_results["q(lin_comp)"] = multi.multipletests(df_results["p(lin_comp)"], method = 'fdr_bh')[1]
     
@@ -1939,7 +1982,7 @@ def fit_generalized_cosinor_n_comp_group(df, period = 24, n_components = 3, fold
 
 def population_fit_generalized_cosinor_n_comp_group(df, period = 24, n_components = 3, folder = "", **kwargs):
     df_results = pd.DataFrame(columns = ['test', 'period', 'n_components', 
-                                         'p', 'q', 'p_reject', 'q_reject', 'RSS', 
+                                         'p', 'q', 'RSS', 
                                          'amplitude', 'acrophase', 'mesor', 
                                          'peaks', 'heights', 'troughs', 'heights2',
                                          'amplification', 'p(amplification)', 'q(amplification)', 
@@ -1969,13 +2012,14 @@ def population_fit_generalized_cosinor_n_comp_group(df, period = 24, n_component
             per = stats_params['params']['period']
 
         n_comps = n_components
-        p, p_reject, RSS = stats['p'], stats['p_reject'], stats['RSS']
+        #p, p_reject, RSS = stats['p'], stats['p_reject'], stats['RSS']
+        p, RSS = stats['p'], stats['RSS']
         amplitude, acrophase, mesor = params['amplitude'], params['acrophase'], params['mesor']
         peaks, heights, troughs, heights2, = params['peaks'], params['heights'], params['troughs'], params['heights2'],
         amplification, p_amplification, CI_amplification = stats_params['params']['C'], stats_params['p_values']['C'], stats_params['CIs']['C']    
         lin_comp, p_lin_comp, CI_lin_comp = stats_params['params']['D'], stats_params['p_values']['D'], stats_params['CIs']['D']
 
-        d = {'test':test, 'period':per, 'n_components': n_comps, 'p':p, 'p_reject':p_reject, 'RSS': RSS,
+        d = {'test':test, 'period':per, 'n_components': n_comps, 'p':p, 'RSS': RSS, #'p_reject':p_reject, 
              'amplitude': amplitude, 'acrophase':acrophase, 'mesor':mesor,
              'peaks':peaks, 'heights':heights, 'troughs':troughs, 'heights2':heights2,
              'amplification':amplification, 'p(amplification)':p_amplification, 'CI(amplification)':CI_amplification,
@@ -1984,7 +2028,7 @@ def population_fit_generalized_cosinor_n_comp_group(df, period = 24, n_component
         df_results = df_results.append(d, ignore_index=True)
 
     df_results["q"] = multi.multipletests(df_results["p"], method = 'fdr_bh')[1]
-    df_results["q_reject"] = multi.multipletests(df_results["p_reject"], method = 'fdr_bh')[1]
+    #df_results["q_reject"] = multi.multipletests(df_results["p_reject"], method = 'fdr_bh')[1]
     df_results["q(amplification)"] = multi.multipletests(df_results["p(amplification)"], method = 'fdr_bh')[1]
     df_results["q(lin_comp)"] = multi.multipletests(df_results["p(lin_comp)"], method = 'fdr_bh')[1]
     
@@ -2091,7 +2135,7 @@ def bootstrap_generalized_cosinor_n_comp_group(df, period=24, n_components=3, am
 # df_boostrap_single: results of the basic bootstrap resutls. If this is not specified or if a certain measurement is missing in the results, bootstrap is ran on individual fits
 def compare_pairs_n_comp_bootstrap_group(df, pairs, df_best_models = None, df_bootstrap_single = None, period=24, n_components=3, folder ="", bootstrap_size=1000, bootstrap_type="std", t_test=True, **kwargs):
     
-    parameters_to_analyse = ['amplitude', 'acrophase', 'amplification', 'lin_comp']
+    parameters_to_analyse = ['amplitude', 'acrophase']#, 'amplification', 'lin_comp']
 
     columns = ['test', 'period1', 'period2', 'n_components1', 'n_components2', 'd_amplitude', 'p(d_amplitude)', 'q(d_amplitude)', 'CI(d_amplitude)', 'd_acrophase', 'p(d_acrophase)','q(d_acrophase)', 'CI(d_acrophase)', 'd_amplification', 'p(d_amplification)', 'q(d_amplification)', 'CI(d_amplification)','d_lin_comp', 'p(d_lin_comp)', 'q(d_lin_comp)', 'CI(d_lin_comp)']
     df_results = pd.DataFrame(columns=columns, dtype=float)

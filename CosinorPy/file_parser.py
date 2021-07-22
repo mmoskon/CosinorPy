@@ -13,7 +13,7 @@ import re
     individual: separate the multiple iterations of the same measurement (for lumicycle)
 """
     
-def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=True, remove_outliers=True):
+def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=True, remove_outliers=False):
     names = []
      
         
@@ -82,30 +82,63 @@ def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=T
             
     return df
 
-def generate_test_data_group(N, name_prefix = "", **kwargs):
+def generate_test_data_group_random(N, name_prefix = "", characterize_data = False, amplitude=1, **kwargs):
     df = pd.DataFrame(columns=['test','x','y'], dtype=float)
-    
+    if characterize_data:
+        df_params = pd.DataFrame(dtype=float)
+
     if not name_prefix:
         name_prefix = "test"
 
+    for i in range(N):
+        name = f"{name_prefix}_{i}"
+        phases = [2*np.pi*np.random.random(), 2*np.pi*np.random.random(), 2*np.pi*np.random.random()]
+        amplitudes = [amplitude,0.5*np.random.random(),0.5*np.random.random()]
+
+        if characterize_data:
+            df2, rhythm_params = generate_test_data(name=name, characterize_data = True, phase = phases, amplitudes = amplitudes,  **kwargs)
+            df = df.append(df2, ignore_index=True)
+            df_params = df_params.append(rhythm_params, ignore_index=True, sort=False)
+        else:
+            df2 = generate_test_data(name=name, phase = phases, amplitudes = amplitudes, **kwargs)
+            df = df.append(df2, ignore_index=True)
+
+    if characterize_data:
+        return df, df_params
+    else:
+        return df
+
+
+
+def generate_test_data_group(N, name_prefix = "", characterize_data = False, **kwargs):
+    df = pd.DataFrame(columns=['test','x','y'], dtype=float)
+    if characterize_data:
+        df_params = pd.DataFrame(dtype=float)
+
+    if not name_prefix:
+        name_prefix = "test"
 
     for i in range(N):
         name = f"{name_prefix}_{i}"
-        df2 = generate_test_data(name=name, **kwargs)
-        df = df.append(df2, ignore_index=True)
+       
+        if characterize_data:
+            df2, rhythm_params = generate_test_data(name=name, characterize_data = True, **kwargs)
+            df = df.append(df2, ignore_index=True)
+            df_params = df_params.append(rhythm_params, ignore_index=True, sort=False)
+        else:
+            df2 = generate_test_data(name=name, **kwargs)
+            df = df.append(df2, ignore_index=True)
 
-    return df
+    if characterize_data:
+        return df, df_params
+    else:
+        return df
 
-
-
-
-
-
-def generate_test_data(n_components=1, period = 24, amplitudes = 0, baseline = 0, lin_comp = 0, amplification = 0, phase = 0, min_time = 0, max_time = 48, time_step = 2, replicates = 1, independent = True, name="test", noise = 0, noise_simple = 1):
+def generate_test_data(n_components=1, period = 24, amplitudes = None, baseline = 0, lin_comp = 0, amplification = 0, phase = 0, min_time = 0, max_time = 48, time_step = 2, replicates = 1, independent = True, name="test", noise = 0, noise_simple = 1, characterize_data=False):
     df = pd.DataFrame(columns=['test','x','y'], dtype=float)
     x = np.arange(min_time, max_time+time_step, time_step)
 
-    if not amplitudes:
+    if amplitudes==None:
         amplitudes = np.array([1,1/2,1/3,1/4])
    
     periods = np.array([period, period/2, period/3, period/4])
@@ -120,7 +153,7 @@ def generate_test_data(n_components=1, period = 24, amplitudes = 0, baseline = 0
         
         for j in range(n_components):
             y += amplitudes[j] * np.cos((x/periods[j])*np.pi*2 + phases[j])
-        
+   
         # if amplification < 0: oscillations are damped with time
         # if amplification > 0: oscillations are amplified with time
         # if amplification == 0: oscillations are sustained        
@@ -138,8 +171,9 @@ def generate_test_data(n_components=1, period = 24, amplitudes = 0, baseline = 0
         mu = 0
         sigma = noise
             
+        NOISE = np.random.normal(mu, sigma, y.shape) 
         if noise_simple:
-            y += np.random.normal(mu, sigma, y.shape) 
+            y += NOISE
         else:
             # mutliplicative noise
             # sigma from 0 to 1; 
@@ -150,7 +184,7 @@ def generate_test_data(n_components=1, period = 24, amplitudes = 0, baseline = 0
             sigma = noise            
             y *= np.random.normal(mu, sigma, y.shape) 
             """
-            y *= (1 + np.random.normal(mu, sigma, y.shape))
+            y *= (1 + NOISE)
         
         df2 = pd.DataFrame(columns=['test','x','y'], dtype=float)
         df2['x'] = x
@@ -159,7 +193,24 @@ def generate_test_data(n_components=1, period = 24, amplitudes = 0, baseline = 0
         df = pd.concat([df, df2])
     df['x'] = df['x'].astype(float)
     df['y'] = df['y'].astype(float)
-    return df
+
+    if characterize_data:
+        
+        X_eval = np.linspace(0, 2*period, 1000)
+        Y_eval = np.zeros(len(X_eval))
+        for j in range(n_components):
+            Y_eval += amplitudes[j] * np.cos((X_eval/periods[j])*np.pi*2 + phases[j])
+        Y_eval += baseline
+        rhythm_params = cosinor.evaluate_rhythm_params(X_eval, Y_eval, period=period)
+
+        rhythm_params['lin_comp'] = lin_comp
+        rhythm_params['amplification'] = amplification
+        rhythm_params['period'] = period
+        rhythm_params['test'] = test
+
+        return df, rhythm_params
+    else:
+        return df
 
 def read_csv(file_name, sep="\t"):
     
