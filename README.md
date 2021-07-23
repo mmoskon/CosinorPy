@@ -33,12 +33,14 @@ To install the software version described in [3], the following command should b
 
 ## Examples
 Examples are given as interactive python notebook (ipynb) files:
-* [`demo_independent_extended.ipynb`](demo_independent_extended.ipynb): cosinor analysis of independent data with extended functionalities of multi-component cosinor
-* [`demo_dependent_extended.ipynb`](demo_dependent_extended.ipynb): cosinor analysis of population (dependent) data with extended functionalities of multi-component cosinor
 * [`demo_independent.ipynb`](demo_independent.ipynb): cosinor analysis of independent data
 * [`demo_dependent.ipynb`](demo_dependent.ipynb): cosinor analysis of population (dependent) data
-* [`demo_csv.ipynb`](demo_csv.ipynb): reading from csv file 
-* [`demo_xlsx.ipynb`](demo_xlsx.ipynb): reading from xlsx file
+* [`demo_independent_extended.ipynb`](demo_independent_extended.ipynb): cosinor analysis of independent data with extended functionalities of multi-component cosinor
+* [`demo_dependent_extended.ipynb`](demo_dependent_extended.ipynb): cosinor analysis of population (dependent) data with extended functionalities of multi-component cosinor
+* [`demo_independent_nonlin.ipynb`](demo_independent_nonlin.ipynb): cosinor analysis of independent data with extended a generalised cosinor model
+* [`demo_dependent_nonlin.ipynb`](demo_dependent_nonlin.ipynb): cosinor analysis of population (dependent) data with extended a generalised cosinor model
+* [`demo_csv.ipynb`](demo_csv.ipynb): reading from a csv file 
+* [`demo_xlsx.ipynb`](demo_xlsx.ipynb): reading from an xlsx file
 * [`multi_vs_single.ipynb`](multi_vs_single.ipynb): multi-component versus single-component cosinor model
 
 The repository as well includes the following R scripts: [`cosinor2_independent.R`](cosinor2_independent.R), [`cosinor2_independent_compare.R`](cosinor2_independent_compare.R), [`cosinor2_dependent.R`](cosinor2_dependent.R) and [`cosinor2_dependent_compare.R`](cosinor2_dependent_compare.R). These can be used to reproduce some of the results obtained with CosinorPy using cosinor and cosinor2 R packages.
