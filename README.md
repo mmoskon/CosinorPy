@@ -70,4 +70,4 @@ Please direct your questions and comments to [miha.moskon@fri.uni-lj.si](mailto:
 
 [3] Moškon, M. "CosinorPy: A Python Package for cosinor-based Rhythmometry." BMC Bioinformatics 21.485 (2020).
 
-[4] Moškon, M. "CosinorPy: Identification and characterisation of variable oscillatory behaviour using CosinorPy." (not yet available)
+[4] Moškon, M. "Identification and characterisation of variable oscillatory behaviour using CosinorPy." (not yet available)
