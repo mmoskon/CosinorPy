@@ -21,8 +21,8 @@ from random import sample
 
 import os
 
-from skopt.space import Space
-from skopt.sampler import Lhs
+#from skopt.space import Space
+#from skopt.sampler import Lhs
 
    
 def periodogram_df(df, folder = '', **kwargs):
@@ -3923,6 +3923,8 @@ def project_acr(acr):
 # uses scikit-optimize library
 # https://scikit-optimize.github.io/stable/auto_examples/sampler/initial-sampling-method.html
 def generate_samples(sampling_type, intervals, size):
+    return
+
     space = Space(intervals)
 
     if sampling_type == "LHS":
