@@ -94,9 +94,9 @@ Population fit (according to Cornelissen). For parameters and returns see `cosin
 Perform the multi-component cosinor fit to the measurements in the dataframe. Calls `cosinor.fit_me`.
 #### Parameters
 * `df`: pandas dataframe composed of three columns:
- * `x`: timepoints
- * `y`: measurements
- * `test`: labels of datasets (a separate cosinor model is returned for each dataset)
+  * `x`: timepoints
+  * `y`: measurements
+  * `test`: labels of datasets (a separate cosinor model is returned for each dataset)
 * `n_components`: number of cosinor components or list with numbers of cosinor components; if list of components is given, cosinor fits will be performed on cosinor models with different numbers of cosinor components
 * `period`: period or list of periods to fit
 * `names`: list of groups names to fit; if empty all groups will be used
