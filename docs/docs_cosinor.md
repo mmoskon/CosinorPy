@@ -47,16 +47,16 @@ Plots the phases in a polar coordinate system.
 * `labels`: labels assigned to each plot
 
 ### `cosinor.plot_heatmap(df, merge_repeats=True, z_score=True, clustermap=True, df_results=False, sort_by="p", ascending=True, xlabel='Time [h]', dropnacols=False):`
-Plots the heatmap of the raw data.
+Plots a heatmap of the raw data.
 #### Parameters
 * `df`: pandas dataframe of measurements
 * `merge_repeats`: if `True`, repeats in the same timepoint are averaged; else, all repeats are plotted
-* `z_score`: if `True`, the measurement for each experiment are scaled to z-scores
+* `z_score`: if `True`, the measurements for each experiment are scaled to z-scores
 * `clustermap`: if `True`, clustermap is also plotted 
-* `df_results`: the results of the fitting process can also be specied and used as sorting
+* `df_results`: the results of the fitting process can also be specified and used as sorting
 * `sort_by`: the column of `df_results` that should be used for sorting
 * `ascending`: if `True`, sorting is performed in an ascending order
-* `x_label`: label to put on x-axis
+* `x_label`: label to put on the x-axis
 * `dropnacols`: if `True`, columns containing `nan` will be dropped
 
 ### `cosinor.fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = "", bootstrap=False))`
