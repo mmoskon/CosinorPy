@@ -14,6 +14,8 @@ from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from scipy.stats import percentileofscore
 from scipy.stats import circstd, circmean
 
+import seaborn as sns
+
 import copy
 import itertools
 from matplotlib.lines import Line2D
@@ -603,6 +605,110 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
         plt.close()
     else:
         plt.show()
+
+
+
+def plot_heatmap(df, merge_repeats=True, z_score=True, clustermap=True, df_results=False, sort_by="p", ascending=True, xlabel='Time [h]', dropnacols=False):
+
+    if merge_repeats:
+        # calculate means of repeats for a timepoint and for a test
+        df_heatmap = df.groupby(["test","x"]).mean().reset_index()
+    else:
+        # separate repeats and denote them as ___rep0, ___rep1, ___rep2,...
+        df_heatmap = pd.DataFrame(columns = df.columns)
+
+        tests = df.test.unique()    
+        for test in tests:
+            df_test = df[df['test'] == test].copy()      
+            X = df_test.x.values
+            locs = list(np.where(X[:-1] > X[1:])[0]+1)
+            locs += [len(X)]
+
+            for i,(i1,i2) in enumerate(zip([0] + locs[:-1], locs)):
+                df_test.iloc[i1:i2,2] = f"{test}___rep{i}"      
+            df_heatmap = df_heatmap.append(df_test, ignore_index=True)
+
+    # convert timepoints to integers
+    df_heatmap['x'] = df_heatmap['x'].astype(int)
+    df_heatmap = df_heatmap.pivot("test", "x", "y")
+    
+    # scale data to obtain z_scores 
+    if z_score: 
+        Y = df_heatmap.values
+        means = np.nanmean(Y, axis=1)
+        means = np.transpose(np.broadcast_to(means, np.transpose(Y).shape))
+        stds = np.nanstd(Y, axis=1)
+        stds = np.transpose(np.broadcast_to(stds, np.transpose(Y).shape))
+        Y = (Y-means)/stds
+        df_heatmap.iloc[:,:] = Y
+
+
+    # sort tests by significance, amplitude, acrophase, etc.
+    if type(df_results) != bool:
+        df_results = df_results.copy()
+        #if sort_by == 'acrophase':
+        #    df_results['acrophase'] = [a + 2*np.pi if a < 0 else a for a in df_results['acrophase']]        
+        
+        df_sorted = df_results.sort_values(by=[sort_by], ascending=ascending)                      
+        
+        sort_mapping = {name:val for val, name in enumerate(df_sorted.test.values)}        
+        if not merge_repeats:
+            test_orig = [test.split("_")[0] for test in df_heatmap.index]
+        else:
+            test_orig = df_heatmap.index        
+        sorter = [sort_mapping[t] for t in test_orig]
+        
+        df_heatmap['sorter'] = sorter
+        df_heatmap = df_heatmap.sort_values(by=['sorter','test'])
+        df_heatmap = df_heatmap.drop(columns=['sorter'])
+        
+    if dropnacols:
+        df_heatmap = df_heatmap.dropna(axis=1)
+    
+    ##########
+    # heatmap
+    ax1 = sns.heatmap(df_heatmap,        
+                    yticklabels=True, 
+                    cbar=False,
+                    linewidths = 0,
+                    cmap="vlag")
+    
+    df_heatmap = df_heatmap.dropna()
+    
+    
+
+    fig = plt.gcf()
+    #x,y = fig.get_size_inches()
+    fig.set_size_inches(10,len(df_heatmap)*0.5)
+       
+    ax1.set_ylabel("")
+    ax1.set_xlabel(xlabel)
+    
+    #plt.savefig(enrichment_folder+'\\'+file_name+'.pdf', bbox_inches = 'tight')  
+    plt.show()
+
+        
+    if not clustermap:
+        return 
+    
+    #############
+    # clustermap
+
+    ax2 = sns.clustermap(df_heatmap, 
+                yticklabels=True, 
+                cbar=False,
+                linewidths = 0,
+                cmap="vlag")
+    
+    ax3 = ax2.ax_heatmap
+    ax3.set_xlabel(xlabel)
+    ax3.set_ylabel("")
+
+    ax2.cax.set_visible(False)
+
+    #plt.savefig(enrichment_folder+'\\cluster_'+file_name+'.pdf', bbox_inches = 'tight') 
+    plt.show()
+
 
 """
 *******************
