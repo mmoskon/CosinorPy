@@ -13,7 +13,7 @@ Plots the raw data.
 #### Parameters
 * `df`: pandas dataframe of measurements
 * `names`: list of names to plot; if empty all names will be plotted
-* `folder`: folder to which the files are stored; if empty plots will be displayed instead of stored
+* `folder`: folder to which the files are stored; if empty, plots will be displayed instead of stored
 * `prefix`: prefix to the file names in which plots will be stored
 
 
@@ -22,7 +22,7 @@ Plots the raw data pairs (two groups of measurement on the same plot).
 #### Parameters
 * `df`: pandas dataframe of measurements
 * `names`: pairs of names to plot together
-* `folder`: folder to which the files are stored; if empty plots will be displayed instead of stored
+* `folder`: folder to which the files are stored; if empty, plots will be displayed instead of stored
 * `prefix`: prefix to the file names in which plots will be stored
 
 ### `cosinor.plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'], folder = '', **kwargs)`
@@ -58,6 +58,8 @@ Plots a heatmap of the raw data.
 * `ascending`: if `True`, sorting is performed in an ascending order
 * `x_label`: label to put on the x-axis
 * `dropnacols`: if `True`, columns containing `nan` will be dropped
+* `folder`: folder to which the files are stored; if empty, plots will be displayed instead of stored
+* `prefix`: prefix to the file names in which plots will be stored
 
 ### `cosinor.fit_me(X, Y, n_components = 2, period = 24, model_type = 'lin', lin_comp = False, alpha = 0, name = '', save_to = '', plot=True, plot_residuals=False, plot_measurements=True, plot_margins=True, return_model = False, color = False, plot_phase = True, hold=False, x_label = "", y_label = "", bootstrap=False))`
 Perform the basic Cosinor regression

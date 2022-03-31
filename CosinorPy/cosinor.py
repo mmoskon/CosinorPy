@@ -608,7 +608,7 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
 
 
 
-def plot_heatmap(df, merge_repeats=True, z_score=True, clustermap=True, df_results=False, sort_by="p", ascending=True, xlabel='Time [h]', dropnacols=False):
+def plot_heatmap(df, merge_repeats=True, z_score=True, clustermap=True, df_results=False, sort_by="p", ascending=True, xlabel='Time [h]', dropnacols=False, folder="", prefix=""):
 
     if merge_repeats:
         # calculate means of repeats for a timepoint and for a test
@@ -684,8 +684,12 @@ def plot_heatmap(df, merge_repeats=True, z_score=True, clustermap=True, df_resul
     ax1.set_ylabel("")
     ax1.set_xlabel(xlabel)
     
-    #plt.savefig(enrichment_folder+'\\'+file_name+'.pdf', bbox_inches = 'tight')  
-    plt.show()
+    if folder:
+        plt.savefig(os.path.join(folder, prefix+'heatmap'+'.png'))
+        plt.savefig(os.path.join(folder, prefix+'heatmap'+'.pdf'), bbox_inches = 'tight')
+        plt.close()
+    else:
+        plt.show()
 
         
     if not clustermap:
@@ -706,8 +710,13 @@ def plot_heatmap(df, merge_repeats=True, z_score=True, clustermap=True, df_resul
 
     ax2.cax.set_visible(False)
 
-    #plt.savefig(enrichment_folder+'\\cluster_'+file_name+'.pdf', bbox_inches = 'tight') 
-    plt.show()
+    if folder:
+        plt.savefig(os.path.join(folder, prefix+'clustermap'+'.png'))
+        plt.savefig(os.path.join(folder, prefix+'clustermap'+'.pdf'), bbox_inches = 'tight')
+        plt.close()
+    else:
+        plt.show()
+
 
 
 """
