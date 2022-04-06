@@ -758,7 +758,7 @@ def make_groups(df, sep='-'):
 
     return groups
 
-def PCA_plot(df, n_components = 2, tSNE=False, perplexity=10, groups={}, **kwargs):
+def plot_PCA(df, n_components = 2, tSNE=False, perplexity=10, groups={}, folder="", prefix="", **kwargs):
     
     try:
         from sklearn.decomposition import PCA
@@ -803,9 +803,15 @@ def PCA_plot(df, n_components = 2, tSNE=False, perplexity=10, groups={}, **kwarg
                     plt.xlabel("PC"+str(i1+1))
                     plt.ylabel("PC"+str(i2+1))
                 plt.legend()
-                plt.gcf().set_size_inches(20,10)
-                #plt.savefig("results_PCA_sampling\\sampling_PCA_"+label_MEM+"PC"+str(i1+1)+'_'+"PC"+str(i2+1)+'_'+factor+".pdf", format="pdf", bbox_inches = 'tight')    
-                plt.show()
+                plt.gcf().set_size_inches(20,10)            
+                if folder:
+                    name = 'tSNE' if tSNE else 'PCA'                                        
+                    plt.savefig(os.path.join(folder, f'{prefix}{name}_{factor}_PC{i1}_PC{i2}.png'))
+                    plt.savefig(os.path.join(folder, f'{prefix}{name}_{factor}_PC{i1}_PC{i2}.pdf'), bbox_inches = 'tight')
+                    plt.close()
+                else:
+                    plt.show()
+            
         else:
 
             for i,test in enumerate(tests):
@@ -821,10 +827,18 @@ def PCA_plot(df, n_components = 2, tSNE=False, perplexity=10, groups={}, **kwarg
                 plt.ylabel("PC"+str(i2+1) + " (" + str(round(100*pca_explained[i2],2))+"%)")
             else:
                 plt.xlabel("PC"+str(i1+1))
-                plt.ylabel("PC"+str(i2+1))
-            #plt.legend()
+                plt.ylabel("PC"+str(i2+1))            
             plt.gcf().set_size_inches(20,10)
-            #plt.savefig("results_PCA_sampling\\sampling_PCA_"+label_MEM+"PC"+str(i1+1)+'_'+"PC"+str(i2+1)+'_'+factor+".pdf", format="pdf", bbox_inches = 'tight')    
+            
+            if folder:
+                name = 'tSNE' if tSNE else 'PCA'                    
+                plt.savefig(os.path.join(folder, f'{prefix}{name}_PC{i1}_PC{i2}.png'))
+                plt.savefig(os.path.join(folder, f'{prefix}{name}_PC{i1}_PC{i2}.pdf'), bbox_inches = 'tight')
+                plt.close()
+            else:
+                plt.show()
+            
+            
             plt.show()
 
 
