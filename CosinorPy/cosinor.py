@@ -607,9 +607,8 @@ def plot_phases(acrs, amps, tests, period=24, colors = ("black", "red", "green",
         plt.show()
 
 
-
-def plot_heatmap(df, merge_repeats=True, z_score=True, clustermap=True, df_results=False, sort_by="p", ascending=True, xlabel='Time [h]', dropnacols=False, folder="", prefix=""):
-
+### pivot a dataframe for heatmaps and PCA/tSNE plot
+def pivot_data(df, merge_repeats = True, z_score = True, df_results=False, sort_by="p", ascending=True, filter_significant=False, dropnacols=False):
     if merge_repeats:
         # calculate means of repeats for a timepoint and for a test
         df_heatmap = df.groupby(["test","x"]).mean().reset_index()
@@ -642,10 +641,13 @@ def plot_heatmap(df, merge_repeats=True, z_score=True, clustermap=True, df_resul
         Y = (Y-means)/stds
         df_heatmap.iloc[:,:] = Y
 
-
     # sort tests by significance, amplitude, acrophase, etc.
     if type(df_results) != bool:
         df_results = df_results.copy()
+        if filter_significant:
+            df_results = df_results[df_results['p(amplitude)']<0.05]
+        
+        
         #if sort_by == 'acrophase':
         #    df_results['acrophase'] = [a + 2*np.pi if a < 0 else a for a in df_results['acrophase']]        
         
@@ -653,18 +655,27 @@ def plot_heatmap(df, merge_repeats=True, z_score=True, clustermap=True, df_resul
         
         sort_mapping = {name:val for val, name in enumerate(df_sorted.test.values)}        
         if not merge_repeats:
-            test_orig = [test.split("_")[0] for test in df_heatmap.index]
+            test_orig = [test.split("__")[0] for test in df_heatmap.index]
         else:
             test_orig = df_heatmap.index        
-        sorter = [sort_mapping[t] for t in test_orig]
+        sorter = [sort_mapping[t] if t in sort_mapping else np.nan for t in test_orig]
         
         df_heatmap['sorter'] = sorter
-        df_heatmap = df_heatmap.sort_values(by=['sorter','test'])
+        df_heatmap = df_heatmap.sort_values(by=['sorter','test'])        
+        if filter_significant:
+            df_heatmap = df_heatmap.dropna(axis=0)
         df_heatmap = df_heatmap.drop(columns=['sorter'])
         
     if dropnacols:
         df_heatmap = df_heatmap.dropna(axis=1)
-    
+
+    return df_heatmap
+
+
+def plot_heatmap(df, clustermap=True, xlabel='Time [h]',  folder="", prefix="", **kwargs):
+
+    df_heatmap = pivot_data(df, **kwargs)
+   
     ##########
     # heatmap
     ax1 = sns.heatmap(df_heatmap,        
@@ -717,6 +728,104 @@ def plot_heatmap(df, merge_repeats=True, z_score=True, clustermap=True, df_resul
     else:
         plt.show()
 
+# make groups for the PCA plot - can be used to plot different factor values with different colours
+def make_groups(df, sep='-'):
+
+    tests = df.test.unique()
+    genes = set(map(lambda x:x.split(sep)[0], tests))
+    cells = set(map(lambda x:x.split(sep)[1], tests))
+
+    group_genes = {}
+    for gene in genes:
+        for test in tests:
+            if gene in test:
+                if gene in group_genes:
+                    group_genes[gene].append(test)  
+                else:
+                    group_genes[gene] = [test]
+
+    group_cells = {}
+    for cell in cells:
+        for test in tests:
+            if cell in test:
+                if cell in group_cells:
+                    group_cells[cell].append(test)  
+                else:
+                    group_cells[cell] = [test]
+
+    groups = {'genes': group_genes,
+              'cells': group_cells}
+
+    return groups
+
+def PCA_plot(df, n_components = 2, tSNE=False, perplexity=10, groups={}, **kwargs):
+    
+    try:
+        from sklearn.decomposition import PCA
+        from sklearn.manifold import TSNE
+    except:
+        print("sklearn needs to be installed for PCA plot")
+        return()
+
+
+    df_data = pivot_data(df, **kwargs)
+    M = df_data.values
+  
+    
+    if not tSNE:
+        pca = PCA(n_components=n_components)
+        comps = pca.fit_transform(M)
+        pca_explained = pca.explained_variance_ratio_
+    else:
+        tSNE  = TSNE(n_components=n_components, perplexity = perplexity,  n_iter=5000)
+        comps = tSNE.fit_transform(M)     
+    
+    tests = df_data.index                        
+    for c in itertools.combinations(range(n_components), 2):
+        i1 = c[0]
+        i2 = c[1]
+    
+        if groups:
+            for factor in groups:
+                for group, test_group in groups[factor].items():        
+                    tests_orig = [test.split("__")[0] for test in tests]                    
+                    locs = np.isin(tests_orig, test_group)
+                    comps1 = comps[locs,i1]
+                    comps2 = comps[locs,i2]
+                    plt.plot(comps1, comps2,"o", label=group)           
+            
+                plt.title(f'{factor}')
+            
+                if not tSNE:
+                    plt.xlabel("PC"+str(i1+1) + " (" + str(round(100*pca_explained[i1],2))+"%)")
+                    plt.ylabel("PC"+str(i2+1) + " (" + str(round(100*pca_explained[i2],2))+"%)")
+                else:
+                    plt.xlabel("PC"+str(i1+1))
+                    plt.ylabel("PC"+str(i2+1))
+                plt.legend()
+                plt.gcf().set_size_inches(20,10)
+                #plt.savefig("results_PCA_sampling\\sampling_PCA_"+label_MEM+"PC"+str(i1+1)+'_'+"PC"+str(i2+1)+'_'+factor+".pdf", format="pdf", bbox_inches = 'tight')    
+                plt.show()
+        else:
+
+            for i,test in enumerate(tests):
+                x = comps[i,i1]
+                y = comps[i,i2]
+
+                plt.text(x+0.05,y+0.05,test)            
+                plt.plot(x,y, 'o')
+
+
+            if not tSNE:
+                plt.xlabel("PC"+str(i1+1) + " (" + str(round(100*pca_explained[i1],2))+"%)")
+                plt.ylabel("PC"+str(i2+1) + " (" + str(round(100*pca_explained[i2],2))+"%)")
+            else:
+                plt.xlabel("PC"+str(i1+1))
+                plt.ylabel("PC"+str(i2+1))
+            #plt.legend()
+            plt.gcf().set_size_inches(20,10)
+            #plt.savefig("results_PCA_sampling\\sampling_PCA_"+label_MEM+"PC"+str(i1+1)+'_'+"PC"+str(i2+1)+'_'+factor+".pdf", format="pdf", bbox_inches = 'tight')    
+            plt.show()
 
 
 """
