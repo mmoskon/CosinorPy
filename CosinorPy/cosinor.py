@@ -4166,6 +4166,7 @@ def generate_samples(sampling_type, intervals, size):
         from skopt.space import Space
         from skopt.sampler import Lhs
     except:
+        print("Cannot import skopt")
         return
 
     space = Space(intervals)
