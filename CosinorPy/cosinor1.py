@@ -270,9 +270,9 @@ def population_fit_group(df, period = 24, save_folder='', **kwargs):
         
         if save_folder:
             #save_to = save_folder+"\\pop_"+name+'.pdf'
-            save_to = os.path.join(save_folder,"pop_"+name+'.pdf')
+            save_to = os.path.join(save_folder,"pop_"+name)
         else:
-            save_to = ""
+            save_to = ""        
 
         res = population_fit_cosinor(df_pop, period = period, save_to = save_to, **kwargs)
         
@@ -415,7 +415,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
     param_names = ['Intercept', 'rrr (beta)', 'sss (gamma)', 'amp', 'acr']
     cosinors = []
     
-    test_name = tests[0].split('_rep')[0]
+    test_name = tests[0].split('_rep')[0]    
     
     for test in tests:
         x,y = np.array(df_pop[df_pop.test == test].x), np.array(df_pop[df_pop.test == test].y)
@@ -494,6 +494,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
         if (ampu > 0 and ampl < 0):
             fiu=np.nan
             fil=np.nan
+            p_acr = 1
             print("Warning: Amplitude confidence interval contains zero. Acrophase confidence interval cannot be calculated and was set to NA.")
         else:
             fiu=acr+np.arctan(((c23*(t**2))+((t*np.sqrt(c33))*np.sqrt((amp**2)-(((c22*c33)-(c23**2))*((t**2)/c33)))))/((amp**2)-(c22*(t**2))))
@@ -502,7 +503,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
             se_acr = (fiu - acr)/t
             T0 = acr/se_acr
             p_acr = 2 * (1 - stats.t.cdf(abs(T0), k-1))
-    else:
+    else:             
         mesoru=MESOR
         mesorl=MESOR  
         ampu=amp
@@ -510,10 +511,17 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
         fiu = acr
         fil = acr
         
+        p_acr = 1
+        p_amp = 1
+        p_mesor = 1
+        
     if plot_on:
         #x = np.linspace(min(df_pop.x), max(df_pop.x), 100)
         Y_fit = evaluate_cosinor(X_fit, MESOR, amp, acr, period)
-        plt.plot(X_fit, Y_fit, 'black')
+              
+        #plt.plot(X_fit, Y_fit, 'black')
+        plt.plot(X_fit, Y_fit, 'red')
+        plt.title(test_name)
 
 
         if plot_margins:
