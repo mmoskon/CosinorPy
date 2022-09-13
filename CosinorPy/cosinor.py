@@ -178,7 +178,7 @@ def remove_lin_comp_df(df, n_components = 0, period = 24, summary_file=""):
     
     return df2
     
-
+# performs detrending only if linear model is significant
 def remove_lin_comp(X, Y, n_components = 0, period = 24, return_fit=False):
     
     X = np.array(X)
@@ -192,6 +192,7 @@ def remove_lin_comp(X, Y, n_components = 0, period = 24, return_fit=False):
     if type(CIs) != np.ndarray:
         CIs = CIs.values
     CI = CIs[1]
+    
     #A = results.params[0]
     k = results.params[1]
 
@@ -208,7 +209,7 @@ def remove_lin_comp(X, Y, n_components = 0, period = 24, return_fit=False):
     
     
     #Y = Y - A - k*X
-    if CI[0] * CI[1] > 0: # if both CIs hve the same sign
+    if CI[0] * CI[1] > 0: # if both CIs have the same sign
         Y = Y - k*X
     
     if return_fit:
@@ -216,7 +217,7 @@ def remove_lin_comp(X, Y, n_components = 0, period = 24, return_fit=False):
         fit['k'] = results.params[1]
         fit['CI'] = CI
         fit['p'] = results.pvalues[1]
-
+        fit['A'] = results.params[0]
 
         return X,Y,fit    
     """

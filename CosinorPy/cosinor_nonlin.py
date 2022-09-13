@@ -2544,8 +2544,154 @@ def compare_nonlinear(X1, Y1, X2, Y2, test1 = '', test2 = '', min_per = 18, max_
     
     return statistics, p_dict
     
+##############
+# DETRENDING #
+##############
+
+def remove_lin_exp_comp_df(df, n_components = 1, period = 24, lin_comp=True, amp_comp=True):
+    df2 = pd.DataFrame(columns=df.columns)
 
 
+    for test in df.test.unique():
+        x,y = df[df['test']==test].x,df[df['test']==test].y
+        x,y = remove_lin_exp_comp(x,y,n_components=n_components, period=period, lin_comp=lin_comp, amp_comp=amp_comp)
+        df_tmp = pd.DataFrame(columns=df.columns)
+        df_tmp['x'] = x
+        df_tmp['y'] = y
+        df_tmp['test'] = test
+        df2 = df2.append(df_tmp, ignore_index=True)
+            
+    return df2
+    
+"""
+def remove_lin_exp_comp(X, Y, n_components = 1, period = 24, lin_comp=True, amp_comp=True, **kwargs):
+    
+    X = np.array(X)
+    Y = np.array(Y)
 
+    res = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_components, lin_comp=lin_comp, amp_comp=amp_comp, **kwargs)
 
+    try:
+        _, _, stats_params, _ = res
+    except:
+        return
+        
+
+    #if not period:        
+    #    period = stats_params['params']['period']
+       
+    A = stats_params['params']['A']   
+    
+    #B1,phase1 = 0, 0
+    #B2,phase2 = 0, 0
+    #B3,phase3 = 0, 0
+    #B4,phase4 = 0, 0
+    #if n_components >= 1:
+    #    B1,phase1 = stats_params['params']['B1'], stats_params['params']['phase1']
+    #if n_components >= 2:
+    #    B2,phase2 = stats_params['params']['B2'], stats_params['params']['phase2']
+    #if n_components >= 3:
+    #    B3,phase3 = stats_params['params']['B3'], stats_params['params']['phase3']
+    #if n_components >= 4:
+    #    B4,phase4 = stats_params['params']['B4'], stats_params['params']['phase4']
+    #if n_components > 4:
+    #    print("Not supported")
+    #    return
+    
+    if amp_comp:
+        C = stats_params['params']['C']
+    else:
+        C = 0
+    if lin_comp:
+        D = stats_params['params']['D']
+    else:
+        D = 0
+
+    Y_d = Y.copy() # Y_d ... detrednded data
+
+    # first subtract mesor (A) and linear component (D)
+    Y1 = A + D*X
+    Y_d -= Y1
+    # second, divide by amplification (exponential) componet
+    Y2 = np.exp(C*X)
+    Y_d /= Y2
+    # third, add linear component back
+    Y_d += A
+    
+    return X, Y_d
+
+"""
+
+# does not observe significance (as in the case of cosinor.remove_lin_comp) - always performs detrending
+def remove_lin_exp_comp(X, Y, n_components = 1, period = 24, lin_comp=True, amp_comp=True, separate_models = False, **kwargs):
+    
+    X = np.array(X)
+    Y = np.array(Y)
+
+    if not separate_models:
+        res = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_components, lin_comp=lin_comp, amp_comp=amp_comp, **kwargs)
+
+        try:
+            _, _, stats_params, _ = res
+        except:
+            return
+
+        A = stats_params['params']['A']   
+        
+        if amp_comp:
+            C = stats_params['params']['C']
+        else:
+            C = 0
+        if lin_comp:
+            D = stats_params['params']['D']
+        else:
+            D = 0
+
+        Y_d = Y.copy() # Y_d ... detrednded data
+
+        # first subtract mesor (A) and linear component (D)
+        Y1 = A + D*X
+        Y_d -= Y1
+        # second, divide by amplification (exponential) componet
+        Y2 = np.exp(C*X)
+        Y_d /= Y2
+        # third, add linear component back
+        Y_d += A
+    else:
+        X, Y_d, fit = cosinor.remove_lin_comp(X, Y, n_components = n_components, period = period, return_fit=True)
+        A_main = fit['A']
+
+        res = fit_generalized_cosinor_n_comp(X, Y_d, period = period, n_components=n_components, lin_comp=lin_comp, amp_comp=amp_comp, **kwargs)
+
+        try:
+            _, _, stats_params, _ = res
+        except:
+            return
+
+        A = stats_params['params']['A']   
+        
+        if amp_comp:
+            C = stats_params['params']['C']
+        else:
+            C = 0
+        if lin_comp:
+            D = stats_params['params']['D']
+        else:
+            D = 0
+
+        #print(A,D)
+
+        Y_d = Y.copy() # Y_d ... detrednded data
+
+        # first subtract mesor (A) and linear component (D)
+        #Y1 = A + D*X
+        #Y_d -= Y1
+        # second, divide by amplification (exponential) componet
+        Y2 = np.exp(C*X)
+        Y_d /= Y2
+        # third, add linear component back
+        Y_d += A_main#A + A_main
+
+    
+    return X, Y_d
 

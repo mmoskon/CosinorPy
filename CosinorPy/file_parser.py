@@ -13,7 +13,7 @@ import re
     individual: separate the multiple iterations of the same measurement (for lumicycle)
 """
     
-def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=True, remove_outliers=False):
+def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=True, remove_outliers=False, skip_tabs=False):
     names = []
      
         
@@ -21,8 +21,12 @@ def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=T
         
         
     xls_file = pd.ExcelFile(file_name)
-    for sheet_name in xls_file.sheet_names:
+    for sheet_idx, sheet_name in enumerate(xls_file.sheet_names):
             
+        if skip_tabs and sheet_idx < skip_tabs:    
+            continue
+            
+        
         sheet = xls_file.parse(sheet_name, header=None)
         #print(sheet_name)
             
