@@ -4144,7 +4144,7 @@ def acrophase_to_hours(acrophase, period=24):
     acrophase = project_acr(acrophase)
     hours = -period * acrophase/(2*np.pi)
     if hours < 0:
-        hours += 24 
+        hours += period 
     return hours
 
 # project acrophase to the interval [-pi, pi]
