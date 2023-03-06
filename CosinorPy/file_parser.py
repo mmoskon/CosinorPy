@@ -25,8 +25,8 @@ def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=T
             
         if skip_tabs and sheet_idx < skip_tabs:    
             continue
-            
-        
+
+
         sheet = xls_file.parse(sheet_name, header=None)
         #print(sheet_name)
             

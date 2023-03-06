@@ -679,7 +679,7 @@ def population_fit_generalized_cosinor_n_comp(df_pop, period=24, n_components = 
         X_plot = np.linspace(min_X, max_X, 1000)
 
     for test in tests:
-        X,Y = np.array(df_pop[df_pop.test == test].x), np.array(df_pop[df_pop.test == test].y)
+        X,Y = df_pop[df_pop.test == test].x.values, df_pop[df_pop.test == test].y.values
         popt, _, _, _ = fit_generalized_cosinor_n_comp(X,Y, period=period, n_components=n_components, plot=False, **kwargs)
         popts.append(popt)
         if plot:
@@ -814,7 +814,7 @@ def population_fit_generalized_cosinor(df_pop, period=24, plot=False, plot_margi
         X_plot = np.linspace(min_X, max_X, 1000)
 
     for test in tests:
-        X,Y = np.array(df_pop[df_pop.test == test].x), np.array(df_pop[df_pop.test == test].y)
+        X,Y = df_pop[df_pop.test == test].x.values, df_pop[df_pop.test == test].y.values
         popt, _, _ = fit_generalized_cosinor(X,Y, period=period, plot=False, plot_margins=plot_margins, **kwargs)
         popts.append(popt)
         if plot:
@@ -1568,8 +1568,8 @@ def fit_generalized_cosinor_group(df, period=24, folder="", **kwargs):
 
     tests = df.test.unique()
     for test in tests:   
-        X = df[df.test == test].x
-        Y = df[df.test == test].y
+        X = df[df.test == test].x.values
+        Y = df[df.test == test].y.values
         
         if folder:                    
             save_to = os.path.join(folder,test)
@@ -1674,11 +1674,11 @@ def fit_generalized_cosinor_compare_pairs_dependent(df, pairs, period=24, folder
         else:
             save_to = ""
 
-        X1 = df[df.test == test1].x
-        Y1 = df[df.test == test1].y
+        X1 = df[df.test == test1].x.values
+        Y1 = df[df.test == test1].y.values
 
-        X2 = df[df.test == test2].x
-        Y2 = df[df.test == test2].y
+        X2 = df[df.test == test2].x.values
+        Y2 = df[df.test == test2].y.values
 
         _, stats, stats_params = fit_generalized_cosinor_compare(X1, Y1, X2, Y2, period=period, save_to = save_to, test1=test1, test2=test2, **kwargs)
 
@@ -1724,11 +1724,11 @@ def fit_generalized_cosinor_compare_pairs_independent(df, pairs, period1=24, per
         else:
             save_to = ""
 
-        X1 = df[df.test == test1].x
-        Y1 = df[df.test == test1].y
+        X1 = df[df.test == test1].x.values
+        Y1 = df[df.test == test1].y.values
 
-        X2 = df[df.test == test2].x
-        Y2 = df[df.test == test2].y
+        X2 = df[df.test == test2].x.values
+        Y2 = df[df.test == test2].y.values
 
         stats_params = fit_generalized_cosinor_compare_independent(X1, Y1, X2, Y2, period1=24, period2 = 24, save_to = save_to, test1 = test1, test2 = test2, **kwargs)
 
@@ -1832,8 +1832,8 @@ def fit_generalized_cosinor_n_comp_group_best(df, period = 24, n_components = [1
         else:
             save_to = ''    
 
-        X = df[df.test == test].x
-        Y = df[df.test == test].y
+        X = df[df.test == test].x.values
+        Y = df[df.test == test].y.values
         best_comps, _, stats, stats_params, params = get_best_model(X,Y, period=period, n_components=n_components, save_to=save_to, test=test,**kwargs)
 
         if period:
@@ -1937,8 +1937,8 @@ def fit_generalized_cosinor_n_comp_group(df, period = 24, n_components = 3, fold
         else:
             save_to = ''    
 
-        X = df[df.test == test].x
-        Y = df[df.test == test].y   
+        X = df[df.test == test].x.values
+        Y = df[df.test == test].y.values  
                 
         res = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_components, save_to=save_to, test=test, **kwargs)
 
@@ -2051,8 +2051,8 @@ def bootstrap_generalized_cosinor_n_comp_group_best(df, df_best_models, **kwargs
     tests = df.test.unique()
 
     for test in tests:
-        X = df[df.test == test].x
-        Y = df[df.test == test].y
+        X = df[df.test == test].x.values
+        Y = df[df.test == test].y.values
 
         best = df_best_models[df_best_models['test'] == test]
 
@@ -2096,8 +2096,8 @@ def bootstrap_generalized_cosinor_n_comp_group(df, period=24, n_components=3, am
 
     tests = df.test.unique()
     for test in tests:
-        X = df[df.test == test].x
-        Y = df[df.test == test].y
+        X = df[df.test == test].x.values
+        Y = df[df.test == test].y.values
 
         _, statistics, stats_params, rhythm_params = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_components, amp_comp=amp_comp, lin_comp=lin_comp)
 
@@ -2147,11 +2147,11 @@ def compare_pairs_n_comp_bootstrap_group(df, pairs, df_best_models = None, df_bo
         else:
             save_to = ""
 
-        X1 = df[df.test == test1].x
-        Y1 = df[df.test == test1].y
+        X1 = df[df.test == test1].x.values
+        Y1 = df[df.test == test1].y.values
 
-        X2 = df[df.test == test2].x
-        Y2 = df[df.test == test2].y
+        X2 = df[df.test == test2].x.values
+        Y2 = df[df.test == test2].y.values
 
         if type(df_best_models) != pd.DataFrame:
             n_components1 = n_components
@@ -2330,8 +2330,8 @@ def compare_phase_pairs(df, pairs, min_per = 18, max_per = 36, folder = '', pref
         else:
             save_to = ''
         
-        X1, Y1 = np.array(df[df.test == test1].x), np.array(df[df.test == test1].y)
-        X2, Y2 = np.array(df[df.test == test2].x), np.array(df[df.test == test2].y)
+        X1, Y1 = df[df.test == test1].x.values, df[df.test == test1].y.values
+        X2, Y2 = df[df.test == test2].x.values, df[df.test == test2].y.values
         
         statistics, d = compare_nonlinear(X1, Y1, X2, Y2, test1 = test1, test2 = test2, min_per = min_per, max_per=max_per, compare_phase = True, compare_period = False, compare_amplitude = False, save_to = save_to, plot_residuals=plot_residuals)
         
@@ -2377,8 +2377,8 @@ def compare_nonlinear_pairs(df, pairs, min_per = 18, max_per = 36, folder = '', 
         else:
             save_to = ''
         
-        X1, Y1 = np.array(df[df.test == test1].x), np.array(df[df.test == test1].y)
-        X2, Y2 = np.array(df[df.test == test2].x), np.array(df[df.test == test2].y)
+        X1, Y1 = df[df.test == test1].x.values, df[df.test == test1].y.values
+        X2, Y2 = df[df.test == test2].x.values, df[df.test == test2].y.values
         
         statistics, d = compare_nonlinear(X1, Y1, X2, Y2, test1 = test1, test2 = test2, min_per = min_per, max_per=max_per, compare_phase = True, compare_period = False, compare_amplitude = True, save_to = save_to, plot_residuals=plot_residuals)
         
@@ -2544,154 +2544,8 @@ def compare_nonlinear(X1, Y1, X2, Y2, test1 = '', test2 = '', min_per = 18, max_
     
     return statistics, p_dict
     
-##############
-# DETRENDING #
-##############
-
-def remove_lin_exp_comp_df(df, n_components = 1, period = 24, lin_comp=True, amp_comp=True):
-    df2 = pd.DataFrame(columns=df.columns)
 
 
-    for test in df.test.unique():
-        x,y = df[df['test']==test].x,df[df['test']==test].y
-        x,y = remove_lin_exp_comp(x,y,n_components=n_components, period=period, lin_comp=lin_comp, amp_comp=amp_comp)
-        df_tmp = pd.DataFrame(columns=df.columns)
-        df_tmp['x'] = x
-        df_tmp['y'] = y
-        df_tmp['test'] = test
-        df2 = df2.append(df_tmp, ignore_index=True)
-            
-    return df2
-    
-"""
-def remove_lin_exp_comp(X, Y, n_components = 1, period = 24, lin_comp=True, amp_comp=True, **kwargs):
-    
-    X = np.array(X)
-    Y = np.array(Y)
 
-    res = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_components, lin_comp=lin_comp, amp_comp=amp_comp, **kwargs)
 
-    try:
-        _, _, stats_params, _ = res
-    except:
-        return
-        
-
-    #if not period:        
-    #    period = stats_params['params']['period']
-       
-    A = stats_params['params']['A']   
-    
-    #B1,phase1 = 0, 0
-    #B2,phase2 = 0, 0
-    #B3,phase3 = 0, 0
-    #B4,phase4 = 0, 0
-    #if n_components >= 1:
-    #    B1,phase1 = stats_params['params']['B1'], stats_params['params']['phase1']
-    #if n_components >= 2:
-    #    B2,phase2 = stats_params['params']['B2'], stats_params['params']['phase2']
-    #if n_components >= 3:
-    #    B3,phase3 = stats_params['params']['B3'], stats_params['params']['phase3']
-    #if n_components >= 4:
-    #    B4,phase4 = stats_params['params']['B4'], stats_params['params']['phase4']
-    #if n_components > 4:
-    #    print("Not supported")
-    #    return
-    
-    if amp_comp:
-        C = stats_params['params']['C']
-    else:
-        C = 0
-    if lin_comp:
-        D = stats_params['params']['D']
-    else:
-        D = 0
-
-    Y_d = Y.copy() # Y_d ... detrednded data
-
-    # first subtract mesor (A) and linear component (D)
-    Y1 = A + D*X
-    Y_d -= Y1
-    # second, divide by amplification (exponential) componet
-    Y2 = np.exp(C*X)
-    Y_d /= Y2
-    # third, add linear component back
-    Y_d += A
-    
-    return X, Y_d
-
-"""
-
-# does not observe significance (as in the case of cosinor.remove_lin_comp) - always performs detrending
-def remove_lin_exp_comp(X, Y, n_components = 1, period = 24, lin_comp=True, amp_comp=True, separate_models = False, **kwargs):
-    
-    X = np.array(X)
-    Y = np.array(Y)
-
-    if not separate_models:
-        res = fit_generalized_cosinor_n_comp(X, Y, period = period, n_components=n_components, lin_comp=lin_comp, amp_comp=amp_comp, **kwargs)
-
-        try:
-            _, _, stats_params, _ = res
-        except:
-            return
-
-        A = stats_params['params']['A']   
-        
-        if amp_comp:
-            C = stats_params['params']['C']
-        else:
-            C = 0
-        if lin_comp:
-            D = stats_params['params']['D']
-        else:
-            D = 0
-
-        Y_d = Y.copy() # Y_d ... detrednded data
-
-        # first subtract mesor (A) and linear component (D)
-        Y1 = A + D*X
-        Y_d -= Y1
-        # second, divide by amplification (exponential) componet
-        Y2 = np.exp(C*X)
-        Y_d /= Y2
-        # third, add linear component back
-        Y_d += A
-    else:
-        X, Y_d, fit = cosinor.remove_lin_comp(X, Y, n_components = n_components, period = period, return_fit=True)
-        A_main = fit['A']
-
-        res = fit_generalized_cosinor_n_comp(X, Y_d, period = period, n_components=n_components, lin_comp=lin_comp, amp_comp=amp_comp, **kwargs)
-
-        try:
-            _, _, stats_params, _ = res
-        except:
-            return
-
-        A = stats_params['params']['A']   
-        
-        if amp_comp:
-            C = stats_params['params']['C']
-        else:
-            C = 0
-        if lin_comp:
-            D = stats_params['params']['D']
-        else:
-            D = 0
-
-        #print(A,D)
-
-        Y_d = Y.copy() # Y_d ... detrednded data
-
-        # first subtract mesor (A) and linear component (D)
-        #Y1 = A + D*X
-        #Y_d -= Y1
-        # second, divide by amplification (exponential) componet
-        Y2 = np.exp(C*X)
-        Y_d /= Y2
-        # third, add linear component back
-        Y_d += A_main#A + A_main
-
-    
-    return X, Y_d
 

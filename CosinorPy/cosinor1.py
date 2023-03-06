@@ -29,8 +29,8 @@ def prepare_df(X1, Y1, X2, Y2):
 
 def plot_pair(data, results, test1='1', test2='2', plot_measurements=True, save_to='', plot_dense=True, period=24, plot_margins = True, legend=True):
    
-    X = data.x
-    Y = data.y 
+    X = data.x.values
+    Y = data.y.values
     H = data.group
     
     color1 = "black"
@@ -129,8 +129,8 @@ def plot_pair(data, results, test1='1', test2='2', plot_measurements=True, save_
    
 def plot_single(data, results, test='', plot_measurements=True, save_to='', plot_dense=True, plot_margins = True, period=24):
    
-    X = data.x
-    Y = data.y 
+    X = data.x.values
+    Y = data.y.values
     
     #if 'control' in test.lower():
     #    color = "black"
@@ -418,7 +418,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
     test_name = tests[0].split('_rep')[0]    
     
     for test in tests:
-        x,y = np.array(df_pop[df_pop.test == test].x), np.array(df_pop[df_pop.test == test].y)
+        x,y = df_pop[df_pop.test == test].x.values, df_pop[df_pop.test == test].y.values
         fit_results, amp, acr, _ = fit_cosinor(x, y, period = period, save_to=save_to, plot_on = False)
         if plot_on and plot_individuals:
             X_fit = np.linspace(min(x), max(x), 100)
@@ -691,7 +691,7 @@ def fit_group(df, period = 24, save_folder='', plot_on=True):
         period = [period] 
 
     for test in df.test.unique():
-        x, y = df[df.test == test].x, df[df.test == test].y
+        x, y = df[df.test == test].x.values, df[df.test == test].y.values
         for per in period:
             if save_folder:
                 #fit_results, amp, acr, statistics = fit_cosinor(x, y, per, test=test, save_to=save_folder+"\\"+test+"_"+str(per)+".pdf",  plot_on = plot_on)
@@ -770,8 +770,8 @@ def test_cosinor_pairs(df, pairs, period = 24, folder = '', prefix='', plot_meas
         else:
             save_to = ''
         
-        X1, Y1 = np.array(df[df.test == test1].x), np.array(df[df.test == test1].y)
-        X2, Y2 = np.array(df[df.test == test2].x), np.array(df[df.test == test2].y)
+        X1, Y1 = df[df.test == test1].x.values, df[df.test == test1].y.values
+        X2, Y2 = df[df.test == test2].x.values, df[df.test == test2].y.values
         df_pair = prepare_df(X1, Y1, X2, Y2)
 
         idx_amp = 2
@@ -856,8 +856,8 @@ def test_cosinor_pairs_independent(df, pairs, period = 24, period2 = None, df_be
     
     for test1, test2 in pairs:           
         
-        X1, Y1 = np.array(df[df.test == test1].x), np.array(df[df.test == test1].y)
-        X2, Y2 = np.array(df[df.test == test2].x), np.array(df[df.test == test2].y)
+        X1, Y1 = df[df.test == test1].x.values, df[df.test == test1].y.values
+        X2, Y2 = df[df.test == test2].x.values, df[df.test == test2].y.values
         
         if type(df_best_models) == int:
             pass

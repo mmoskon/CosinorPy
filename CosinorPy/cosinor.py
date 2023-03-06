@@ -32,7 +32,7 @@ def periodogram_df(df, folder = '', **kwargs):
     names.sort()  
 
     for name in names:
-        x, y = np.array(df[df.test == name].x), np.array(df[df.test == name].y)
+        x, y = df[df.test == name].x.values, df[df.test == name].y.values
         if folder:
             save_to = os.path.join(folder, "per_" + name)            
         else:
@@ -159,7 +159,7 @@ def remove_lin_comp_df(df, n_components = 0, period = 24, summary_file=""):
         df_fit = pd.DataFrame(columns=['test', 'k', 'CI', 'p', 'q'])
 
     for test in df.test.unique():
-        x,y = df[df['test']==test].x,df[df['test']==test].y
+        x,y = df[df['test']==test].x.values,df[df['test']==test].y.values
         x,y,fit = remove_lin_comp(x,y,n_components=n_components, period=period, return_fit=True)
         df_tmp = pd.DataFrame(columns=df.columns)
         df_tmp['x'] = x
@@ -178,7 +178,7 @@ def remove_lin_comp_df(df, n_components = 0, period = 24, summary_file=""):
     
     return df2
     
-# performs detrending only if linear model is significant
+
 def remove_lin_comp(X, Y, n_components = 0, period = 24, return_fit=False):
     
     X = np.array(X)
@@ -192,7 +192,6 @@ def remove_lin_comp(X, Y, n_components = 0, period = 24, return_fit=False):
     if type(CIs) != np.ndarray:
         CIs = CIs.values
     CI = CIs[1]
-    
     #A = results.params[0]
     k = results.params[1]
 
@@ -412,7 +411,7 @@ def plot_data(df, names = [], folder = '', prefix = '', color='black'):
         names = np.unique(df.test) 
         
     for test in names:
-        X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)  
+        X, Y = np.array(df[df.test == test].x.values), np.array(df[df.test == test].y.values)  
         
         plt.plot(X,Y,'o', markersize=1, color=color)
         plt.title(test)
@@ -434,8 +433,8 @@ def plot_data(df, names = [], folder = '', prefix = '', color='black'):
 def plot_data_pairs(df, names, folder = '', prefix ='', color1='black', color2='red'):
         
     for test1, test2 in names:
-        X1, Y1 = np.array(df[df.test == test1].x), np.array(df[df.test == test1].y)  
-        X2, Y2 = np.array(df[df.test == test2].x), np.array(df[df.test == test2].y)  
+        X1, Y1 = df[df.test == test1].x.values, df[df.test == test1].y.values  
+        X2, Y2 = df[df.test == test2].x.values, df[df.test == test2].y.values  
         
         plt.plot(X1,Y1,'o', color=color1, markersize=1, label=test1)
         plt.plot(X2,Y2,'o', color=color2, markersize=1, label=test2)
@@ -874,7 +873,7 @@ def fit_group(df, n_components = 2, period = 24, names = "", folder = '', prefix
             for per in period:            
                 if n_comps == 0:
                     per = 100000
-                X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)        
+                X, Y = df[df.test == test].x.values, df[df.test == test].y.values        
                 if folder:                    
                     save_to = os.path.join(folder,prefix+test+'_compnts='+str(n_comps) +'_per=' + str(per))
                 else:
@@ -1030,7 +1029,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
     
     
     for test in tests:
-        x,y = np.array(df_pop[df_pop.test == test].x), np.array(df_pop[df_pop.test == test].y)
+        x,y = df_pop[df_pop.test == test].x.values, df_pop[df_pop.test == test].y.values
         
         """
         min_X = min(min_X, np.min(x))
@@ -2342,8 +2341,8 @@ def compare_pair_df_extended(df, test1, test2, n_components = 3, period = 24, n_
     
     ###
     if plot and plot_measurements:
-        plt.plot(df_pair[df_pair.test == test1].x, df_pair[df_pair.test == test1].y, 'ko', markersize=1, alpha = 0.75)
-        plt.plot(df_pair[df_pair.test == test2].x, df_pair[df_pair.test == test2].y, 'ro', markersize=1, alpha = 0.75)
+        plt.plot(df_pair[df_pair.test == test1].x.values, df_pair[df_pair.test == test1].y.values, 'ko', markersize=1, alpha = 0.75)
+        plt.plot(df_pair[df_pair.test == test2].x.values, df_pair[df_pair.test == test2].y.values, 'ro', markersize=1, alpha = 0.75)
     #plt.plot(X, results.fittedvalues, label = 'fit')
     
     if model_type =='lin':
@@ -2522,7 +2521,7 @@ def plot_df_models(df, df_models, folder ="", **kwargs):
         test = row[1].test
         n_components = row[1].n_components
         period = row[1].period
-        X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)   
+        X, Y = df[df.test == test].x.values, df[df.test == test].y.values   
         
         if folder:            
             save_to = os.path.join(folder,test+'_compnts='+str(n_components) +'_per=' + str(period))
@@ -2579,7 +2578,7 @@ def analyse_models(df, n_components = 3, period = 24, plot = False, folder = "",
     for test in df.test.unique():
         for per in period:
             for n_comps in n_components:     
-                X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)   
+                X, Y = df[df.test == test].x.values, df[df.test == test].y.values   
                 
                 if plot and folder:
                     save_to = os.path.join(folder,test+'_compnts='+str(n_comps) +'_per=' + str(per))
@@ -2654,7 +2653,7 @@ def analyse_best_models(df, df_models, sparse_output = True, plot = False, folde
         test = row[1].test
         n_components = row[1].n_components
         period = row[1].period
-        X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)   
+        X, Y = df[df.test == test].x.values, df[df.test == test].y.values   
         
         if plot and folder:
             save_to = os.path.join(folder,test+'_compnts='+str(n_components) +'_per=' + str(period))
@@ -2812,7 +2811,7 @@ def plot_tuples_best_models(df, df_best_models, tuples, colors = ['black', 'red'
             model = df_best_models[df_best_models["test"] == test].iloc[0]
             n_components = model.n_components
             period = model.period
-            X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)  
+            X, Y = df[df.test == test].x.values, df[df.test == test].y.values  
 
             min_x = min(min(X), min_x)
             if 'plot_measurements' in kwargs and kwargs['plot_measurements'] == False:
@@ -2906,7 +2905,7 @@ def plot_tuples_models(df, tuples, n_components = 2, period = 24, colors = ['bla
 
 
                 for test, color in zip(T, colors):
-                    X, Y = np.array(df[df.test == test].x), np.array(df[df.test == test].y)  
+                    X, Y = df[df.test == test].x.values, df[df.test == test].y.values  
 
                     min_x = min(min(X), min_x)
                     if 'plot_measurements' in kwargs and kwargs['plot_measurements'] == False:
@@ -3506,10 +3505,10 @@ def compare_pair_bootstrap(df, test1, test2, n_components = 1, period = 24, n_co
     if not period2:
         period2 = period1   
     
-    X1 = np.array(df[(df.test == test1)].x)
-    Y1 = np.array(df[(df.test == test1)].y)
-    X2 = np.array(df[(df.test == test2)].x)
-    Y2 = np.array(df[(df.test == test2)].y)
+    X1 = df[(df.test == test1)].x.values
+    Y1 = df[(df.test == test1)].y.values
+    X2 = df[(df.test == test2)].x.values
+    Y2 = df[(df.test == test2)].y.values
     
     if single_params:
         run_bootstrap = False
@@ -4017,10 +4016,10 @@ def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_component
     if not period2:
         period2 = period1   
     
-    X1 = df[(df.test == test1)].x
-    Y1 = df[(df.test == test1)].y
-    X2 = df[(df.test == test2)].x
-    Y2 = df[(df.test == test2)].y
+    X1 = df[(df.test == test1)].x.values
+    Y1 = df[(df.test == test1)].y.values
+    X2 = df[(df.test == test2)].x.values
+    Y2 = df[(df.test == test2)].y.values
 
     if single_params:
         run_params_CI = False # fit_me is called without sampling
@@ -4144,7 +4143,7 @@ def acrophase_to_hours(acrophase, period=24):
     acrophase = project_acr(acrophase)
     hours = -period * acrophase/(2*np.pi)
     if hours < 0:
-        hours += period 
+        hours += period
     return hours
 
 # project acrophase to the interval [-pi, pi]
