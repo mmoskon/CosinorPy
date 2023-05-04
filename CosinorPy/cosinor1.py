@@ -319,7 +319,7 @@ def population_test_cosinor_pairs(df, pairs, period = 24):
         d = {'test': res['test'], 
             'd_amplitude':res['amp']['pop2'] - res['amp']['pop1'], 
             'p(d_amplitude)':res['amp']['p_value'],            
-            'd_acrophase1':cosinor.project_acr(res['acr']['pop2']-res['acr']['pop1']),
+            'd_acrophase':cosinor.project_acr(res['acr']['pop2']-res['acr']['pop1']),
             'p(d_acrophase)':res['acr']['p_value']}
 
         df_res = df_res.append(d, ignore_index=True)
@@ -417,11 +417,15 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
     
     test_name = tests[0].split('_rep')[0]    
     
+    min_X = np.min(df_pop.x.values)
+    max_X = np.max(df_pop.x.values)
+    
     for test in tests:
         x,y = df_pop[df_pop.test == test].x.values, df_pop[df_pop.test == test].y.values
         fit_results, amp, acr, _ = fit_cosinor(x, y, period = period, save_to=save_to, plot_on = False)
         if plot_on and plot_individuals:
-            X_fit = np.linspace(min(x), max(x), 100)
+            #X_fit = np.linspace(min(x), max(x), 100)
+            X_fit = np.linspace(min_X, max_X, 100)
             rrr_fit= np.cos(2*np.pi*X_fit/period)
             sss_fit = np.sin(2*np.pi*X_fit/period)
         
