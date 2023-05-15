@@ -299,7 +299,7 @@ def population_fit_group(df, period = 24, save_folder='', **kwargs):
 
     return df_cosinor1_fits    
 
-def population_test_cosinor_pairs(df, pairs, period = 24):
+def population_test_cosinor_pairs(df, pairs, period = 24, save_folder = "", plot_on=True):
     df_res = pd.DataFrame(columns = ['test', 
                                     'd_amplitude', 
                                     'p(d_amplitude)',
@@ -312,8 +312,19 @@ def population_test_cosinor_pairs(df, pairs, period = 24):
         df_pop1 = df[df.test.str.startswith(pair[0])] 
         df_pop2 = df[df.test.str.startswith(pair[1])] 
 
-        res1 = population_fit_cosinor(df_pop1, period = period, plot_on = False)      
-        res2 = population_fit_cosinor(df_pop2, period = period, plot_on = False)
+        res1 = population_fit_cosinor(df_pop1, period = period, plot_on = plot_on, hold_on=True, color="black")      
+        res2 = population_fit_cosinor(df_pop2, period = period, plot_on = plot_on, hold_on=True, color="red")
+        
+        plt.legend()
+        plt.title(f"{pair[0]} vs. {pair[1]}")
+        
+        if save_folder:
+            save_to = os.path.join(save_folder,f"{pair[0]}_vs_{pair[1]}")
+            plt.savefig(save_to+'.pdf')
+            plt.savefig(save_to+'.png')
+            plt.close()
+        else:
+            plt.show()
 
         res = population_test_cosinor(res1, res2)
         d = {'test': res['test'], 
@@ -408,7 +419,7 @@ def population_test_cosinor_pairs_independent(df, pairs, period=24, period2=None
     return df_res
 
 
-def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = True, plot_individuals = True, plot_measurements=True, plot_margins=True):
+def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = True, plot_individuals = True, plot_measurements=True, plot_margins=True, color="black", hold_on=False):
     params = -1
     tests = df_pop.test.unique()
     k = len(tests)
@@ -434,13 +445,13 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
             data['sss'] = sss_fit
             Y_fit = fit_results.predict(data)          
         
-            plt.plot(X_fit, Y_fit, color='black', alpha=0.25)
+            plt.plot(X_fit, Y_fit, color=color, alpha=0.1, label='_Hidden label')
         
             #M = fit_results.params[0]
             #y_fit = evaluate_cosinor(x, M, amp, acr, period)
             #plt.plot(x, y_fit, 'k')
         if plot_on and plot_measurements:
-            plt.plot(x, y, 'ko', markersize=1)
+            plt.plot(x, y, 'o', color=color, markersize=1, label='_Hidden label')
         
         if type(params) == int:
             params = np.append(fit_results.params, np.array([amp, acr]))
@@ -524,7 +535,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
         Y_fit = evaluate_cosinor(X_fit, MESOR, amp, acr, period)
               
         #plt.plot(X_fit, Y_fit, 'black')
-        plt.plot(X_fit, Y_fit, 'red')
+        plt.plot(X_fit, Y_fit, color=color, label="_".join(test.split("_")[:-1]))
         plt.title(test_name)
 
 
@@ -556,17 +567,16 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
                 sd_Y = var_Y**0.5
                 lower = Y_fit - ((t*sd_Y)/(k**0.5)) # biased se as above
                 upper = Y_fit + ((t*sd_Y)/(k**0.5)) # biased se as above                
-            plt.fill_between(X_fit, lower, upper, color='black', alpha=0.1)
+            plt.fill_between(X_fit, lower, upper, color=color, alpha=0.1)
 
             
-
-
-        if save_to:
-            plt.savefig(save_to+'.pdf')
-            plt.savefig(save_to+'.png')
-            plt.close()
-        else:  
-            plt.show()
+        if not hold_on:
+            if save_to:
+                plt.savefig(save_to+'.pdf')
+                plt.savefig(save_to+'.png')
+                plt.close()
+            else:  
+                plt.show()
   
   
     #print("acr", acr)
