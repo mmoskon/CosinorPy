@@ -11,6 +11,8 @@ from statsmodels.sandbox.regression.predstd import wls_prediction_std
 import statsmodels.api as sm
 import os
 
+from CosinorPy.helpers import df_add_row
+
 def prepare_df(X1, Y1, X2, Y2):
     H1 = np.zeros(X1.size)
     H2 = np.ones(X2.size)
@@ -289,7 +291,8 @@ def population_fit_group(df, period = 24, save_folder='', **kwargs):
          'CI(acrophase)': [res['confint']['acr'][0], res['confint']['acr'][1]],
          'acrophase[h]':cosinor.acrophase_to_hours(res['means'][-1],period)}
     
-        df_cosinor1_fits = df_cosinor1_fits.append(d, ignore_index=True)
+        #df_cosinor1_fits = df_cosinor1_fits.append(d, ignore_index=True)
+        df_cosinor1_fits = df_add_row(df_cosinor1_fits, d)
     
     df_cosinor1_fits['q'] = multi.multipletests(df_cosinor1_fits['p'], method = 'fdr_bh')[1]
     df_cosinor1_fits['q(amplitude)'] = multi.multipletests(df_cosinor1_fits['p(amplitude)'], method = 'fdr_bh')[1]
@@ -333,7 +336,8 @@ def population_test_cosinor_pairs(df, pairs, period = 24, save_folder = "", plot
             'd_acrophase':cosinor.project_acr(res['acr']['pop2']-res['acr']['pop1']),
             'p(d_acrophase)':res['acr']['p_value']}
 
-        df_res = df_res.append(d, ignore_index=True)
+        #df_res = df_res.append(d, ignore_index=True)
+        df_res = df_add_row(df_res, d)
 
     df_res['q(d_amplitude)'] = multi.multipletests(df_res['p(d_amplitude)'], method = 'fdr_bh')[1]
     df_res['q(d_acrophase)'] = multi.multipletests(df_res['p(d_acrophase)'], method = 'fdr_bh')[1]
@@ -411,7 +415,8 @@ def population_test_cosinor_pairs_independent(df, pairs, period=24, period2=None
             'p(d_acrophase)':p_val_acr,
             'CI(d_acrophase)':CI_acr}
 
-        df_res = df_res.append(d, ignore_index=True)
+        #df_res = df_res.append(d, ignore_index=True)
+        df_res = df_add_row(df_res, d)
 
     df_res['q(d_amplitude)'] = multi.multipletests(df_res['p(d_amplitude)'], method = 'fdr_bh')[1]
     df_res['q(d_acrophase)'] = multi.multipletests(df_res['p(d_acrophase)'], method = 'fdr_bh')[1]
@@ -726,7 +731,8 @@ def fit_group(df, period = 24, save_folder='', plot_on=True):
             'CI(acrophase)': [statistics['CI'][0][2], statistics['CI'][1][2]],
             'acrophase[h]':cosinor.acrophase_to_hours(acr,per)}
         
-            df_cosinor1_fits = df_cosinor1_fits.append(d, ignore_index=True)
+            #df_cosinor1_fits = df_cosinor1_fits.append(d, ignore_index=True)
+            df_cosinor1_fits = df_add_row(df_cosinor1_fits, d)
         
     df_cosinor1_fits['q'] = multi.multipletests(df_cosinor1_fits['p'], method = 'fdr_bh')[1]
     df_cosinor1_fits['q(amplitude)'] = multi.multipletests(df_cosinor1_fits['p(amplitude)'], method = 'fdr_bh')[1]
@@ -821,7 +827,8 @@ def test_cosinor_pairs(df, pairs, period = 24, folder = '', prefix='', plot_meas
             'p(d_acrophase)': float(ind_test_acr['p_value']),
             'CI(d_acrophase)': ind_test_acr['conf_int']}
 
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
         plot_pair(df_pair, fit_results, test1=test1, test2=test2, plot_measurements=plot_measurements, save_to=save_to, period=period, legend=legend)
         
         CI_l, CI_u = statistics_trans['CI']   
@@ -925,7 +932,8 @@ def test_cosinor_pairs_independent(df, pairs, period = 24, period2 = None, df_be
             'p(d_acrophase)': p_val_acr,
             'CI(d_acrophase)': CI_acr}
 
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
         
     df_results['q1'] = multi.multipletests(df_results['p1'], method = 'fdr_bh')[1]
     df_results['q2'] = multi.multipletests(df_results['p2'], method = 'fdr_bh')[1]

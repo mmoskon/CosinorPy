@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from CosinorPy import cosinor
 import re
 
+from CosinorPy.helpers import df_add_row
 
 """
     file_name
@@ -69,7 +70,8 @@ def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=T
             df_measurement = pd.DataFrame({'x':x, 'y':y})
             df_measurement['test'] = sheet_name
             names.append(sheet_name)
-            df = df.append(df_measurement)                
+            #df = df.append(df_measurement)                
+            df = pd.concat([df, df_measurement], ignore_index=True)
             
         else:
             #idxs = np.argwhere(x > np.append(x[1:], [0]))[:-1] + 1
@@ -79,7 +81,8 @@ def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=T
                 df_measurement = pd.DataFrame({'x':x[idxs[i]:idxs[i+1]], 'y':y[idxs[i]:idxs[i+1]]})
                 df_measurement['test'] = sheet_name + '_rep' + str(i+1) 
                 names.append(sheet_name + '_rep' + str(i+1))
-                df = df.append(df_measurement)             
+                #df = df.append(df_measurement)             
+                df = pd.concat([df, df_measurement], ignore_index=True)
             
                         
 
@@ -101,11 +104,14 @@ def generate_test_data_group_random(N, name_prefix = "", characterize_data = Fal
 
         if characterize_data:
             df2, rhythm_params = generate_test_data(name=name, characterize_data = True, phase = phases, amplitudes = amplitudes,  **kwargs)
-            df = df.append(df2, ignore_index=True)
-            df_params = df_params.append(rhythm_params, ignore_index=True, sort=False)
+            #df = df.append(df2, ignore_index=True)
+            df = pd.concat([df, df2], ignore_index=True)
+            #df_params = df_params.append(rhythm_params, ignore_index=True, sort=False)
+            df_params = df_add_row(df_params, rhythm_params)
         else:
             df2 = generate_test_data(name=name, phase = phases, amplitudes = amplitudes, **kwargs)
-            df = df.append(df2, ignore_index=True)
+            #df = df.append(df2, ignore_index=True)
+            df = pd.concat([df, df2], ignore_index=True)
 
     if characterize_data:
         return df, df_params
@@ -127,11 +133,14 @@ def generate_test_data_group(N, name_prefix = "", characterize_data = False, **k
        
         if characterize_data:
             df2, rhythm_params = generate_test_data(name=name, characterize_data = True, **kwargs)
-            df = df.append(df2, ignore_index=True)
-            df_params = df_params.append(rhythm_params, ignore_index=True, sort=False)
+            #df = df.append(df2, ignore_index=True)
+            df = pd.concat([df, df2], ignore_index=True)
+            #df_params = df_params.append(rhythm_params, ignore_index=True, sort=False)
+            df_params = df_add_row(df_params, rhythm_params)
         else:
             df2 = generate_test_data(name=name, **kwargs)
-            df = df.append(df2, ignore_index=True)
+            #df = df.append(df2, ignore_index=True)
+            df = pd.concat([df, df2], ignore_index=True)
 
     if characterize_data:
         return df, df_params
@@ -307,7 +316,8 @@ def export_JTK(df, file_name, descriptor = "", names = [], individual=False):
             df_export = df_export[df_export.test != name]
             df_tmp = pd.DataFrame({'x':x_unique, 'y':y_unique})
             df_tmp['test'] = name
-            df_export = df_export.append(df_tmp, ignore_index=True)
+            #df_export = df_export.append(df_tmp, ignore_index=True)
+            df_export = pd.concat([df_export, df_tmp], ignore_index=True)
       
     reps = 0
         

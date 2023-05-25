@@ -22,6 +22,9 @@ import os
 
 eps = 10**-10
 
+from CosinorPy.helpers import df_add_row
+
+
 #####################
 # FITTING FUNCTIONS #
 #####################
@@ -1603,7 +1606,8 @@ def fit_generalized_cosinor_group(df, period=24, folder="", **kwargs):
              'lin_comp': lin_comp, 'p(lin_comp)':p_lin_comp, 'CI(lin_comp)':CI_lin_comp,
              'acrophase': acrophase, 'p(acrophase)':p_acrophase, 'CI(acrophase)':CI_acrophase}
 
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
 
     df_results["q"] = multi.multipletests(df_results["p"], method = 'fdr_bh')[1]
     #df_results["q_reject"] = multi.multipletests(df_results["p_reject"], method = 'fdr_bh')[1]
@@ -1650,7 +1654,8 @@ def population_fit_generalized_cosinor_group(df, period=24, folder="", **kwargs)
              'lin_comp': lin_comp, 'p(lin_comp)':p_lin_comp, 'CI(lin_comp)':CI_lin_comp,
              'acrophase': acrophase, 'p(acrophase)':p_acrophase, 'CI(acrophase)':CI_acrophase}
 
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
 
     df_results["q"] = multi.multipletests(df_results["p"], method = 'fdr_bh')[1]
     #df_results["q_reject"] = multi.multipletests(df_results["p_reject"], method = 'fdr_bh')[1]
@@ -1700,7 +1705,8 @@ def fit_generalized_cosinor_compare_pairs_dependent(df, pairs, period=24, folder
              'd_lin_comp': d_lin_comp, 'p(d_lin_comp)':p_d_lin_comp, 'CI(d_lin_comp)':CI_d_lin_comp,
              'd_acrophase': d_acrophase, 'p(d_acrophase)':p_d_acrophase, 'CI(d_acrophase)':CI_d_acrophase}
 
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
 
     df_results["q"] = multi.multipletests(df_results["p"], method = 'fdr_bh')[1]
     #df_results["q_reject"] = multi.multipletests(df_results["p_reject"], method = 'fdr_bh')[1]
@@ -1754,7 +1760,8 @@ def fit_generalized_cosinor_compare_pairs_independent(df, pairs, period1=24, per
              'd_lin_comp': d_lin_comp, 'p(d_lin_comp)':p_d_lin_comp, 'CI(d_lin_comp)':CI_d_lin_comp,
              'd_acrophase': d_acrophase, 'p(d_acrophase)':p_d_acrophase, 'CI(d_acrophase)':CI_d_acrophase}
 
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
 
     df_results["q(d_amplitude)"] = multi.multipletests(df_results["p(d_amplitude)"], method = 'fdr_bh')[1]
     df_results["q(d_amplification)"] = multi.multipletests(df_results["p(d_amplification)"], method = 'fdr_bh')[1]
@@ -1804,7 +1811,8 @@ def population_fit_generalized_cosinor_compare_pairs(df, pairs, period1=24, peri
              'd_lin_comp': d_lin_comp, 'p(d_lin_comp)':p_d_lin_comp, 'CI(d_lin_comp)':CI_d_lin_comp,
              'd_acrophase': d_acrophase, 'p(d_acrophase)':p_d_acrophase, 'CI(d_acrophase)':CI_d_acrophase}
 
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
 
     df_results["q(d_amplitude)"] = multi.multipletests(df_results["p(d_amplitude)"], method = 'fdr_bh')[1]
     df_results["q(d_amplification)"] = multi.multipletests(df_results["p(d_amplification)"], method = 'fdr_bh')[1]
@@ -1855,7 +1863,8 @@ def fit_generalized_cosinor_n_comp_group_best(df, period = 24, n_components = [1
              'amplification':amplification, 'p(amplification)':p_amplification, 'CI(amplification)':CI_amplification,
              'lin_comp':lin_comp, 'p(lin_comp)':p_lin_comp, 'CI(lin_comp)':CI_lin_comp}
 
-        df_best_models = df_best_models.append(d, ignore_index=True)
+        #df_best_models = df_best_models.append(d, ignore_index=True)
+        df_best_models = df_add_row(df_best_models, d)
 
     df_best_models["q"] = multi.multipletests(df_best_models["p"], method = 'fdr_bh')[1]
     #df_best_models["q_reject"] = multi.multipletests(df_best_models["p_reject"], method = 'fdr_bh')[1]
@@ -1909,7 +1918,8 @@ def population_fit_generalized_cosinor_n_comp_group_best(df, period = 24, n_comp
              'amplification':amplification, 'p(amplification)':p_amplification, 'CI(amplification)':CI_amplification,
              'lin_comp':lin_comp, 'p(lin_comp)':p_lin_comp, 'CI(lin_comp)':CI_lin_comp}
 
-        df_best_models = df_best_models.append(d, ignore_index=True)
+        #df_best_models = df_best_models.append(d, ignore_index=True)
+        df_best_models= df_add_row(df_best_models, d)
 
     df_best_models["q"] = multi.multipletests(df_best_models["p"], method = 'fdr_bh')[1]
     #df_best_models["q_reject"] = multi.multipletests(df_best_models["p_reject"], method = 'fdr_bh')[1]
@@ -1970,7 +1980,8 @@ def fit_generalized_cosinor_n_comp_group(df, period = 24, n_components = 3, fold
              'amplification':amplification, 'p(amplification)':p_amplification, 'CI(amplification)':CI_amplification,
              'lin_comp':lin_comp, 'p(lin_comp)':p_lin_comp, 'CI(lin_comp)':CI_lin_comp}
 
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
 
     df_results["q"] = multi.multipletests(df_results["p"], method = 'fdr_bh')[1]
     #df_results["q_reject"] = multi.multipletests(df_results["p_reject"], method = 'fdr_bh')[1]
@@ -2025,7 +2036,8 @@ def population_fit_generalized_cosinor_n_comp_group(df, period = 24, n_component
              'amplification':amplification, 'p(amplification)':p_amplification, 'CI(amplification)':CI_amplification,
              'lin_comp':lin_comp, 'p(lin_comp)':p_lin_comp, 'CI(lin_comp)':CI_lin_comp}
 
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
 
     df_results["q"] = multi.multipletests(df_results["p"], method = 'fdr_bh')[1]
     #df_results["q_reject"] = multi.multipletests(df_results["p_reject"], method = 'fdr_bh')[1]
@@ -2072,7 +2084,8 @@ def bootstrap_generalized_cosinor_n_comp_group_best(df, df_best_models, **kwargs
              'amplification':amplification, 'p(amplification)':p_amplification, 'CI(amplification)':CI_amplification,
              'lin_comp':lin_comp, 'p(lin_comp)':p_lin_comp, 'CI(lin_comp)':CI_lin_comp}
 
-        df_results = df_results.append(d, ignore_index=True)    
+        #df_results = df_results.append(d, ignore_index=True)    
+        df_results = df_add_row(df_results, d)
 
     df_results["q"] = multi.multipletests(df_results["p"], method = 'fdr_bh')[1]
     df_results["q(amplitude)"] = multi.multipletests(df_results["p(amplitude)"], method = 'fdr_bh')[1]
@@ -2121,7 +2134,8 @@ def bootstrap_generalized_cosinor_n_comp_group(df, period=24, n_components=3, am
              'amplification':amplification, 'p(amplification)':p_amplification, 'CI(amplification)':CI_amplification,
              'lin_comp':lin_comp, 'p(lin_comp)':p_lin_comp, 'CI(lin_comp)':CI_lin_comp}
 
-        df_results = df_results.append(d, ignore_index=True)    
+        #df_results = df_results.append(d, ignore_index=True)    
+        df_results = df_add_row(df_results, d)
 
     df_results["q"] = multi.multipletests(df_results["p"], method = 'fdr_bh')[1]
     df_results["q(amplitude)"] = multi.multipletests(df_results["p(amplitude)"], method = 'fdr_bh')[1]
@@ -2221,7 +2235,8 @@ def compare_pairs_n_comp_bootstrap_group(df, pairs, df_best_models = None, df_bo
              'd_lin_comp': d_lin_comp, 'p(d_lin_comp)':p_d_lin_comp, 'CI(d_lin_comp)':CI_d_lin_comp,
              'd_acrophase': d_acrophase, 'p(d_acrophase)':p_d_acrophase, 'CI(d_acrophase)':CI_d_acrophase}
 
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
 
     df_results["q(d_amplitude)"] = multi.multipletests(df_results["p(d_amplitude)"], method = 'fdr_bh')[1]
     df_results["q(d_amplification)"] = multi.multipletests(df_results["p(d_amplification)"], method = 'fdr_bh')[1]
@@ -2282,7 +2297,8 @@ def population_compare_pairs_n_comp_group(df, pairs, df_best_models = None, peri
              'd_lin_comp': d_lin_comp, 'p(d_lin_comp)':p_d_lin_comp, 'CI(d_lin_comp)':CI_d_lin_comp,
              'd_acrophase': d_acrophase}
 
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
 
     df_results["q(d_amplification)"] = multi.multipletests(df_results["p(d_amplification)"], method = 'fdr_bh')[1]
     df_results["q(d_lin_comp)"] = multi.multipletests(df_results["p(d_lin_comp)"], method = 'fdr_bh')[1]
@@ -2341,7 +2357,8 @@ def compare_phase_pairs(df, pairs, min_per = 18, max_per = 36, folder = '', pref
         d['ME'] = statistics['ME']
         d['resid_SE'] = statistics['resid_SE']
       
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
 
     for v in d:
         if v.startswith('p'):
@@ -2388,7 +2405,8 @@ def compare_nonlinear_pairs(df, pairs, min_per = 18, max_per = 36, folder = '', 
         d['ME'] = statistics['ME']
         d['resid_SE'] = statistics['resid_SE']
      
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
   
     for v in d:
         if v.startswith('p'):

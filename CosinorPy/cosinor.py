@@ -23,6 +23,8 @@ from random import sample
 
 import os
 
+from CosinorPy.helpers import df_add_row
+
 #from skopt.space import Space
 #from skopt.sampler import Lhs
 
@@ -165,10 +167,12 @@ def remove_lin_comp_df(df, n_components = 0, period = 24, summary_file=""):
         df_tmp['x'] = x
         df_tmp['y'] = y
         df_tmp['test'] = test
-        df2 = df2.append(df_tmp, ignore_index=True)
+        #df2 = df2.append(df_tmp, ignore_index=True)
+        df2 = pd.concat([df2, df_tmp], ignore_index=True)
         if summary_file:
             fit['test'] = test
-            df_fit=df_fit.append(fit, ignore_index=True)
+            #df_fit=df_fit.append(fit, ignore_index=True)
+            df_fit = df_add_row(df_fit, fit)
     if summary_file:
         df_fit.q = multi.multipletests(df_fit.p, method = 'fdr_bh')[1]
         if summary_file.endswith("csv"):
@@ -316,11 +320,13 @@ def get_best_fits(df_results, criterium = 'R2_adj', reverse = False, n_component
                     M = df_results[(df_results.test == name) & (df_results.n_components == n_comp)][criterium].min()
                 else:
                     M = df_results[(df_results.test == name) & (df_results.n_components == n_comp)][criterium].max()
-                df_best = df_best.append(df_results[(df_results.test == name) & (df_results.n_components == n_comp) & (df_results[criterium] == M)], ignore_index = True)
+                #df_best = df_best.append(df_results[(df_results.test == name) & (df_results.n_components == n_comp) & (df_results[criterium] == M)], ignore_index = True)
+                df_best = pd.concat([df_best, df_results[(df_results.test == name) & (df_results.n_components == n_comp) & (df_results[criterium] == M)]], ignore_index = True)
         
         else:
             M = df_results[df_results.test == name][criterium].max()
-            df_best = df_best.append(df_results[(df_results.test == name) & (df_results[criterium] == M)], ignore_index = True)
+            #df_best = df_best.append(df_results[(df_results.test == name) & (df_results[criterium] == M)], ignore_index = True)
+            df_best = pd.concat([df_best,df_results[(df_results.test == name) & (df_results[criterium] == M)]], ignore_index = True)
     
     return df_best
 
@@ -352,7 +358,8 @@ def get_best_models_population(df, df_models, n_components = [1,2,3], lin_comp =
                 #print (test, old_row[1].n_components, new_row[1].n_components)
                 if compare_models(RSS_reduced, RSS_full, DF_reduced, DF_full) < 0.05:
                     best_row = new_row
-        df_best = df_best.append(best_row[1], ignore_index=True)
+        #df_best = df_best.append(best_row[1], ignore_index=True)
+        df_best = df_add_row(df_best, dict(best_row[1]))
     return df_best
 
 
@@ -389,8 +396,8 @@ def get_best_models(df, df_models, n_components = [1,2,3], lin_comp = False, cri
                 if compare_models(RSS_reduced, RSS_full, DF_reduced, DF_full) < 0.05:
                     best_row = new_row
                    
-        df_best = df_best.append(best_row[1], ignore_index=True)
-    
+        #df_best = df_best.append(best_row[1], ignore_index=True)
+        df_best = df_add_row(df_best, dict(best_row[1]))
     return df_best
 
 """
@@ -625,7 +632,8 @@ def pivot_data(df, merge_repeats = True, z_score = True, df_results=False, sort_
 
             for i,(i1,i2) in enumerate(zip([0] + locs[:-1], locs)):
                 df_test.iloc[i1:i2,2] = f"{test}___rep{i}"      
-            df_heatmap = df_heatmap.append(df_test, ignore_index=True)
+            #df_heatmap = df_heatmap.append(df_test, ignore_index=True)
+            df_heatmap = pd.concat([df_heatmap, df_test], ignore_index=True)
 
     # convert timepoints to integers
     df_heatmap['x'] = df_heatmap['x'].astype(int)
@@ -886,26 +894,25 @@ def fit_group(df, n_components = 2, period = 24, names = "", folder = '', prefix
                 except:
                     R2, R2_adj = np.nan, np.nan
 
-                df_results = df_results.append({'test': test, 
-                                            'period': per,
-                                            'n_components': n_comps,
-                                            'p': statistics['p'], 
-                                            'p_reject': statistics['p_reject'],
-                                            'RSS': statistics['RSS'],
-                                            'R2': R2, 
-                                            'R2_adj': R2_adj,
-                                            'ME': statistics['ME'],
-                                            'resid_SE': statistics['resid_SE'],
-                                            'log-likelihood': results.llf,        
-                                            'amplitude': rhythm_param['amplitude'],
-                                            'acrophase': rhythm_param['acrophase'],
-                                            'mesor': rhythm_param['mesor'],
-                                            'peaks': rhythm_param['peaks'],
-                                            'heights': rhythm_param['heights'],
-                                            'troughs': rhythm_param['troughs'],
-                                            'heights2': rhythm_param['heights2']
-                                            
-                                            }, ignore_index=True)
+                df_results = df_add_row(df_results,
+                                        {'test': test, 
+                                        'period': per,
+                                        'n_components': n_comps,
+                                        'p': statistics['p'], 
+                                        'p_reject': statistics['p_reject'],
+                                        'RSS': statistics['RSS'],
+                                        'R2': R2, 
+                                        'R2_adj': R2_adj,
+                                        'ME': statistics['ME'],
+                                        'resid_SE': statistics['resid_SE'],
+                                        'log-likelihood': results.llf,        
+                                        'amplitude': rhythm_param['amplitude'],
+                                        'acrophase': rhythm_param['acrophase'],
+                                        'mesor': rhythm_param['mesor'],
+                                        'peaks': rhythm_param['peaks'],
+                                        'heights': rhythm_param['heights'],
+                                        'troughs': rhythm_param['troughs'],
+                                        'heights2': rhythm_param['heights2']})
                 if n_comps == 0:
                     break
     
@@ -949,7 +956,7 @@ def population_fit_group(df, n_components = 2, period = 24, folder = '', prefix=
                     _, statistics, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, **kwargs)
                     
                             
-                df_results = df_results.append({'test': name, 
+                df_results = df_add_row(df_results,{'test': name, 
                                             'period': per,
                                             'n_components': n_comps,
                                             'p': statistics['p'], 
@@ -959,7 +966,7 @@ def population_fit_group(df, n_components = 2, period = 24, folder = '', prefix=
                                             'resid_SE': statistics['resid_SE'],
                                             'amplitude': rhythm_params['amplitude'],
                                             'acrophase': rhythm_params['acrophase'],
-                                            'mesor': rhythm_params['mesor']}, ignore_index=True)
+                                            'mesor': rhythm_params['mesor']})
                 if n_comps == 0:
                     break
     
@@ -1332,15 +1339,15 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
             color = 'black'
 
         if plot_measurements:        
-            if not hold:             
-                plt.plot(X,Y, 'ko', markersize=1, label = 'data', color=color)
+            if not hold:                             
+                plt.plot(X,Y, 'o', markersize=1, label = 'data', color=color)
             else:
-                plt.plot(X,Y, 'ko', markersize=1, color=color)
+                plt.plot(X,Y, 'o', markersize=1, color=color)
                 
         if not hold:
-            plt.plot(X_plot, Y_plot, 'k', label = 'fit', color=color)
+            plt.plot(X_plot, Y_plot, label = 'fit', color=color)
         else:
-            plt.plot(X_plot, Y_plot, 'k', label = name, color=color)
+            plt.plot(X_plot, Y_plot, label = name, color=color)
         
         # plot measurements
         if plot_measurements:
@@ -1696,7 +1703,8 @@ def compare_pairs_limo(df, pairs, n_components = 3, period = 24, folder = "", pr
                         d[f'p(d_{param})'] = rhythm_params[f'p(d_{param})']
                         d[f'q(d_{param})'] = np.nan           
                     
-                df_results = df_results.append(d, ignore_index=True)
+                #df_results = df_results.append(d, ignore_index=True)
+                df_results = df_add_row(df_results, d)
   
     df_results['q'] = multi.multipletests(df_results['p'], method = 'fdr_bh')[1]
     
@@ -1784,7 +1792,7 @@ def compare_pairs_best_models_limo(df, df_best_models, pairs, folder = "", prefi
                 d[f'p(d_{param})'] = rhythm_params[f'p(d_{param})']
                 d[f'q(d_{param})'] = np.nan           
             
-            df_results = df_results.append(d, ignore_index=True)
+            #df_results = df_results.append(d, ignore_index=True)
 
 
         #d['CI(d_amplitude)'] = rhythm_params['CI(d_amplitude)']
@@ -1792,7 +1800,8 @@ def compare_pairs_best_models_limo(df, df_best_models, pairs, folder = "", prefi
         #d['CI(d_acrophase)'] = rhythm_params['CI(d_acrophase)']
         #d['p(d_acrophase)'] = rhythm_params['p(d_acrophase)']
        
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
     
     df_results['q'] = multi.multipletests(df_results['p'], method = 'fdr_bh')[1]
     df_results['q params'] = multi.multipletests(df_results['p params'], method = 'fdr_bh')[1]     
@@ -1905,7 +1914,8 @@ def compare_pairs(df, pairs, n_components = 3, period = 24, analysis = "bootstra
                     d['d_lin_comp'], d['p(d_lin_comp)'], d['CI(d_lin_comp)'] = diff_p_t_test_from_CI(rp1['lin_comp'], rp2['lin_comp'], rp1['CI(lin_comp)'], rp2['CI(lin_comp)'], rhythm_params['DoF'])
 
 
-                df_results = df_results.append(d, ignore_index=True)
+                #df_results = df_results.append(d, ignore_index=True)
+                df_results = df_add_row(df_results, d)
   
     df_results['q1'] = multi.multipletests(df_results['p1'], method = 'fdr_bh')[1]
     df_results['q2'] = multi.multipletests(df_results['p2'], method = 'fdr_bh')[1]
@@ -1996,7 +2006,8 @@ def compare_pairs_best_models(df, df_best_models, pairs, analysis = "bootstrap",
             d['d_lin_comp'], d['p(d_lin_comp)'], d['CI(d_lin_comp)'] = diff_p_t_test_from_CI(rp1['lin_comp'], rp2['lin_comp'], rp1['CI(lin_comp)'], rp2['CI(lin_comp)'], rhythm_params['DoF'])
 
         
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
 
 
     df_results['q1'] = multi.multipletests(df_results['p1'], method = 'fdr_bh')[1]
@@ -2100,7 +2111,8 @@ def compare_pairs_population(df, pairs, n_components = 3, period = 24, folder = 
                         d[f'q(d_{param})'] = np.nan
                
                     
-                df_results = df_results.append(d, ignore_index=True)
+                #df_results = df_results.append(d, ignore_index=True)
+                df_results = df_add_row(df_results, d)
   
     df_results['q1'] = multi.multipletests(df_results['p1'], method = 'fdr_bh')[1]
     df_results['q2'] = multi.multipletests(df_results['p2'], method = 'fdr_bh')[1]
@@ -2200,7 +2212,8 @@ def compare_pairs_best_models_population(df, df_best_models, pairs, folder = "",
                 d[f'p(d_{param})'] = rhythm_params[f'p(d_{param})']
                 d[f'q(d_{param})'] = np.nan
                 
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
     
     for param in parameters_to_analyse:
         df_results[f'q(d_{param})'] = multi.multipletests(df_results[f'p(d_{param})'], method = 'fdr_bh')[1]     
@@ -2604,7 +2617,8 @@ def analyse_models(df, n_components = 3, period = 24, plot = False, folder = "",
                     row[f'p({param})'] = rhythm_params[f'p({param})']
                     row[f'q({param})'] = np.nan   
 
-                df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
+                #df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
+                df_results_extended = df_add_row(df_results_extended, row)
 
     df_results_extended['q'] = multi.multipletests(df_results_extended['p'], method = 'fdr_bh')[1]
     df_results_extended['q_reject'] = multi.multipletests(df_results_extended['p_reject'], method = 'fdr_bh')[1]    
@@ -2668,7 +2682,8 @@ def analyse_best_models(df, df_models, sparse_output = True, plot = False, folde
             row[f'p({param})'] = rhythm_params[f'p({param})']
             row[f'q({param})'] = np.nan   
 
-        df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
+        #df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
+        df_results_extended = df_add_row(df_results_extended, row)
         
     for param in parameters_to_analyse_ext:               
         df_results_extended[f'q({param})'] = multi.multipletests(df_results_extended[f'p({param})'], method = 'fdr_bh')[1]
@@ -2728,7 +2743,8 @@ def analyse_models_population(df, n_components = 3, period = 24, plot=False, fol
                     row[f'q({param})'] = np.nan   
 
                                    
-                df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
+                #df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
+                df_results_extended = df_add_row(df_results_extended, row)
 
     df_results_extended['q'] = multi.multipletests(df_results_extended['p'], method = 'fdr_bh')[1]
     df_results_extended['q_reject'] = multi.multipletests(df_results_extended['p_reject'], method = 'fdr_bh')[1]    
@@ -2781,7 +2797,8 @@ def analyse_best_models_population(df, df_models, sparse_output = True, plot=Fal
             row[f'q({param})'] = np.nan   
 
             
-        df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
+        #df_results_extended = df_results_extended.append(row, ignore_index=True, sort=False)
+        df_results_extended = df_add_row(df_results_extended, row)
 
     for param in parameters_to_analyse:
         df_results_extended[f'q({param})'] = multi.multipletests(df_results_extended[f'p({param})'], method = 'fdr_bh')[1]
@@ -3341,7 +3358,8 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
             d[f'd_{param}'] = d_params[param]
             d[f'p(d_{param})'] = p_d[param]
         
-        df_results = df_results.append(d, ignore_index=True)
+        #df_results = df_results.append(d, ignore_index=True)
+        df_results = df_add_row(df_results, d)
     
     if len(pairs) == 1:
         return d
