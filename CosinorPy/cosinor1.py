@@ -565,7 +565,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
 
             plt.fill_between(x, lower, upper, color='black', alpha=0.1)  
             """
-            if k == 0:                
+            if k <= 1:                
                 _, lower, upper = wls_prediction_std(fit_results, exog=sm.add_constant(data, has_constant='add'), alpha=0.05)        
             else:
                 var_Y = np.var(Y_fit_all, axis=0, ddof = k-1)
