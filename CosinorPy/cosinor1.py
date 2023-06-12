@@ -302,7 +302,7 @@ def population_fit_group(df, period = 24, save_folder='', **kwargs):
 
     return df_cosinor1_fits    
 
-def population_test_cosinor_pairs(df, pairs, period = 24, save_folder = "", plot_on=True):
+def population_test_cosinor_pairs(df, pairs, period = 24, save_folder = "", plot_on=True, **kwargs):
     df_res = pd.DataFrame(columns = ['test', 
                                     'd_amplitude', 
                                     'p(d_amplitude)',
@@ -315,8 +315,8 @@ def population_test_cosinor_pairs(df, pairs, period = 24, save_folder = "", plot
         df_pop1 = df[df.test.str.startswith(pair[0])] 
         df_pop2 = df[df.test.str.startswith(pair[1])] 
 
-        res1 = population_fit_cosinor(df_pop1, period = period, plot_on = plot_on, hold_on=True, color="black")      
-        res2 = population_fit_cosinor(df_pop2, period = period, plot_on = plot_on, hold_on=True, color="red")
+        res1 = population_fit_cosinor(df_pop1, period = period, plot_on = plot_on, hold_on=True, color="black", **kwargs)      
+        res2 = population_fit_cosinor(df_pop2, period = period, plot_on = plot_on, hold_on=True, color="red", **kwargs)
         
         plt.legend()
         plt.title(f"{pair[0]} vs. {pair[1]}")
@@ -430,7 +430,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
     k = len(tests)
     param_names = ['Intercept', 'rrr (beta)', 'sss (gamma)', 'amp', 'acr']
     cosinors = []
-    
+
     test_name = tests[0].split('_rep')[0]    
     
     min_X = np.min(df_pop.x.values)
