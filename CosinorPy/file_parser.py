@@ -437,7 +437,19 @@ def remove_outliers_f(x, y):
     #print(x[np.logical_not(idxs)], y[np.logical_not(idxs)])
     return x[idxs], y[idxs]
 
+def remove_outliers_df(df):
 
+    for test in df.test.unique():
+        x,y = df.loc[df.test == test, 'x'].values, df.loc[df.test == test, 'y'].values
+        x,y = remove_outliers_f(x, y)
+        df3 = pd.DataFrame()
+        df3['x'] = x
+        df3['y'] = y
+        df3['test'] = test
+
+
+        df2 = pd.concat([df2, df3], ignore_index=True)
+    return df2
 
 """
 RESCALE RESCALE RESCALE
