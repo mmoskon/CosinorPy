@@ -424,7 +424,7 @@ def population_test_cosinor_pairs_independent(df, pairs, period=24, period2=None
     return df_res
 
 
-def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = True, plot_individuals = True, plot_measurements=True, plot_margins=True, color="black", hold_on=False):
+def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = True, plot_individuals = True, plot_measurements=True, plot_margins=True, color="black", hold_on=False, plot_residuals=False):
     params = -1
     tests = df_pop.test.unique()
     k = len(tests)
@@ -451,6 +451,21 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
             Y_fit = fit_results.predict(data)          
         
             plt.plot(X_fit, Y_fit, color=color, alpha=0.1, label='_Hidden label')
+
+            if plot_residuals:
+                plt.figure(2)
+
+                resid = fit_results.resid
+                sm.qqplot(resid)
+                plt.title(test)
+                if save_to:
+                    plt.savefig(save_to+f'_resid_{test}'+'.pdf')
+                    plt.savefig(save_to+f'_resid_{test}'+'.png')
+                    plt.close()
+                else:
+                    plt.show()
+                plt.figure(1)
+
         
             #M = fit_results.params[0]
             #y_fit = evaluate_cosinor(x, M, amp, acr, period)
