@@ -448,7 +448,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
             data = pd.DataFrame()
             data['rrr'] = rrr_fit
             data['sss'] = sss_fit
-            Y_fit = fit_results.predict(data)          
+            Y_fit = fit_results.predict(data).values          
         
             plt.plot(X_fit, Y_fit, color=color, alpha=0.1, label='_Hidden label')
 
