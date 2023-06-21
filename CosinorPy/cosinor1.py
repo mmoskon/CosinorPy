@@ -268,7 +268,7 @@ def population_fit_group(df, period = 24, save_folder='', **kwargs):
     names.sort()
     
     for name in names:
-        df_pop = df[df.test.str.startswith(name)] 
+        df_pop = df[df.test.str.startswith(f'{name}_rep')] 
         
         if save_folder:
             #save_to = save_folder+"\\pop_"+name+'.pdf'
@@ -312,8 +312,8 @@ def population_test_cosinor_pairs(df, pairs, period = 24, save_folder = "", plot
                                     'q(d_acrophase)'], dtype=float)
 
     for pair in pairs:
-        df_pop1 = df[df.test.str.startswith(pair[0])] 
-        df_pop2 = df[df.test.str.startswith(pair[1])] 
+        df_pop1 = df[df.test.str.startswith(f'{pair[0]}_rep')] 
+        df_pop2 = df[df.test.str.startswith(f'{pair[1]}_rep')] 
 
         res1 = population_fit_cosinor(df_pop1, period = period, plot_on = plot_on, hold_on=True, color="black", **kwargs)      
         res2 = population_fit_cosinor(df_pop2, period = period, plot_on = plot_on, hold_on=True, color="red", **kwargs)
@@ -365,8 +365,8 @@ def population_test_cosinor_pairs_independent(df, pairs, period=24, period2=None
                                     'CI(d_acrophase)'], dtype=float)
 
     for pair in pairs:
-        df_pop1 = df[df.test.str.startswith(pair[0])] 
-        df_pop2 = df[df.test.str.startswith(pair[1])] 
+        df_pop1 = df[df.test.str.startswith(f'{pair[0]}_rep')] 
+        df_pop2 = df[df.test.str.startswith(f'{pair[1]}_rep')] 
         
         k1 = len(df_pop1.test.unique())
         k2 = len(df_pop2.test.unique())
