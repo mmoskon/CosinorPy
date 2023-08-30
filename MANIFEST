@@ -6,3 +6,4 @@ CosinorPy\cosinor.py
 CosinorPy\cosinor1.py
 CosinorPy\cosinor_nonlin.py
 CosinorPy\file_parser.py
+CosinorPy\helpers.py
