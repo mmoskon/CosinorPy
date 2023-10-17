@@ -4085,8 +4085,6 @@ def compare_pair_population_CI_new(df, test1, test2, n_components = 1, period = 
     _, statistics1, statistics_params1, rhythm_params1, _ = population_fit(df_pop1, n_components = n_components1, period = period1, plot = False,plot_measurements=False, plot_individuals=False, plot_margins=False, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, **kwargs)
     _, statistics2, statistics_params2, rhythm_params2, _ = population_fit(df_pop2, n_components = n_components2, period = period2, plot = False, plot_measurements=False, plot_individuals=False, plot_margins=False, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, **kwargs)
 
-    print(statistics_params1)
-
     rhythm_params['rhythm_params1'] = rhythm_params1
     rhythm_params['rhythm_params2'] = rhythm_params2
 
