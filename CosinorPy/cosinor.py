@@ -951,22 +951,29 @@ def population_fit_group(df, n_components = 2, period = 24, folder = '', prefix=
 
                 if folder:                    
                     save_to=os.path.join(folder,prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per))                    
-                    _, statistics, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, save_to = save_to, **kwargs)
+                    _, statistics, statistics_params, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, save_to = save_to, **kwargs)
                 else:                    
-                    _, statistics, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, **kwargs)
-                    
-                            
-                df_results = df_add_row(df_results,{'test': name, 
-                                            'period': per,
-                                            'n_components': n_comps,
-                                            'p': statistics['p'], 
-                                            'p_reject': statistics['p_reject'],
-                                            'RSS': statistics['RSS'],
-                                            'ME': statistics['ME'],
-                                            'resid_SE': statistics['resid_SE'],
-                                            'amplitude': rhythm_params['amplitude'],
-                                            'acrophase': rhythm_params['acrophase'],
-                                            'mesor': rhythm_params['mesor']})
+                    _, statistics, statistics_params, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, **kwargs)
+
+
+                d = {'test': name, 
+                    'period': per,
+                    'n_components': n_comps,
+                    'p': statistics['p'], 
+                    'p_reject': statistics['p_reject'],
+                    'RSS': statistics['RSS'],
+                    'ME': statistics['ME'],
+                    'resid_SE': statistics['resid_SE'],
+                    'amplitude': rhythm_params['amplitude'],
+                    'acrophase': rhythm_params['acrophase'],
+                    'mesor': rhythm_params['mesor']}    
+                
+                
+                ind_params_stats = statistics_params['ind_params_stats'] 
+                for a,b in ind_params_stats.items():
+                    d[a] = b
+
+                df_results = df_add_row(df_results, d)
                 if n_comps == 0:
                     break
     
@@ -989,12 +996,16 @@ def population_fit_group(df, n_components = 2, period = 24, folder = '', prefix=
 ******************************
 """
     
-def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', plot = True, plot_measurements=True, plot_individuals=True, plot_margins=True, hold = False, save_to = '', x_label='', y_label='', return_individual_params = False, params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000, sampling_type = "LHS", parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], color="black", **kwargs):
+def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', 
+                   plot = True, plot_measurements=True, plot_individuals=True, plot_margins=True, hold = False, save_to = '', x_label='', y_label='', 
+                   return_individual_params = False, params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000, 
+                   sampling_type = "LHS", parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], color="black", **kwargs):
 
-    if return_individual_params:
-        ind_params = {}
-        for param in parameters_to_analyse:
-            ind_params[param] = []
+    #if return_individual_params:
+    ind_params = {}
+    ind_params_stats = {}
+    for param in parameters_to_analyse:
+        ind_params[param] = []
 
         
     params = -1
@@ -1051,11 +1062,11 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         if lin_comp:
             X_fit_eval_params[:,1] = 0    
 
-        if return_individual_params:
-            Y_eval_params = results.predict(X_fit_eval_params)    
-            rhythm_ind_params = evaluate_rhythm_params(X_test, Y_eval_params, period=period)    
-            for param in parameters_to_analyse:
-                ind_params[param].append(rhythm_ind_params[param])
+        #if return_individual_params:
+        Y_eval_params = results.predict(X_fit_eval_params)    
+        rhythm_ind_params = evaluate_rhythm_params(X_test, Y_eval_params, period=period)    
+        for param in parameters_to_analyse:
+            ind_params[param].append(rhythm_ind_params[param])
             
         if (plot and plot_individuals):
             #Y_eval_params = results.predict(X_fit_eval_params)            
@@ -1088,7 +1099,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
     
 
 
-    # parameter statistics: means, variances, stadndard deviations, confidence intervals, p-values
+    # parameter statistics: means, variances, standard deviations, confidence intervals, p-values
     #http://reliawiki.com/index.php/Multiple_Linear_Regression_Analysis
     if k > 1:
         means = np.mean(params, axis=0)
@@ -1101,6 +1112,30 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         lower_CI = means - ((t*sd)/((k-1)**0.5))
         upper_CI = means + ((t*sd)/((k-1)**0.5))        
         results.initialize(model, means)
+
+
+        # analysis of amplitude, mesor, acrophase...
+        for ind_param in parameters_to_analyse:
+            ind_vals = np.array(ind_params[ind_param])
+            
+            if ind_param in parameters_angular:
+                p_means = project_acr(circmean(ind_vals, high = np.pi, low = -np.pi))
+                p_sd = circstd(ind_vals, high = np.pi, low = -np.pi)
+            else:
+                p_means = np.mean(ind_vals)
+                p_variances = np.sum((ind_vals-np.mean(ind_vals))**2)/(k-1)
+                p_sd = p_variances**0.5
+            
+            p_se = p_sd/((k-1)**0.5)
+            p_T0 = p_means/p_se
+            ind_param_p = 2 * (1 - stats.t.cdf(abs(p_T0), k-1))
+            t = abs(stats.t.ppf(0.05/2,df=k-1))
+            ind_param_lower_CI = p_means - ((t*p_sd)/((k-1)**0.5))
+            ind_param_upper_CI = p_means + ((t*p_sd)/((k-1)**0.5))        
+           
+            ind_params_stats[f'{ind_param}'] = p_means
+            ind_params_stats[f'p({ind_param})'] = ind_param_p
+            ind_params_stats[f'CI({ind_param})'] = [ind_param_lower_CI, ind_param_upper_CI]            
     else:
         means = params
         sd = np.zeros(len(params))
@@ -1111,6 +1146,11 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         upper_CI = means
         p_values = np.zeros(len(params))
         p_values[:] = np.nan
+
+        for ind_param in parameters_to_analyse:
+            ind_params_stats[f'{ind_param}'] = ind_params[ind_param][0]
+            ind_params_stats[f'p({ind_param})'] = np.nan
+            ind_params_stats[f'CI({ind_param})'] = [np.nan, np.nan_to_num]
 
     x,y = df_pop.x, df_pop.y
     xy = list(zip(x,y))
@@ -1187,7 +1227,8 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
     statistics_params = {'values': means,
                         'SE': se,
                         'CI': (lower_CI, upper_CI),
-                        'p-values': p_values} 
+                        'p-values': p_values,
+                        'ind_params_stats': ind_params_stats} 
 
 
     if params_CI:
@@ -1503,7 +1544,7 @@ def evaluate_rhythm_params(X,Y, project_acrophase=True, period=0):
     #plt.show()    
 
     m = min(Y)
-    M = max(Y)
+    M = max(Y)    
     A = M - m
     MESOR = m + A/2
     AMPLITUDE = abs(A/2)
@@ -1514,6 +1555,8 @@ def evaluate_rhythm_params(X,Y, project_acrophase=True, period=0):
     H = M - 0.01*M if M >= 0 else M + 0.01*M
     locs, heights = signal.find_peaks(Y, height = H)
     heights = heights['peak_heights'] 
+
+    
     
     if len(locs) >= 2:
         period2 = X[locs[1]] - X[locs[0]]
@@ -1535,7 +1578,7 @@ def evaluate_rhythm_params(X,Y, project_acrophase=True, period=0):
     else:
         ACROPHASE = np.nan
   
-
+    
     # peaks and heights
     #Y = Y[X < 24]
     #X = X[X < 24]
@@ -3307,8 +3350,8 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
         # equations below only present an approximation
         for param in parameters_to_analyse:        
             if param in parameters_angular:
-                mean_params1[param] = project_acr(circmean(ind_params1[param], high = 0, low = -2*np.pi))
-                mean_params2[param] = project_acr(circmean(ind_params2[param], high = 0, low = -2*np.pi))
+                mean_params1[param] = project_acr(circmean(ind_params1[param], high = np.pi, low = -np.pi))
+                mean_params2[param] = project_acr(circmean(ind_params2[param], high = np.pi, low = -np.pi))
                 d_params[param] = project_acr(mean_params2[param] - mean_params1[param])
             else:
                 mean_params1[param] = np.mean(ind_params1[param])
@@ -3340,8 +3383,8 @@ def permutation_test_population_approx(df, pairs, period = 24, n_components = 2,
 
             for param in parameters_to_analyse:     
                 if param in parameters_angular:
-                    test1 = project_acr(circmean(ind_params_all[param][perm1], high = 0, low = -2*np.pi))
-                    test2 = project_acr(circmean(ind_params_all[param][perm2], high = 0, low = -2*np.pi))
+                    test1 = project_acr(circmean(ind_params_all[param][perm1], high = np.pi, low = -np.pi))
+                    test2 = project_acr(circmean(ind_params_all[param][perm2], high = np.pi, low = -np.pi))
                     d_test = project_acr(test2 - test1)
                 else:
                     test1 = np.mean(ind_params_all[param][perm1])
@@ -4024,6 +4067,92 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
     return rhythm_params
 
 
+# compare two population fit pairs independently - new variant that calculates CI amplitudes, CI acrophases etc. from individual models
+def compare_pair_population_CI_new(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], t_test = True, **kwargs):
+      
+    rhythm_params = {}
+
+    n_components1 = n_components
+    period1 = period
+    if not n_components2:
+        n_components2 = n_components1
+    if not period2:
+        period2 = period1
+            
+    df_pop1 = df[df.test.str.startswith(test1)] 
+    df_pop2 = df[df.test.str.startswith(test2)] 
+
+    _, statistics1, statistics_params1, rhythm_params1, _ = population_fit(df_pop1, n_components = n_components1, period = period1, plot = False,plot_measurements=False, plot_individuals=False, plot_margins=False, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, **kwargs)
+    _, statistics2, statistics_params2, rhythm_params2, _ = population_fit(df_pop2, n_components = n_components2, period = period2, plot = False, plot_measurements=False, plot_individuals=False, plot_margins=False, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, **kwargs)
+
+    print(statistics_params1)
+
+    rhythm_params['rhythm_params1'] = rhythm_params1
+    rhythm_params['rhythm_params2'] = rhythm_params2
+
+    rhythm_params['statistics1'] = statistics1
+    rhythm_params['statistics2'] = statistics2
+
+    #p1 = statistics1['p']
+    #p2 = statistics2['p']
+
+    #if p1 > 0.05 or p2 > 0.05:
+    #    print("rhythmicity in one is not significant")
+    #    #return
+
+    d_params = {}
+    
+    for param in parameters_to_analyse:        
+
+        rhythm_params1[param] = statistics_params1['ind_params_stats'][param] #override the joint cosinor model
+        rhythm_params2[param] = statistics_params2['ind_params_stats'][param] #override the joint cosinor model
+
+        d_params[param] = rhythm_params2[param] - rhythm_params1[param]
+        if param in parameters_angular:
+            d_params[param] = project_acr(d_params[param])        
+    
+    CI1 = {}
+    CI2 = {}
+    for param in parameters_to_analyse:            
+        CI1[param] = statistics_params1['ind_params_stats'][f'CI({param})']
+        CI2[param] = statistics_params2['ind_params_stats'][f'CI({param})']
+        
+
+    # DoF
+    k1 = len(df_pop1.test.unique())
+    k2 = len(df_pop2.test.unique()) 
+    k = len(df_pop1.test.unique()) + len(df_pop2.test.unique()) 
+    DoF = k - 2
+    DoF1 = k1 - 1
+    DoF2 = k2 - 1
+    rhythm_params['DoF'] = DoF
+
+    # statistics
+    if t_test:
+        t = abs(stats.t.ppf(0.05/2,df=DoF)) 
+    else:
+        t = 1.96
+
+    for param in parameters_to_analyse:        
+        angular = True if param in parameters_angular else False
+        se_param = get_se_diff_from_CIs(CI1[param], CI2[param], DoF1, DoF2, t_test = t_test, angular=angular, CI_type = "se", n1 = k1, n2 = k2, DoF = DoF) 
+        d_param = d_params[param]
+
+        rhythm_params[f'd_{param}'] = d_param
+
+        if param in parameters_angular:
+            rhythm_params[f'CI(d_{param})'] =  get_acrophase_CI(d_param, t*se_param)
+        else:
+            rhythm_params[f'CI(d_{param})'] = [d_param - t*se_param, d_param + t*se_param]        
+  
+        if t_test:
+            rhythm_params[f'p(d_{param})'] = get_p_t_test(d_param, se_param, DoF)
+        else:
+            rhythm_params[f'p(d_{param})'] = get_p_z_test(d_param, se_param)
+    
+    return rhythm_params
+
+
 # compare two pairs independently
 def compare_pair_CI(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], samples_per_param_CI=5, max_samples_CI = 1000, t_test = True, sampling_type="LHS", rhythm_params = {}, single_params = {}, **kwargs):    
     
@@ -4318,8 +4447,8 @@ def bootstrap_statistics(sample_bs, angular=False, bootstrap_type = "std", t_tes
     # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1255808/
     # https://ocw.mit.edu/courses/mathematics/18-05-introduction-to-probability-and-statistics-spring-2014/readings/MIT18_05S14_Reading24.pdf
     if angular:
-        mean = project_acr(circmean(sample_bs, high = 0, low = -2*np.pi))
-        std = circstd(sample_bs, high = 0, low = -2*np.pi)
+        mean = project_acr(circmean(sample_bs, high = np.pi, low = -np.pi))
+        std = circstd(sample_bs, high = np.pi, low = -np.pi)
 
         if bootstrap_type == "se":
             se = std/(len(sample_bs)-1)**0.5
