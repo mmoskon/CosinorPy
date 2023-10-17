@@ -1133,7 +1133,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
             ind_param_lower_CI = p_means - ((t*p_sd)/((k-1)**0.5))
             ind_param_upper_CI = p_means + ((t*p_sd)/((k-1)**0.5))        
            
-            ind_params_stats[f'{ind_param}'] = p_means
+            ind_params_stats[f'mean({ind_param})'] = p_means
             ind_params_stats[f'p({ind_param})'] = ind_param_p
             ind_params_stats[f'CI({ind_param})'] = [ind_param_lower_CI, ind_param_upper_CI]            
     else:
@@ -1148,7 +1148,7 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         p_values[:] = np.nan
 
         for ind_param in parameters_to_analyse:
-            ind_params_stats[f'{ind_param}'] = ind_params[ind_param][0]
+            ind_params_stats[f'mean({ind_param})'] = ind_params[ind_param][0]
             ind_params_stats[f'p({ind_param})'] = np.nan
             ind_params_stats[f'CI({ind_param})'] = [np.nan, np.nan_to_num]
 
@@ -4104,8 +4104,8 @@ def compare_pair_population_CI_new(df, test1, test2, n_components = 1, period = 
     
     for param in parameters_to_analyse:        
 
-        rhythm_params1[param] = statistics_params1['ind_params_stats'][param] #override the joint cosinor model
-        rhythm_params2[param] = statistics_params2['ind_params_stats'][param] #override the joint cosinor model
+        rhythm_params1[param] = statistics_params1['ind_params_stats'][f'mean({param})'] #override the joint cosinor model
+        rhythm_params2[param] = statistics_params2['ind_params_stats'][f'mean({param})'] #override the joint cosinor model
 
         d_params[param] = rhythm_params2[param] - rhythm_params1[param]
         if param in parameters_angular:
