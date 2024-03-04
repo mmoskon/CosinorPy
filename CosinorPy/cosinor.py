@@ -1210,7 +1210,14 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
         else:
             plt.axis([0, period, min_Y_test*0.9, max_Y_test*1.1])
         
-    
+       
+    statistics = calculate_statistics(x, y, Y_fit, n_components, period, lin_comp)   
+    statistics_params = {'values': means,
+                        'SE': se,
+                        'CI': (lower_CI, upper_CI),
+                        'p-values': p_values,
+                        'ind_params_stats': ind_params_stats} 
+
     if plot:
         #pop_name = "_".join(test.split("_")[:-1])
         if not hold:
@@ -1222,14 +1229,6 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
                 plt.close()
             else:
                 plt.show()
-    
-    statistics = calculate_statistics(x, y, Y_fit, n_components, period, lin_comp)   
-    statistics_params = {'values': means,
-                        'SE': se,
-                        'CI': (lower_CI, upper_CI),
-                        'p-values': p_values,
-                        'ind_params_stats': ind_params_stats} 
-
 
     if params_CI:
         population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=samples_per_param_CI, max_samples = max_samples_CI, k=k, sampling_type=sampling_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, period=period)
