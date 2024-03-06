@@ -1135,7 +1135,8 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
            
             ind_params_stats[f'mean({ind_param})'] = p_means
             ind_params_stats[f'p({ind_param})'] = ind_param_p
-            ind_params_stats[f'CI({ind_param})'] = [ind_param_lower_CI, ind_param_upper_CI]            
+            ind_params_stats[f'CI({ind_param})'] = [ind_param_lower_CI, ind_param_upper_CI]          
+
     else:
         means = params
         sd = np.zeros(len(params))
@@ -1230,8 +1231,12 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
             else:
                 plt.show()
 
+    
     if params_CI:
-        population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=samples_per_param_CI, max_samples = max_samples_CI, k=k, sampling_type=sampling_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, period=period)
+        # this code is not used any more - not reliable
+        #    population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=samples_per_param_CI, max_samples = max_samples_CI, k=k, sampling_type=sampling_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, period=period)
+        rhythm_params.update(ind_params_stats)
+
 
     if return_individual_params:        
         return params, statistics, statistics_params, rhythm_params, results, ind_params
@@ -2780,6 +2785,7 @@ def analyse_models_population(df, n_components = 3, period = 24, plot=False, fol
                 
                 for param in parameters_to_analyse:
                     row[f'{param}'] =  rhythm_params[f'{param}']
+                    #row[f'mean({param})'] =  rhythm_params[f'mean({param})']
                     row[f'CI({param})'] = rhythm_params[f'CI({param})']
                     row[f'p({param})'] = rhythm_params[f'p({param})']
                     row[f'q({param})'] = np.nan   
