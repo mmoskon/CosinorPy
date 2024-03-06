@@ -23,6 +23,8 @@ from random import sample
 
 import os
 
+import copy
+
 from CosinorPy.helpers import df_add_row
 
 #from skopt.space import Space
@@ -998,8 +1000,10 @@ def population_fit_group(df, n_components = 2, period = 24, folder = '', prefix=
     
 def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model_type = 'lin', 
                    plot = True, plot_measurements=True, plot_individuals=True, plot_margins=True, hold = False, save_to = '', x_label='', y_label='', 
-                   return_individual_params = False, params_CI = False, samples_per_param_CI=5, max_samples_CI = 1000, 
-                   sampling_type = "LHS", parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], color="black", **kwargs):
+                   return_individual_params = False, params_CI = False, params_CI_analysis = 'sampling', bootstrap_size = 1000, samples_per_param_CI=5, max_samples_CI = 1000, 
+                   sampling_type = "LHS", parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], color="black", **kwargs):    
+
+    
 
     #if return_individual_params:
     ind_params = {}
@@ -1233,11 +1237,13 @@ def population_fit(df_pop, n_components = 2, period = 24, lin_comp= False, model
 
     
     if params_CI:
-        # this code is not used any more - not reliable
-        #    population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=samples_per_param_CI, max_samples = max_samples_CI, k=k, sampling_type=sampling_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, period=period)
+        if params_CI_analysis == 'bootstrap':
+            ind_params_stats = population_eval_params_bootstrap(X_test, X_fit_eval_params, model, results, params, bootstrap_size=bootstrap_size, bootstrap_type='std', t_test=True, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, period=period)               
+        elif params_CI_analysis == 'sampling':
+            ind_params_stats = population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, samples_per_param=samples_per_param_CI, max_samples = max_samples_CI, k=k, sampling_type=sampling_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, period=period)                
+        
         rhythm_params.update(ind_params_stats)
-
-
+        
     if return_individual_params:        
         return params, statistics, statistics_params, rhythm_params, results, ind_params
 
@@ -2770,8 +2776,9 @@ def analyse_models_population(df, n_components = 3, period = 24, plot=False, fol
                     
                 if plot and folder:
                     save_to=os.path.join(folder,prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per)) 
+            
 
-                _, statistics, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, plot = plot, save_to = save_to, params_CI = True, **kwargs)  
+                _, statistics, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, plot = plot, save_to = save_to, params_CI = True, parameters_to_analyse=parameters_to_analyse, parameters_angular=parameters_angular, **kwargs)  
                                 
                 row = {'test': name,
                     'period': per,
@@ -2834,7 +2841,7 @@ def analyse_best_models_population(df, df_models, sparse_output = True, plot=Fal
         if plot and folder:
             save_to=os.path.join(folder,prefix+name+'_compnts='+str(n_comps) +'_per=' + str(per)) 
 
-        _, _, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, plot = plot, save_to = save_to, params_CI = True, **kwargs)  
+        _, _, _, rhythm_params, _ = population_fit(df_pop, n_components = n_comps, period = per, plot = plot, save_to = save_to, params_CI = True, parameters_to_analyse=parameters_to_analyse, parameters_angular=parameters_angular, **kwargs)  
                         
         row = dict(row[1])
         
@@ -3899,10 +3906,75 @@ def eval_params_diff_CI(X_full, X_fit_full, locs, results, rhythm_params, parame
 
     return rhythm_params
 
+# eval parameters using bootstrap
+# bootstrap type should be set to either std (CI = X+-1.96*STD(X)) or percentile (CI = [2.5th percentile, 97.5th percentile])
+def population_eval_params_bootstrap(X_test, X_fit_eval_params, model, results, model_params, bootstrap_size=100, bootstrap_type='std', t_test=True, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], period=24):           
+    
+    model_bs = copy.deepcopy(model) # precaution
+    results_bs = copy.deepcopy(results) # precaution
+        
+    # generate and evaluate bootstrap samples
+    params_bs = {}
+    for param in parameters_to_analyse:
+        params_bs[param] = np.zeros(bootstrap_size)
+        
+    n_models = model_params.shape[0] # number of models
+    n_params  = model_params.shape[1] # number of model params
+
+    for i in range(bootstrap_size):
+
+        idxs = np.random.choice(n_models, n_models)
+
+        model_params_sample = model_params[idxs,:] #resampling
+                
+        params_means = np.mean(model_params_sample, axis=0)
+        results_bs.initialize(model_bs, params_means)
+                
+        Y_eval_params = results_bs.predict(X_fit_eval_params) 
+        rhythm_params = evaluate_rhythm_params(X_test, Y_eval_params, period=period)
+        
+
+        for param in parameters_to_analyse:
+            params_bs[param][i] = rhythm_params[param]
+
+
+        """
+        # remove the fits that exhibit divergence
+        for param in parameters_to_analyse:
+            if (abs(rhythm_params_bs['amplitude']) > (np.max(Y)-np.min(Y))) or ((rhythm_params_bs['period2']) and (rhythm_params_bs['period2'] < rhythm_params_bs['period2'])):
+                params_bs[param][i] = np.nan                         
+            else:    
+                #plt.plot(X_test, Y_eval_params_bs, alpha=0.5)
+                params_bs[param][i] = rhythm_params_bs[param]                 
+        """
+
+    #print(params_bs)
+
+    # analyse bootstrap samples
+    DoF = bootstrap_size - n_params    
+    rhythm_params['DoF'] = DoF    
+
+    for param in parameters_to_analyse:
+        if param in parameters_angular:
+            angular = True
+        else:
+            angular = False
+    
+        sample_bs = params_bs[param]
+        mean, p_val, CI = bootstrap_statistics(sample_bs, angular=angular, bootstrap_type = bootstrap_type, t_test= t_test, n_params=n_params)
+
+        rhythm_params[f'{param}_bootstrap'] = mean
+        rhythm_params[f'CI({param})'] = CI
+        rhythm_params[f'p({param})'] = p_val
+    
+    return rhythm_params
+
+
 
 # sample the parameters from the confidence interval, builds a set of models and assesses the rhythmicity parameters confidence intervals   
 def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_params, rhythm_params, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], samples_per_param=5, max_samples = 1000, t_test = True, k=0, sampling_type="LHS", period=24): 
     res2 = copy.deepcopy(results)
+    rhythm_params = copy.deepcopy(rhythm_params)
     params = res2.params    
     DoF = k-1
     rhythm_params['DoF'] = DoF
@@ -3980,10 +4052,11 @@ def population_eval_params_CI(X_test, X_fit_eval_params, results, statistics_par
         else:
             rhythm_params[f'p({param})'] = get_p_z_test(mean_params[param], se_param)            
         
+    #print(rhythm_params)
     return rhythm_params
 
 # compare two population fit pairs independently
-def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], samples_per_param_CI=5, max_samples_CI = 1000, t_test = True, sampling_type = "LHS", single_params = {}, **kwargs):
+def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, n_components2 = None, period2 = None, parameters_to_analyse = ['amplitude', 'acrophase', 'mesor'], parameters_angular = ['acrophase'], single_params = {}, t_test = True, **kwargs):
       
     rhythm_params = {}
 
@@ -4002,8 +4075,8 @@ def compare_pair_population_CI(df, test1, test2, n_components = 1, period = 24, 
     else:
         run_params_CI = True # fit_me is called with sampling
 
-    _, statistics1, _, rhythm_params1, _ = population_fit(df_pop1, n_components = n_components1, period = period1, plot = False,plot_measurements=False, plot_individuals=False, plot_margins=False, params_CI = run_params_CI, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, sampling_type = sampling_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, **kwargs)
-    _, statistics2, _, rhythm_params2, _ = population_fit(df_pop2, n_components = n_components2, period = period2, plot = False, plot_measurements=False, plot_individuals=False, plot_margins=False, params_CI = run_params_CI, samples_per_param_CI = samples_per_param_CI, max_samples_CI=max_samples_CI, sampling_type = sampling_type, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, **kwargs)
+    _, statistics1, _, rhythm_params1, _ = population_fit(df_pop1, n_components = n_components1, period = period1, plot = False,plot_measurements=False, plot_individuals=False, plot_margins=False, params_CI = run_params_CI, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, **kwargs)
+    _, statistics2, _, rhythm_params2, _ = population_fit(df_pop2, n_components = n_components2, period = period2, plot = False, plot_measurements=False, plot_individuals=False, plot_margins=False, params_CI = run_params_CI, parameters_to_analyse = parameters_to_analyse, parameters_angular = parameters_angular, **kwargs)
 
     rhythm_params['rhythm_params1'] = rhythm_params1
     rhythm_params['rhythm_params2'] = rhythm_params2
