@@ -1,0 +1,20 @@
+Metadata-Version: 2.1
+Name: CosinorPy
+Version: 3.1
+Summary: Python package for cosinor based rhytmometry
+Home-page: https://github.com/mmoskon/CosinorPy
+Download-URL: https://github.com/mmoskon/CosinorPy/archive/v3.1.tar.gz
+Author: Miha Moskon
+Author-email: miha.moskon@fri.uni-lj.si
+License: MIT
+Keywords: cosinor,rhytmometry,regression,bioinformatics
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Build Tools
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+License-File: LICENSE.txt

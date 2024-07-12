@@ -54,15 +54,7 @@ def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=T
 
         if rescale_x:
             x,y = rescale_times(x,y)
-                                        
-                
-        """
-            nans, nans, nas
-        """
-        # remove nans from measurement data
-        x = x[np.argwhere(~np.isnan(y))[:,0]]
-        y = y[np.argwhere(~np.isnan(y))[:,0]]
-            
+                                                                    
         if remove_outliers:
             x,y = remove_outliers_f(x,y)
 
@@ -83,6 +75,16 @@ def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=T
                 names.append(sheet_name + '_rep' + str(i+1))
                 #df = df.append(df_measurement)             
                 df = pd.concat([df, df_measurement], ignore_index=True)
+
+        """
+            nans, nans, nas
+        """
+        # remove nans from measurement data
+        #x = x[np.argwhere(~np.isnan(y))[:,0]]
+        #y = y[np.argwhere(~np.isnan(y))[:,0]]
+
+        # remove nans from a dataframe
+        df.dropna(inplace=True)
             
                         
 
@@ -432,7 +434,7 @@ def rescale_times(x, y):
     return x,y
     
 def remove_outliers_f(x, y):
-    m, s = np.mean(y), np.std(y)        
+    m, s = np.nanmean(y), np.nanstd(y)        
     idxs = np.logical_not(np.logical_or(y > m + 3*s, y < m - 3*s))
     #print(x[np.logical_not(idxs)], y[np.logical_not(idxs)])
     return x[idxs], y[idxs]

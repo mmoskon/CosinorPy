@@ -1,0 +1,15 @@
+LICENSE.txt
+README.md
+setup.cfg
+setup.py
+CosinorPy/__init__.py
+CosinorPy/cosinor.py
+CosinorPy/cosinor1.py
+CosinorPy/cosinor_nonlin.py
+CosinorPy/file_parser.py
+CosinorPy/helpers.py
+CosinorPy.egg-info/PKG-INFO
+CosinorPy.egg-info/SOURCES.txt
+CosinorPy.egg-info/dependency_links.txt
+CosinorPy.egg-info/requires.txt
+CosinorPy.egg-info/top_level.txt

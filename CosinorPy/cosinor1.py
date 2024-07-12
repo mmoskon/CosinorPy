@@ -438,6 +438,9 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
     
     for test in tests:
         x,y = df_pop[df_pop.test == test].x.values, df_pop[df_pop.test == test].y.values
+        if len(x) < 3:
+            k -= 1
+            continue
         fit_results, amp, acr, _ = fit_cosinor(x, y, period = period, save_to=save_to, plot_on = False)
         if plot_on and plot_individuals:
             #X_fit = np.linspace(min(x), max(x), 100)
