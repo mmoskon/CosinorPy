@@ -14,7 +14,7 @@ from CosinorPy.helpers import df_add_row
     individual: separate the multiple iterations of the same measurement (for lumicycle)
 """
     
-def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=True, remove_outliers=False, skip_tabs=False):
+def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=True, remove_outliers=False, skip_tabs=False, min_measurements = 0):
     names = []
      
         
@@ -29,7 +29,7 @@ def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=T
 
 
         sheet = xls_file.parse(sheet_name, header=None)
-        #print(sheet_name)
+        print(f"Reading {sheet_name}...")
             
         M = np.array(sheet)
             
@@ -76,18 +76,26 @@ def read_excel(file_name, trim=False, diff=False, rescale_x=False, independent=T
                 #df = df.append(df_measurement)             
                 df = pd.concat([df, df_measurement], ignore_index=True)
 
-        """
-            nans, nans, nas
-        """
-        # remove nans from measurement data
-        #x = x[np.argwhere(~np.isnan(y))[:,0]]
-        #y = y[np.argwhere(~np.isnan(y))[:,0]]
+    """
+    nans, nans, nas
+    """
+    # remove nans from measurement data
+    #x = x[np.argwhere(~np.isnan(y))[:,0]]
+    #y = y[np.argwhere(~np.isnan(y))[:,0]]
 
-        # remove nans from a dataframe
-        df.dropna(inplace=True)
-            
-                        
+    # remove nans from a dataframe
+    df.dropna(inplace=True)
 
+    # remove tests that cannot be used to fit a cosinor model (e.g., have less than 3 measurements)
+    if min_measurements > 0:
+        to_remove = []
+        for test in df.test.unique():
+            if len(df[df.test  == test]) < min_measurements:
+                to_remove.append(test)
+        df = df[~df.test.isin(to_remove)]
+        if to_remove:
+            print(f'{",".join(to_remove)} removed due to small number of data!')
+                                
             
     return df
 
@@ -437,6 +445,11 @@ def remove_outliers_f(x, y):
     m, s = np.nanmean(y), np.nanstd(y)        
     idxs = np.logical_not(np.logical_or(y > m + 3*s, y < m - 3*s))
     #print(x[np.logical_not(idxs)], y[np.logical_not(idxs)])
+
+    removed = len(x) - len(x[idxs])
+    if removed:
+        print(f"{removed} outliers removed.")
+    
     return x[idxs], y[idxs]
 
 def remove_outliers_df(df):

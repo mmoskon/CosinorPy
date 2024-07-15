@@ -435,26 +435,34 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
     
     min_X = np.min(df_pop.x.values)
     max_X = np.max(df_pop.x.values)
-    
-    for test in tests:
+
+    for i_test, test in enumerate(tests):
         x,y = df_pop[df_pop.test == test].x.values, df_pop[df_pop.test == test].y.values
         fit_results, amp, acr, _ = fit_cosinor(x, y, period = period, save_to=save_to, plot_on = False)
+        
+        #X_fit = np.linspace(min(x), max(x), 100)
+        X_fit = np.linspace(min_X, max_X, 100)
+        rrr_fit= np.cos(2*np.pi*X_fit/period)
+        sss_fit = np.sin(2*np.pi*X_fit/period)
+        
+        data = pd.DataFrame()
+        data['rrr'] = rrr_fit
+        data['sss'] = sss_fit
+        Y_fit = fit_results.predict(data).values          
+        
         if plot_on and plot_individuals:
-            #X_fit = np.linspace(min(x), max(x), 100)
-            X_fit = np.linspace(min_X, max_X, 100)
-            rrr_fit= np.cos(2*np.pi*X_fit/period)
-            sss_fit = np.sin(2*np.pi*X_fit/period)
-        
-            data = pd.DataFrame()
-            data['rrr'] = rrr_fit
-            data['sss'] = sss_fit
-            Y_fit = fit_results.predict(data).values          
-        
-            plt.plot(X_fit, Y_fit, color=color, alpha=0.1, label='_Hidden label')
+            plt.plot(X_fit, Y_fit, color=color, alpha=0.1, label='_Hidden label')          
 
-            if plot_residuals:
+            if plot_individuals:
                 plt.figure(2)
-
+                if i_test == 0:
+                    f_ind, ax_ind = plt.subplots(len(tests))
+                ax_ind[i_test].plot(X_fit, Y_fit, color=color)
+                plt.figure(1)
+                
+            if plot_residuals: 
+                plt.figure(3)
+                
                 resid = fit_results.resid
                 sm.qqplot(resid)
                 plt.title(test)
@@ -464,6 +472,7 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
                     plt.close()
                 else:
                     plt.show()
+                    
                 plt.figure(1)
 
         
@@ -472,11 +481,15 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
             #plt.plot(x, y_fit, 'k')
         if plot_on and plot_measurements:
             plt.plot(x, y, 'o', color=color, markersize=1, label='_Hidden label')
+            if plot_individuals:
+                plt.figure(2)
+                ax_ind[i_test].plot(x, y, 'o', color=color)
+                plt.figure(1)
         
         if type(params) == int:
             params = np.append(fit_results.params, np.array([amp, acr]))
             if plot_on and plot_margins:
-                Y_fit_all = Y_fit
+                Y_fit_all = Y_fit 
         else:
             params = np.vstack([params, np.append(fit_results.params, np.array([amp, acr]))])
             if plot_on and plot_margins:
@@ -597,6 +610,23 @@ def population_fit_cosinor(df_pop, period, save_to='', alpha = 0.05, plot_on = T
                 plt.close()
             else:  
                 plt.show()
+
+        if plot_individuals:
+           
+            plt.figure(2)
+            
+            f_ind.suptitle(test_name)
+            if save_to:
+                f_ind.savefig(save_to+'_ind.pdf')
+                f_ind.savefig(save_to+'_ind.png')
+                plt.close(f_ind)
+            else:                  
+                plt.show() 
+            
+            if hold_on:
+                plt.figure(1)
+
+            
   
   
     #print("acr", acr)
