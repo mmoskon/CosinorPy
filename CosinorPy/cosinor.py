@@ -1351,7 +1351,7 @@ def fit_me(X, Y, n_components = 2, period = 24, lin_comp = False, model_type = '
         statistics = {'p':p, 'RSS':RSS, 'count': np.sum(Y)}
     
     #Y_test = results.predict(X_fit_test)
-    X_test = np.linspace(0, 2*period, 1000)
+    X_test = np.linspace(0, 2*period, 10000)
     X_fit_test = generate_independents(X_test, n_components=n_components, period=period, lin_comp=lin_comp, remove_lin_comp = True)
     Y_fit_test = results.predict(X_fit_test)
     rhythm_params = evaluate_rhythm_params(X_test, Y_fit_test, period=period)
