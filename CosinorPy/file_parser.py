@@ -157,11 +157,13 @@ def generate_test_data_group(N, name_prefix = "", characterize_data = False, **k
     else:
         return df
 
-def generate_test_data(n_components=1, period = 24, amplitudes = None, baseline = 0, lin_comp = 0, amplification = 0, phase = 0, min_time = 0, max_time = 48, time_step = 2, replicates = 1, independent = True, name="test", noise = 0, noise_simple = 1, characterize_data=False):
+def generate_test_data(n_components=1, period = 24, amplitudes = None, baseline = 0, lin_comp = 0, amplification = 0, phase = 0, min_time = 0, max_time = 48, time_step = 2, replicates = 1, independent = True, name="test", noise = 0, noise_simple = 1, characterize_data=False, quad = 0, add_stats=False):
     df = pd.DataFrame(columns=['test','x','y'], dtype=float)
     x = np.arange(min_time, max_time+time_step, time_step)
+    mins = []
+    maxes = []
 
-    if amplitudes==None:
+    if amplitudes is None:
         amplitudes = np.array([1,1/2,1/3,1/4])
    
     periods = np.array([period, period/2, period/3, period/4])
@@ -177,6 +179,15 @@ def generate_test_data(n_components=1, period = 24, amplitudes = None, baseline 
         for j in range(n_components):
             y += amplitudes[j] * np.cos((x/periods[j])*np.pi*2 + phases[j])
    
+        y += baseline
+        
+        # for mesor computation
+        m = min(y)
+        M = max(y)
+        mins.append(m)
+        maxes.append(M)
+
+
         # if amplification < 0: oscillations are damped with time
         # if amplification > 0: oscillations are amplified with time
         # if amplification == 0: oscillations are sustained        
@@ -184,13 +195,19 @@ def generate_test_data(n_components=1, period = 24, amplitudes = None, baseline 
         
         # if lin_comp != 0: baseline is rising/decreasing with time
         y +=  lin_comp*x
+
+        # quadratic increase
         
-        y += baseline
+        y +=  quad*(x**2)
+
+        stats_str = ""
+        if (add_stats):
+            stats_str = "_#MESOR#_#AMPLITUDE#"
         
         if independent:
-            test = name
+            test = name + stats_str
         else:
-            test = name + "_rep" + str(i+1)
+            test = name + stats_str + "_rep" + str(i+1)
         mu = 0
         sigma = noise
             
@@ -216,6 +233,13 @@ def generate_test_data(n_components=1, period = 24, amplitudes = None, baseline 
         df = pd.concat([df, df2])
     df['x'] = df['x'].astype(float)
     df['y'] = df['y'].astype(float)
+
+    max_all = max(maxes)
+    min_all = min(mins)
+    amp_all = max_all - min_all
+    MESOR_all = min_all + amp_all/2
+
+    df["test"] = df.apply(lambda row: row["test"].replace("#MESOR#", str(MESOR_all)).replace("#AMPLITUDE#", str(amp_all)), axis=1)
 
     if characterize_data:
         
