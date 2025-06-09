@@ -130,7 +130,7 @@ Accepts fitting results and returns the best fits for each model complexity (num
 #### Parameters
 * `df_results`: pandas dataframe returned by* `df`: pandas dataframe of measurements
 * `criterium`: criterium for finding the best models
-* `reverse`: if false lower is better
+* `reverse`: if `True` lower is better
 * `n_components`: list with numbers of cosinor components to analyse; if list is empty all components in the dataframe will be used
 #### Returns
 * dataframe with the best fitting model (the model with the best fitting period) for certain number of components
@@ -143,7 +143,7 @@ Find the best models for each measurement. Get the best models for all fits (acc
 * `n_components`: number of cosinor components or list with numbers of cosinor components; if list of components is given, cosinor fits will be performed on cosinor models with different numbers of cosinor components
 * `lin_comp`: if `True` linear componet (y ~ x) is included in the models
 * `criterium`: criterium for finding the best models
-* `reverse`: if false lower is better
+* `reverse`: if `True` lower is better
 #### Returns
 * dataframe with the best fitting models
 
