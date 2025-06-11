@@ -3081,6 +3081,21 @@ def compare_models(RSS1, RSS2, DF1, DF2):
         F = ((RSS2 - RSS1)/(DF2 - DF1))/(RSS1/DF1)
         return 1 - stats.f.cdf(F, DF2 - DF1, DF1)
 
+def compare_models_LR_test(ll1, ll2, K1, K2):
+    #ll1 = m1.llf
+    #ll2 = m2.llf 
+    LR = -2*(ll1-ll2)
+    #print("LR",LR)
+    
+    #K1 = len(m1.params)
+    #K2 = len(m2.params)
+    
+    DoF = K2-K1
+    p = stats.chi2.sf(LR, DoF)
+    
+    return p
+
+
 
 def ct_response(y, mu):
     return ((y-mu)**2 - y) / mu
