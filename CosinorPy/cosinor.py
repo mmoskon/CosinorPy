@@ -1633,8 +1633,8 @@ def calculate_statistics(X, Y, Y_fit, n_components, period, lin_comp = False):
     # statistics of GOF according to Cornelissen (eqs (14) - (15))
     # TODO: ali bi bilo potrebno popraviti za lumicycle - ko je več zaporednih meritev v eni časovni točki?
     #X_periodic = (X % period).astype(int)
-    X_periodic = np.round_(X % period,2)                                    
-    
+    X_periodic = np.round(X % period,2)
+
     X_unique = np.unique(X_periodic)
     n_T = len(X_unique)
     
