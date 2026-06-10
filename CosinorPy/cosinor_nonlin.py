@@ -158,8 +158,8 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
     except:
         p = 1
     
-    X_periodic = np.round_(X % period,2)                                    
-    
+    X_periodic = np.round(X % period,2)
+
     X_unique = np.unique(X_periodic)
     n_T = len(X_unique)
     

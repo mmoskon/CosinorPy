@@ -862,14 +862,14 @@ def test_cosinor_pairs(df, pairs, period = 24, folder = '', prefix='', plot_meas
             'amplitude2': statistics_trans['values'][idx_group_amp],
             'p(amplitude2)':statistics_trans['p-values'][idx_group_amp],
             'd_amplitude': ind_test_amp['value'],
-            'p(d_amplitude)': float(ind_test_amp['p_value']),
+            'p(d_amplitude)': float(np.ravel(ind_test_amp['p_value'])[0]),
             'CI(d_amplitude)': ind_test_amp['conf_int'],
             'acrophase1': statistics_trans['values'][idx_acr],
             'p(acrophase1)':statistics_trans['p-values'][idx_acr],
             'acrophase2': statistics_trans['values'][idx_group_acr],
             'p(acrophase2)':statistics_trans['p-values'][idx_group_acr],
             'd_acrophase': ind_test_acr['value'],
-            'p(d_acrophase)': float(ind_test_acr['p_value']),
+            'p(d_acrophase)': float(np.ravel(ind_test_acr['p_value'])[0]),
             'CI(d_acrophase)': ind_test_acr['conf_int']}
 
         #df_results = df_results.append(d, ignore_index=True)
