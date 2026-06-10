@@ -162,8 +162,8 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
     except:
         p = 1
     
-    X_periodic = np.round(X % period,2)                                    
-    
+    X_periodic = np.round(X % period,2)
+
     X_unique = np.unique(X_periodic)
     n_T = len(X_unique)
     
@@ -214,6 +214,54 @@ def calculate_statistics_nonlinear(X, Y, Y_fit, n_params, period):
 ##############
 # REGRESSION #
 ##############
+
+
+
+def fit_lin_model(X,Y, plot=False, plot_margins=True, save_to = "", **kwargs):
+    min_bounds = {'A':min(0, min(Y)), 
+                      'B':0}                      
+                      
+    max_bounds = {'A':max(Y), 
+                      'B':abs(max(Y))}
+    
+    parameters = ['A', 'B']
+
+    predictor = X
+    min_bounds = [min_bounds[name] for name in parameters]
+    max_bounds = [max_bounds[name] for name in parameters] 
+
+    popt, pcov = curve_fit(linear_model, predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)   
+
+    DoF = Y.size - len(popt)
+
+    Y_fit = linear_model(predictor, *popt)
+    statistics = calculate_statistics_nonlinear(X, Y, Y_fit, len(popt), period=1000)
+    statistics_params = calculate_statistics_curve_fit_parameters(popt, pcov, DoF, parameters)
+
+    if plot:
+        X_plot = np.linspace(min(X), max(X), 1000)
+        Y_plot = linear_model(X_plot, *popt)
+        plt.plot(X_plot, Y_plot, label='fit', color="black")
+        plt.plot(X, Y, 'o', markersize=1, label='measurements', color="black")
+        if plot_margins:
+            lower = Y_plot - statistics['ME']
+            upper = Y_plot + statistics['ME']
+            plt.fill_between(X_plot, lower, upper, color="black", alpha=0.1)
+        
+        plt.axis([min(X), max(X), 0.9*min(min(Y), min(Y_plot)), 1.1*max(max(Y), max(Y_plot))])
+
+        plt.legend()
+        if save_to:
+            plt.savefig(save_to+'.png')
+            plt.savefig(save_to+'.pdf')
+            plt.close()
+        else:
+            plt.show()
+
+
+    return popt, statistics, statistics_params   
+
+
 
 def fit_cosinor_basic(X,Y, period=24, min_per = 12, max_per=36, plot=False, plot_margins=True, save_to = "", **kwargs):
     
@@ -281,8 +329,6 @@ def fit_cosinor_basic(X,Y, period=24, min_per = 12, max_per=36, plot=False, plot
 
 
 def fit_cosinor_basic_n_comp(X,Y, period=24, n_components = 1, min_per = 12, max_per=36, plot=False, plot_margins=True, save_to = "", **kwargs):
- 
-    
     min_bounds = {'A':min(0, min(Y)), 
                       'B':0,
                       'B2':0,
@@ -317,7 +363,7 @@ def fit_cosinor_basic_n_comp(X,Y, period=24, n_components = 1, min_per = 12, max
     min_bounds = [min_bounds[name] for name in parameters]
     max_bounds = [max_bounds[name] for name in parameters]  
 
-
+    
     if n_components == 0:
         fitting_func = linear_model     
     elif n_components == 1:
@@ -332,9 +378,9 @@ def fit_cosinor_basic_n_comp(X,Y, period=24, n_components = 1, min_per = 12, max
         print("Invalid option!")
         return
 
-    
+
     if n_components == 0:    
-        popt, pcov = curve_fit(lambda x, A, B: fitting_func(x, A, B), predictor, Y, bounds=(min_bounds[:2], max_bounds[:2]), **kwargs)                
+        popt, pcov = curve_fit(lambda x, A, B: fitting_func(x, A, B), predictor, Y, bounds=(min_bounds[:2], max_bounds[:2]), **kwargs)      
     elif period:
         if n_components == 1:
             popt, pcov = curve_fit(lambda x, A, B, acrophase: fitting_func(x, A, B, acrophase, period), predictor, Y, bounds=(min_bounds, max_bounds), **kwargs)
@@ -359,8 +405,6 @@ def fit_cosinor_basic_n_comp(X,Y, period=24, n_components = 1, min_per = 12, max
     else:
         popt_ext = list(popt) + [period]
 
-
-    
     Y_fit = fitting_func(predictor, *popt_ext)
     statistics = calculate_statistics_nonlinear(X, Y, Y_fit, len(popt), period)
     statistics_params = calculate_statistics_curve_fit_parameters(popt, pcov, DoF, parameters)
@@ -504,6 +548,7 @@ def fit_generalized_cosinor(X,Y, period=24, min_per = 12, max_per=36, plot=False
 
 def fit_generalized_cosinor_n_comp(X,Y, period=24, n_components = 1, min_per = 12, max_per=36, plot=False, plot_margins=True, color = 'black', hold_on = False, save_to = "", x_label="time [h]", y_label="measurements", test="", lin_comp = True, amp_comp = True, **kwargs):
 
+   
 
     #if not exp:
     #    fitting_func = generalized_cosinor
@@ -555,6 +600,7 @@ def fit_generalized_cosinor_n_comp(X,Y, period=24, n_components = 1, min_per = 1
     min_bounds = [min_bounds[name] for name in parameters]
     max_bounds = [max_bounds[name] for name in parameters]  
    
+
     if n_components == 0:    
         fitting_func = linear_model
     elif n_components == 1:
@@ -656,18 +702,17 @@ def fit_generalized_cosinor_n_comp(X,Y, period=24, n_components = 1, min_per = 1
     popt_eval = popt_ext.copy()
     if n_components>0:     
         popt_eval[2] = 0 #set C to 0
-        popt_eval[3] = 0 #set D to 0
+        popt_eval[3] = 0 #set D to 0   
     X_eval = np.linspace(0, 2*period, 1000)
     Y_eval = fitting_func(X_eval, *popt_eval)    
     rhythm_params = cosinor.evaluate_rhythm_params(X_eval, Y_eval, period=period)
-
+        
     if n_components > 0:   
         rhythm_params['amplification'] = statistics_params['params']['C']
         rhythm_params['lin_comp'] = statistics_params['params']['D']
     else:
         rhythm_params['amplification'] = 0
         rhythm_params['lin_comp'] = 0
-    
 
     # returns
     return popt_ext, statistics, statistics_params, rhythm_params   
@@ -1518,8 +1563,6 @@ def get_best_model(X, Y, period=24, n_components = [0,1,2,3], plot=False, plot_m
         n_params_best -= 1
     
     DoF_best = len(X) - n_params_best
-
-    
     for amp_comp in [False, True]:
         for n_comps in n_components:
 
