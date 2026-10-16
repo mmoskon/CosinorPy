@@ -1556,7 +1556,7 @@ def evaluate_rhythm_params(X,Y, project_acrophase=True, period=0):
     m = min(Y)
     M = max(Y)    
     A = M - m
-    MESOR = m + A/2
+    #MESOR = m + A/2 # np.mean(Y)
     AMPLITUDE = abs(A/2)
     
     PHASE = 0
@@ -1576,6 +1576,10 @@ def evaluate_rhythm_params(X,Y, project_acrophase=True, period=0):
     
     if not period:
         period = period2
+
+    idx = X <= X[0] + period
+    MESOR = np.trapz(Y[idx], X[idx]) / period
+
 
     if len(locs) >= 1:
        PHASE = X[locs[0]]
